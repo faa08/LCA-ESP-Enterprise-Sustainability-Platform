@@ -10,7 +10,7 @@ export async function setManagerRole() {
     maxAge: 60 * 60 * 24 * 365,
     sameSite: "lax",
   })
-  redirect("/")
+  redirect("/dashboard")
 }
 
 export async function setViewerRole() {
@@ -20,11 +20,11 @@ export async function setViewerRole() {
     maxAge: 60 * 60 * 24 * 365,
     sameSite: "lax",
   })
-  redirect("/")
+  redirect("/dashboard")
 }
 
 export async function clearRole() {
   const cookieStore = await cookies()
   cookieStore.delete("role")
-  redirect("/")
+  redirect("/dashboard")
 }

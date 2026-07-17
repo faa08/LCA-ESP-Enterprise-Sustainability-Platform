@@ -7,6 +7,6 @@ export default async function InputPageGuard({
   children: React.ReactNode
 }) {
   const role = await getRoleFromCookie()
-  if (!role || role === "viewer") redirect("/")
+  if (!role || role === "viewer") redirect("/select-role")
   return <>{children}</>
 }
