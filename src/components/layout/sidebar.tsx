@@ -1,0 +1,286 @@
+"use client"
+
+import { useState, useCallback } from "react"
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { motion } from "framer-motion"
+import { cn } from "@/lib/utils"
+import { clearRole } from "@/app/actions/role"
+import { t, type Locale } from "@/lib/i18n"
+import { id } from "@/locales/id"
+import { en } from "@/locales/en"
+import type { Role } from "@/lib/role"
+import {
+  LayoutDashboard,
+  Cpu,
+  BarChart3,
+  Leaf,
+  FileText,
+  Zap,
+  Droplets,
+  Recycle,
+  ShieldCheck,
+  FolderOpen,
+  Lightbulb,
+  Settings,
+  PencilLine,
+  LogOut,
+  PanelLeftClose,
+  PanelLeft,
+  type LucideIcon,
+} from "lucide-react"
+
+const dicts: Record<Locale, Record<string, string>> = { id, en }
+
+type NavItem = {
+  labelKey: string
+  href: string
+  icon: LucideIcon
+  inputHref?: string
+}
+
+type NavGroup = {
+  label: string
+  items: NavItem[]
+}
+
+const navGroups: NavGroup[] = [
+  {
+    label: "EXECUTIVE",
+    items: [
+      { labelKey: "sidebar.executive_overview", href: "/", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "SUSTAINABILITY",
+    items: [
+      { labelKey: "sidebar.lca", href: "/lca", icon: Cpu },
+      { labelKey: "sidebar.carbon", href: "/carbon-accounting", icon: BarChart3, inputHref: "/carbon-accounting/input" },
+      { labelKey: "sidebar.environmental", href: "/environmental-monitoring", icon: Leaf, inputHref: "/environmental-monitoring/input" },
+      { labelKey: "sidebar.esg", href: "/esg-reporting", icon: FileText },
+    ],
+  },
+  {
+    label: "OPERATIONS",
+    items: [
+      { labelKey: "sidebar.energy", href: "/energy-monitoring", icon: Zap, inputHref: "/energy-monitoring/input" },
+      { labelKey: "sidebar.water", href: "/water-monitoring", icon: Droplets, inputHref: "/water-monitoring/input" },
+      { labelKey: "sidebar.waste", href: "/waste-management", icon: Recycle, inputHref: "/waste-management/input" },
+    ],
+  },
+  {
+    label: "COMPLIANCE",
+    items: [
+      { labelKey: "sidebar.compliance", href: "/compliance", icon: ShieldCheck },
+      { labelKey: "sidebar.documents", href: "/documents", icon: FolderOpen },
+    ],
+  },
+  {
+    label: "INTELLIGENCE",
+    items: [
+      { labelKey: "sidebar.ai", href: "/ai-insights", icon: Lightbulb },
+    ],
+  },
+  {
+    label: "SYSTEM",
+    items: [
+      { labelKey: "sidebar.settings", href: "/settings", icon: Settings },
+    ],
+  },
+]
+
+const roleLabels: Record<Role, string> = {
+  admin: "role.admin",
+  manager: "role.manager",
+  viewer: "role.viewer",
+}
+
+const roleBadge: Record<Role, string> = {
+  admin: "bg-emerald-100 text-emerald-700",
+  manager: "bg-blue-100 text-blue-700",
+  viewer: "bg-slate-100 text-slate-600",
+}
+
+function isActive(href: string, pathname: string): boolean {
+  if (href === "/") return pathname === "/"
+  return pathname.startsWith(href)
+}
+
+export function Sidebar({
+  role,
+  locale,
+  collapsed,
+  onToggle,
+}: {
+  role: Role | null
+  locale: Locale
+  collapsed: boolean
+  onToggle: () => void
+}) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const dict = dicts[locale]
+  const [hovered, setHovered] = useState(false)
+  const canEdit = role === "admin" || role === "manager"
+  const isCollapsed = collapsed && !hovered
+
+  const handleSwitch = useCallback(async () => {
+    await clearRole()
+    router.refresh()
+  }, [router])
+
+  return (
+    <aside
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ width: isCollapsed ? "72px" : "280px" }}
+      className={cn(
+        "sticky top-0 z-40 flex h-screen shrink-0 flex-col border-r bg-white transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[width]",
+        "border-[#E2E8F0]",
+      )}
+    >
+      {/* Logo */}
+      <div className={cn("flex h-16 shrink-0 items-center border-b border-[#E2E8F0] overflow-hidden", isCollapsed ? "justify-center" : "px-5")}>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-emerald-600">
+            <Leaf className="h-[18px] w-[18px] text-white" />
+          </div>
+          {!isCollapsed && (
+            <div>
+              <div className="text-[15px] font-semibold leading-tight text-[#0F172A]">{t(dict, "brand.name")}</div>
+              <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#64748B]">{t(dict, "brand.subtitle")}</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tagline */}
+      {!isCollapsed && (
+        <div className="shrink-0 border-b border-[#E2E8F0] py-2.5">
+          <div className="px-5">
+            <div className="text-[11px] font-medium leading-snug text-[#64748B]">{t(dict, "sidebar.subtitle")}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4">
+        {navGroups.map((group, gi) => (
+          <div key={group.label} className={gi > 0 ? (isCollapsed ? "mt-3" : "mt-5") : ""}>
+            {!isCollapsed && (
+              <div className="mb-1.5 px-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">{group.label}</div>
+              </div>
+            )}
+
+            <ul className="space-y-0.5">
+              {group.items.map((item) => {
+                const active = isActive(item.href, pathname)
+                return (
+                  <li key={item.href} className="group relative">
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "flex items-center rounded-xl py-2.5 text-sm font-medium transition-colors duration-150",
+                        isCollapsed ? "justify-center" : "gap-3 px-3",
+                        active
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]",
+                      )}
+                    >
+                      <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center", active ? "text-emerald-600" : "text-[#64748B]")}>
+                        <item.icon className="h-5 w-5" />
+                      </div>
+                      {!isCollapsed && (
+                        <span>{t(dict, item.labelKey)}</span>
+                      )}
+
+                      {active && (
+                        <motion.div
+                          layoutId="activeIndicator"
+                          className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-emerald-600"
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                      )}
+                    </Link>
+
+                    {!isCollapsed && canEdit && item.inputHref && (
+                      <Link
+                        href={item.inputHref}
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100 text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#64748B]"
+                        title={t(dict, "sidebar.input")}
+                      >
+                        <PencilLine className="h-3.5 w-3.5" />
+                      </Link>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
+      </nav>
+
+      {/* Bottom Section */}
+      <div className="shrink-0 border-t border-[#E2E8F0]">
+        {!isCollapsed && (
+          <div className="flex items-center px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F1F5F9] text-sm font-semibold text-[#64748B]">
+                {role === "manager" ? "IT" : "AT"}
+              </div>
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="truncate">
+                  <div className="text-sm font-medium text-[#0F172A]">
+                    {role === "manager" ? "Tim IT" : "Petinggi"}
+                  </div>
+                  {role ? (
+                    <span className={cn("inline-block rounded px-1.5 py-0.5 text-[10px] font-medium", roleBadge[role])}>
+                      {t(dict, roleLabels[role])}
+                    </span>
+                  ) : null}
+                </div>
+                <button
+                  onClick={handleSwitch}
+                  title={t(dict, "sidebar.switch_role")}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#64748B]"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isCollapsed && (
+          <div className="flex justify-center px-4 py-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F1F5F9] text-sm font-semibold text-[#64748B]">
+              {role === "manager" ? "IT" : "AT"}
+            </div>
+          </div>
+        )}
+
+        <div className={cn("border-t border-[#E2E8F0] px-3 py-2", isCollapsed ? "flex justify-center" : "")}>
+          <button
+            onClick={onToggle}
+            title={t(dict, isCollapsed ? "sidebar.expand" : "sidebar.collapse")}
+            className={cn(
+              "flex items-center rounded-lg text-[#94A3B8] transition-colors hover:bg-[#F1F5F9] hover:text-[#64748B]",
+              isCollapsed ? "justify-center p-2" : "gap-2 px-3 py-2 w-full",
+            )}
+          >
+            {isCollapsed ? (
+              <PanelLeft className="h-4 w-4 shrink-0" />
+            ) : (
+              <>
+                <PanelLeftClose className="h-4 w-4 shrink-0" />
+                <span className="text-xs font-medium">{t(dict, "sidebar.collapse")}</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </aside>
+  )
+}
