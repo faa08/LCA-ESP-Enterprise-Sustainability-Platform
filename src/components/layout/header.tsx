@@ -1,16 +1,23 @@
 "use client"
 
+import { useState, useRef, useEffect } from "react"
 import { usePathname } from "next/navigation"
-import { Bell, Search, Maximize2 } from "lucide-react"
+import Link from "next/link"
+import { Bell, Search, ChevronRight, ChevronDown, User, Settings as SettingsIcon, LogOut } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
 import { id } from "@/locales/id"
 import { en } from "@/locales/en"
 import { t } from "@/lib/i18n"
+import { ThemeToggle } from "@/components/theme/theme-toggle"
+import { clearRole } from "@/app/actions/role"
+import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 const dicts: Record<Locale, Record<string, string>> = { id, en }
 
 const moduleTitles: Record<string, string> = {
   "/dashboard": "sidebar.executive_overview",
+  "/dashboard/data-hub": "sidebar.data_hub",
   "/dashboard/environmental-monitoring": "sidebar.environmental",
   "/dashboard/carbon-accounting": "sidebar.carbon",
   "/dashboard/lca": "sidebar.lca",
@@ -24,54 +31,177 @@ const moduleTitles: Record<string, string> = {
   "/dashboard/settings": "sidebar.settings",
 }
 
+const groupFor: Record<string, string> = {
+  "/dashboard/data-hub": "sidebar.data_management",
+}
+
+const notifications = [
+  { id: 1, title: "Import selesai", desc: "emissions_q2.xlsx diproses", tone: "success" },
+  { id: 2, title: "Validasi gagal", desc: "3 baris pada water_log.csv", tone: "danger" },
+  { id: 3, title: "IoT terhubung", desc: "Meter Plant A online", tone: "info" },
+]
+
 export function Header({ locale }: { locale: Locale }) {
   const pathname = usePathname()
+  const router = useRouter()
   const dict = dicts[locale]
   const titleKey = moduleTitles[pathname]
   const title = titleKey ? t(dict, titleKey) : "ensPR"
+  const groupKey = groupFor[pathname]
+
+  const [search, setSearch] = useState("")
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [userOpen, setUserOpen] = useState(false)
+  const notifRef = useRef<HTMLDivElement>(null)
+  const userRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false)
+      if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false)
+    }
+    document.addEventListener("mousedown", onClick)
+    return () => document.removeEventListener("mousedown", onClick)
+  }, [])
 
   function switchLang(lang: string) {
     document.cookie = `lang=${lang}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`
     window.location.href = pathname + "?t=" + Date.now()
   }
 
+  async function signOut() {
+    await clearRole()
+    router.refresh()
+  }
+
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-neutral-200 bg-white/80 backdrop-blur-md px-6">
-      <div>
-        <h1 className="text-base font-semibold text-neutral-900">{title}</h1>
-        <p className="text-xs text-neutral-500">{t(dict, "header.subtitle")}</p>
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-token bg-surface/80 backdrop-blur-md px-6">
+      <div className="flex min-w-0 items-center gap-3">
+        <nav className="flex items-center gap-1 text-xs text-muted">
+          <Link href="/dashboard" className="transition-colors hover:text-[color:var(--brand)]">
+            {t(dict, "datahub.breadcrumb.home")}
+          </Link>
+          {groupKey && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5" />
+              <span>{t(dict, groupKey)}</span>
+            </>
+          )}
+          <ChevronRight className="h-3.5 w-3.5" />
+          <span className="font-medium text-primary">{title}</span>
+        </nav>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-0.5 rounded-lg border border-neutral-200 bg-white p-0.5">
+      <div className="flex flex-1 items-center justify-end gap-2">
+        <div className="hidden items-center gap-2 rounded-lg border border-token bg-surface-2 px-3 py-1.5 text-sm text-muted md:flex">
+          <Search className="h-4 w-4" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t(dict, "datahub.search.placeholder")}
+            className="w-44 bg-transparent text-primary placeholder:text-muted focus:outline-none"
+          />
+        </div>
+
+        <div className="flex items-center gap-0.5 rounded-lg border border-token bg-surface p-0.5">
           <button
             onClick={() => switchLang("id")}
-            className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
-              locale === "id" ? "bg-emerald-600 text-white" : "text-neutral-500 hover:text-neutral-700"
-            }`}
+            className={cn(
+              "rounded-md px-2 py-1 text-xs font-medium transition-colors",
+              locale === "id"
+                ? "bg-[color:var(--brand)] text-white"
+                : "text-muted hover:text-primary",
+            )}
           >
             ID
           </button>
           <button
             onClick={() => switchLang("en")}
-            className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
-              locale === "en" ? "bg-emerald-600 text-white" : "text-neutral-500 hover:text-neutral-700"
-            }`}
+            className={cn(
+              "rounded-md px-2 py-1 text-xs font-medium transition-colors",
+              locale === "en"
+                ? "bg-[color:var(--brand)] text-white"
+                : "text-muted hover:text-primary",
+            )}
           >
             EN
           </button>
         </div>
 
-        <button className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600">
-          <Search className="h-4 w-4" />
-        </button>
-        <button className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600">
-          <Maximize2 className="h-4 w-4" />
-        </button>
-        <button className="relative flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600">
-          <Bell className="h-4 w-4" />
-          <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
-        </button>
+        <ThemeToggle locale={locale} />
+
+        <div className="relative" ref={notifRef}>
+          <button
+            onClick={() => setNotifOpen((v) => !v)}
+            className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-token bg-surface text-secondary transition-colors hover:border-[color:var(--brand-soft-border)] hover:text-[color:var(--brand)]"
+          >
+            <Bell className="h-4 w-4" />
+            <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-surface" />
+          </button>
+          {notifOpen && (
+            <div className="absolute right-0 mt-2 w-72 overflow-hidden rounded-xl border border-token bg-surface shadow-lg">
+              <div className="border-b border-token px-4 py-3 text-sm font-semibold text-primary">
+                {t(dict, "datahub.notifications.title")}
+              </div>
+              <ul className="max-h-72 divide-y divide-[color:var(--border-subtle)] overflow-y-auto">
+                {notifications.map((n) => (
+                  <li key={n.id} className="flex gap-3 px-4 py-3">
+                    <span
+                      className={cn(
+                        "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                        n.tone === "success" && "bg-emerald-500",
+                        n.tone === "danger" && "bg-red-500",
+                        n.tone === "info" && "bg-sky-500",
+                      )}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-primary">{n.title}</p>
+                      <p className="truncate text-xs text-muted">{n.desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="relative" ref={userRef}>
+          <button
+            onClick={() => setUserOpen((v) => !v)}
+            className="flex items-center gap-2 rounded-lg border border-token bg-surface py-1 pl-1 pr-2 transition-colors hover:border-[color:var(--brand-soft-border)]"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--brand-soft)] text-xs font-semibold text-[color:var(--brand)]">
+              AT
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 text-muted" />
+          </button>
+          {userOpen && (
+            <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-token bg-surface py-1 shadow-lg">
+              <div className="border-b border-token px-3 py-2">
+                <p className="text-sm font-medium text-primary">Petinggi</p>
+                <p className="text-xs text-muted">admin@envi.io</p>
+              </div>
+              <Link
+                href="/dashboard/settings"
+                className="flex items-center gap-2 px-3 py-2 text-sm text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
+              >
+                <User className="h-4 w-4" /> {t(dict, "datahub.user.profile")}
+              </Link>
+              <Link
+                href="/dashboard/settings"
+                className="flex items-center gap-2 px-3 py-2 text-sm text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
+              >
+                <SettingsIcon className="h-4 w-4" /> {t(dict, "datahub.user.settings")}
+              </Link>
+              <button
+                onClick={signOut}
+                className="flex w-full items-center gap-2 border-t border-token px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
+              >
+                <LogOut className="h-4 w-4" /> {t(dict, "datahub.user.signout")}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   )

@@ -27,6 +27,7 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeft,
+  Database,
   type LucideIcon,
 } from "lucide-react"
 
@@ -66,6 +67,12 @@ const navGroups: NavGroup[] = [
       { labelKey: "sidebar.energy", href: "/dashboard/energy-monitoring", icon: Zap, inputHref: "/dashboard/energy-monitoring/input" },
       { labelKey: "sidebar.water", href: "/dashboard/water-monitoring", icon: Droplets, inputHref: "/dashboard/water-monitoring/input" },
       { labelKey: "sidebar.waste", href: "/dashboard/waste-management", icon: Recycle, inputHref: "/dashboard/waste-management/input" },
+    ],
+  },
+  {
+    label: "DATA MANAGEMENT",
+    items: [
+      { labelKey: "sidebar.data_hub", href: "/dashboard/data-hub", icon: Database },
     ],
   },
   {
@@ -135,20 +142,20 @@ export function Sidebar({
       onMouseLeave={() => setHovered(false)}
       style={{ width: isCollapsed ? "72px" : "280px" }}
       className={cn(
-        "sticky top-0 z-40 flex h-screen shrink-0 flex-col border-r bg-white transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[width]",
-        "border-[#E2E8F0]",
+        "sticky top-0 z-40 flex h-screen shrink-0 flex-col border-r bg-surface transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[width]",
+        "border-token",
       )}
     >
       {/* Logo */}
-      <div className={cn("flex h-16 shrink-0 items-center border-b border-[#E2E8F0] overflow-hidden", isCollapsed ? "justify-center" : "px-5")}>
+      <div className={cn("flex h-16 shrink-0 items-center border-b border-token overflow-hidden", isCollapsed ? "justify-center" : "px-5")}>
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-emerald-600">
             <Leaf className="h-[18px] w-[18px] text-white" />
           </div>
           {!isCollapsed && (
             <div>
-              <div className="text-[15px] font-semibold leading-tight text-[#0F172A]">{t(dict, "brand.name")}</div>
-              <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#64748B]">{t(dict, "brand.subtitle")}</div>
+              <div className="text-[15px] font-semibold leading-tight text-primary">{t(dict, "brand.name")}</div>
+              <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted">{t(dict, "brand.subtitle")}</div>
             </div>
           )}
         </div>
@@ -156,9 +163,9 @@ export function Sidebar({
 
       {/* Tagline */}
       {!isCollapsed && (
-        <div className="shrink-0 border-b border-[#E2E8F0] py-2.5">
+        <div className="shrink-0 border-b border-token py-2.5">
           <div className="px-5">
-            <div className="text-[11px] font-medium leading-snug text-[#64748B]">{t(dict, "sidebar.subtitle")}</div>
+            <div className="text-[11px] font-medium leading-snug text-muted">{t(dict, "sidebar.subtitle")}</div>
           </div>
         </div>
       )}
@@ -169,7 +176,7 @@ export function Sidebar({
           <div key={group.label} className={gi > 0 ? (isCollapsed ? "mt-3" : "mt-5") : ""}>
             {!isCollapsed && (
               <div className="mb-1.5 px-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">{group.label}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{group.label}</div>
               </div>
             )}
 
@@ -185,10 +192,10 @@ export function Sidebar({
                         isCollapsed ? "justify-center" : "gap-3 px-3",
                         active
                           ? "bg-emerald-50 text-emerald-700"
-                          : "text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]",
+                          : "text-muted hover:bg-surface-2 hover:text-primary",
                       )}
                     >
-                      <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center", active ? "text-emerald-600" : "text-[#64748B]")}>
+                      <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center", active ? "text-emerald-600" : "text-muted")}>
                         <item.icon className="h-5 w-5" />
                       </div>
                       {!isCollapsed && (
@@ -208,7 +215,7 @@ export function Sidebar({
                       <Link
                         href={item.inputHref}
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100 text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#64748B]"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100 text-muted hover:bg-surface-2 hover:text-muted"
                         title={t(dict, "sidebar.input")}
                       >
                         <PencilLine className="h-3.5 w-3.5" />
@@ -223,16 +230,16 @@ export function Sidebar({
       </nav>
 
       {/* Bottom Section */}
-      <div className="shrink-0 border-t border-[#E2E8F0]">
+      <div className="shrink-0 border-t border-token">
         {!isCollapsed && (
           <div className="flex items-center px-4 py-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F1F5F9] text-sm font-semibold text-[#64748B]">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-sm font-semibold text-muted">
                 {role === "manager" ? "IT" : "AT"}
               </div>
               <div className="flex min-w-0 items-center gap-2">
                 <div className="truncate">
-                  <div className="text-sm font-medium text-[#0F172A]">
+                  <div className="text-sm font-medium text-primary">
                     {role === "manager" ? "Tim IT" : "Petinggi"}
                   </div>
                   {role ? (
@@ -244,7 +251,7 @@ export function Sidebar({
                 <button
                   onClick={handleSwitch}
                   title={t(dict, "sidebar.switch_role")}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#64748B]"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-2 hover:text-muted"
                 >
                   <LogOut className="h-3.5 w-3.5" />
                 </button>
@@ -255,18 +262,18 @@ export function Sidebar({
 
         {isCollapsed && (
           <div className="flex justify-center px-4 py-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F1F5F9] text-sm font-semibold text-[#64748B]">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-sm font-semibold text-muted">
               {role === "manager" ? "IT" : "AT"}
             </div>
           </div>
         )}
 
-        <div className={cn("border-t border-[#E2E8F0] px-3 py-2", isCollapsed ? "flex justify-center" : "")}>
+        <div className={cn("border-t border-token px-3 py-2", isCollapsed ? "flex justify-center" : "")}>
           <button
             onClick={onToggle}
             title={t(dict, isCollapsed ? "sidebar.expand" : "sidebar.collapse")}
             className={cn(
-              "flex items-center rounded-lg text-[#94A3B8] transition-colors hover:bg-[#F1F5F9] hover:text-[#64748B]",
+              "flex items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-muted",
               isCollapsed ? "justify-center p-2" : "gap-2 px-3 py-2 w-full",
             )}
           >

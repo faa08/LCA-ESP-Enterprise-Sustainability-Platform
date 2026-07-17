@@ -17,7 +17,7 @@ export function DashboardLayout({ children, role, locale }: DashboardLayoutProps
   const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="flex min-h-screen bg-app">
       <Sidebar role={role} locale={locale} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header locale={locale} />
