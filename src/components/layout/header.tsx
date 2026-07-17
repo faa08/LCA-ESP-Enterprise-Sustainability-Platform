@@ -10,18 +10,18 @@ import { t } from "@/lib/i18n"
 const dicts: Record<Locale, Record<string, string>> = { id, en }
 
 const moduleTitles: Record<string, string> = {
-  "/": "sidebar.executive_overview",
-  "/environmental-monitoring": "sidebar.environmental",
-  "/carbon-accounting": "sidebar.carbon",
-  "/lca": "sidebar.lca",
-  "/waste-management": "sidebar.waste",
-  "/energy-monitoring": "sidebar.energy",
-  "/water-monitoring": "sidebar.water",
-  "/compliance": "sidebar.compliance",
-  "/ai-insights": "sidebar.ai",
-  "/esg-reporting": "sidebar.esg",
-  "/documents": "sidebar.documents",
-  "/settings": "sidebar.settings",
+  "/dashboard": "sidebar.executive_overview",
+  "/dashboard/environmental-monitoring": "sidebar.environmental",
+  "/dashboard/carbon-accounting": "sidebar.carbon",
+  "/dashboard/lca": "sidebar.lca",
+  "/dashboard/waste-management": "sidebar.waste",
+  "/dashboard/energy-monitoring": "sidebar.energy",
+  "/dashboard/water-monitoring": "sidebar.water",
+  "/dashboard/compliance": "sidebar.compliance",
+  "/dashboard/ai-insights": "sidebar.ai",
+  "/dashboard/esg-reporting": "sidebar.esg",
+  "/dashboard/documents": "sidebar.documents",
+  "/dashboard/settings": "sidebar.settings",
 }
 
 export function Header({ locale }: { locale: Locale }) {

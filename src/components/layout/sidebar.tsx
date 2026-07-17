@@ -48,43 +48,43 @@ const navGroups: NavGroup[] = [
   {
     label: "EXECUTIVE",
     items: [
-      { labelKey: "sidebar.executive_overview", href: "/", icon: LayoutDashboard },
+      { labelKey: "sidebar.executive_overview", href: "/dashboard", icon: LayoutDashboard },
     ],
   },
   {
     label: "SUSTAINABILITY",
     items: [
-      { labelKey: "sidebar.lca", href: "/lca", icon: Cpu },
-      { labelKey: "sidebar.carbon", href: "/carbon-accounting", icon: BarChart3, inputHref: "/carbon-accounting/input" },
-      { labelKey: "sidebar.environmental", href: "/environmental-monitoring", icon: Leaf, inputHref: "/environmental-monitoring/input" },
-      { labelKey: "sidebar.esg", href: "/esg-reporting", icon: FileText },
+      { labelKey: "sidebar.lca", href: "/dashboard/lca", icon: Cpu },
+      { labelKey: "sidebar.carbon", href: "/dashboard/carbon-accounting", icon: BarChart3, inputHref: "/dashboard/carbon-accounting/input" },
+      { labelKey: "sidebar.environmental", href: "/dashboard/environmental-monitoring", icon: Leaf, inputHref: "/dashboard/environmental-monitoring/input" },
+      { labelKey: "sidebar.esg", href: "/dashboard/esg-reporting", icon: FileText },
     ],
   },
   {
     label: "OPERATIONS",
     items: [
-      { labelKey: "sidebar.energy", href: "/energy-monitoring", icon: Zap, inputHref: "/energy-monitoring/input" },
-      { labelKey: "sidebar.water", href: "/water-monitoring", icon: Droplets, inputHref: "/water-monitoring/input" },
-      { labelKey: "sidebar.waste", href: "/waste-management", icon: Recycle, inputHref: "/waste-management/input" },
+      { labelKey: "sidebar.energy", href: "/dashboard/energy-monitoring", icon: Zap, inputHref: "/dashboard/energy-monitoring/input" },
+      { labelKey: "sidebar.water", href: "/dashboard/water-monitoring", icon: Droplets, inputHref: "/dashboard/water-monitoring/input" },
+      { labelKey: "sidebar.waste", href: "/dashboard/waste-management", icon: Recycle, inputHref: "/dashboard/waste-management/input" },
     ],
   },
   {
     label: "COMPLIANCE",
     items: [
-      { labelKey: "sidebar.compliance", href: "/compliance", icon: ShieldCheck },
-      { labelKey: "sidebar.documents", href: "/documents", icon: FolderOpen },
+      { labelKey: "sidebar.compliance", href: "/dashboard/compliance", icon: ShieldCheck },
+      { labelKey: "sidebar.documents", href: "/dashboard/documents", icon: FolderOpen },
     ],
   },
   {
     label: "INTELLIGENCE",
     items: [
-      { labelKey: "sidebar.ai", href: "/ai-insights", icon: Lightbulb },
+      { labelKey: "sidebar.ai", href: "/dashboard/ai-insights", icon: Lightbulb },
     ],
   },
   {
     label: "SYSTEM",
     items: [
-      { labelKey: "sidebar.settings", href: "/settings", icon: Settings },
+      { labelKey: "sidebar.settings", href: "/dashboard/settings", icon: Settings },
     ],
   },
 ]
