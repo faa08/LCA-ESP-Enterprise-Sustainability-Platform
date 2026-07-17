@@ -7,7 +7,7 @@ import DashboardShowcase from "@/components/landing/DashboardShowcase";
 import FeatureModules from "@/components/landing/FeatureModules";
 import Industries from "@/components/landing/Industries";
 import Compliance from "@/components/landing/Compliance";
-import Testimonials from "@/components/landing/Testimonials";
+import HowEnviWorks from "@/components/landing/HowEnviWorks";
 import Faq from "@/components/landing/Faq";
 import FinalCta from "@/components/landing/FinalCta";
 
@@ -24,9 +24,9 @@ export default async function Home() {
         <HowItWorks dict={dict} />
         <DashboardShowcase dict={dict} />
         <FeatureModules dict={dict} />
-        <Industries dict={dict} />
+        <Industries />
         <Compliance dict={dict} />
-        <Testimonials dict={dict} />
+        <HowEnviWorks />
         <Faq dict={dict} />
         <FinalCta dict={dict} />
       </main>

@@ -42,6 +42,31 @@ export interface FrameworkContent {
   how: string;
 }
 
+export interface IndustriesLandingItem {
+  slug: string;
+  icon: "chemical" | "manufacturing" | "mining" | "steel" | "utilities" | "oilgas";
+  name: string;
+  desc: string;
+  challenges: string[];
+  modules: string[];
+}
+
+export interface HowWorksStep {
+  icon: "database" | "shield" | "brain" | "clipboard" | "dashboard";
+  title: string;
+  desc: string;
+  bullets: string[];
+  badge: string;
+}
+
+export interface HowWorksContent {
+  label: string;
+  title: string;
+  subtitle: string;
+  steps: HowWorksStep[];
+  summary: { title: string; desc: string; cta1: string; cta2: string };
+}
+
 export interface SiteContent {
   nav: {
     platform: string;
@@ -163,6 +188,10 @@ export interface SiteContent {
   };
   modules: Record<string, ModuleContent>;
   industries: Record<string, IndustryContent>;
+  industriesLanding: IndustriesLandingItem[];
+  industriesSection: { eyebrow: string; title: string; desc: string };
+  industriesLandingLabels: { challenges: string; modules: string; learnMore: string };
+  howWorks: HowWorksContent;
   frameworks: FrameworkContent[];
 }
 
@@ -299,11 +328,11 @@ const en: SiteContent = {
     infoTitle: "Enterprise sales",
     infoDesc: "For procurement, security reviews, and pilots.",
     salesLabel: "Sales",
-    salesValue: "enterprise@enspr.io",
+    salesValue: "linkproductive@gmail.com",
     hqLabel: "Headquarters",
-    hqValue: "Jakarta, Indonesia",
+    hqValue: "Cilegon, Banten, Indonesia",
     regionsLabel: "Regions",
-    regionsValue: "Asia Pacific · Middle East · Europe",
+    regionsValue: "Asia Pacific",
   },
   footer: {
     desc: "Enterprise sustainability intelligence for industrial companies — from the factory floor to the boardroom.",
@@ -679,6 +708,139 @@ const en: SiteContent = {
         metricValue: "-70%",
       },
     },
+    oilgas: {
+      slug: "oilgas",
+      name: "Oil & Gas",
+      heroTitle: "Sustainability for oil & gas.",
+      heroDesc: "Methane anomaly detection, flaring and venting accounting, and fugitive emissions validation under tightening regulation.",
+      challenges: [
+        { title: "Methane leaks", desc: "Fugitive and vented emissions hard to locate." },
+        { title: "Flaring & venting", desc: "High-volume, tightly regulated releases." },
+        { title: "Asset sprawl", desc: "Wells, plants, and pipelines across regions." },
+      ],
+      solutions: [
+        { title: "Methane detection", desc: "Anomalies flagged against sensor and satellite data." },
+        { title: "Flaring accounting", desc: "Volume and intensity captured per asset." },
+        { title: "Framework validation", desc: "Reported against methane programs." },
+      ],
+      modules: ["environmental-monitoring", "carbon-accounting", "compliance-management", "ai-insights"],
+      caseStudy: {
+        quote: "ensPR turned scattered methane spreadsheets into one defensible record our auditors accepted without follow-up.",
+        name: "Putra Mahendra",
+        role: "HSE Manager",
+        company: "Medco E&P",
+        metricLabel: "Audit findings",
+        metricValue: "-90%",
+      },
+    },
+  },
+  industriesLanding: [
+    {
+      slug: "chemical",
+      icon: "chemical",
+      name: "Chemical",
+      desc: "Track hazardous emissions, wastewater quality, and process-level environmental performance.",
+      challenges: ["Hazardous emissions", "Wastewater treatment", "Multi-site compliance"],
+      modules: ["environmental-monitoring", "carbon-accounting", "compliance-management"],
+    },
+    {
+      slug: "manufacturing",
+      icon: "manufacturing",
+      name: "Manufacturing",
+      desc: "Connect shop-floor meters to corporate ESG reporting without manual reconciliation.",
+      challenges: ["Multi-site footprint", "Shop-floor data gaps", "Supplier risk"],
+      modules: ["environmental-monitoring", "carbon-accounting", "waste-management"],
+    },
+    {
+      slug: "mining",
+      icon: "mining",
+      name: "Mining",
+      desc: "Monitor land, water, and energy impact across remote, distributed sites in one view.",
+      challenges: ["Remote site impact", "Biodiversity compliance", "Tailings management"],
+      modules: ["environmental-monitoring", "water-monitoring", "compliance-management"],
+    },
+    {
+      slug: "steel",
+      icon: "steel",
+      name: "Steel & Metals",
+      desc: "Attribute emissions to specific furnaces and model credible decarbonization pathways.",
+      challenges: ["High emissions intensity", "Furnace-level detail", "Decarbonization targets"],
+      modules: ["environmental-monitoring", "carbon-accounting", "life-cycle-assessment"],
+    },
+    {
+      slug: "utilities",
+      icon: "utilities",
+      name: "Utilities",
+      desc: "Report generation mix and grid-level emissions with full traceability and lineage.",
+      challenges: ["Generation mix", "Grid emissions", "Regulator filing"],
+      modules: ["environmental-monitoring", "carbon-accounting", "compliance-management"],
+    },
+    {
+      slug: "oilgas",
+      icon: "oilgas",
+      name: "Oil & Gas",
+      desc: "Detect methane anomalies and validate flaring, venting, and fugitive emissions.",
+      challenges: ["Methane leaks", "Flaring & venting", "Asset sprawl"],
+      modules: ["environmental-monitoring", "carbon-accounting", "compliance-management"],
+    },
+  ],
+  industriesSection: {
+    eyebrow: "Industries",
+    title: "Built for the operational complexity of heavy industry.",
+    desc: "Purpose-built modules for the sectors with the hardest sustainability problems.",
+  },
+  industriesLandingLabels: {
+    challenges: "Primary Challenges",
+    modules: "Modules",
+    learnMore: "Learn More",
+  },
+  howWorks: {
+    label: "HOW ENVI WORKS",
+    title: "From Operational Data to Sustainability Intelligence.",
+    subtitle: "ENVI transforms environmental data from multiple industrial sources into actionable insights, automated reporting, and regulatory compliance through one unified platform.",
+    steps: [
+      {
+        icon: "database",
+        title: "Collect Data",
+        desc: "Collect environmental information from every operational source across the facility.",
+        bullets: ["IoT Sensors", "SCADA Systems", "ERP", "Excel Upload", "Manual Inspection", "Laboratory Results"],
+        badge: "Real-time Collection",
+      },
+      {
+        icon: "shield",
+        title: "Validate",
+        desc: "Automatically validate incoming operational data to ensure consistency, accuracy, and traceability.",
+        bullets: ["AI Data Validation", "Missing Data Detection", "Approval Workflow", "Audit Trail"],
+        badge: "Verified Data",
+      },
+      {
+        icon: "brain",
+        title: "Analyze",
+        desc: "Transform operational data into environmental intelligence using advanced sustainability analytics.",
+        bullets: ["Carbon Accounting", "Life Cycle Assessment", "Waste Management", "Water Monitoring", "Energy Monitoring"],
+        badge: "AI Powered",
+      },
+      {
+        icon: "clipboard",
+        title: "Compliance",
+        desc: "Automatically prepare sustainability information according to global reporting frameworks.",
+        bullets: ["ISO 14001", "GRI", "CDP", "TCFD", "PROPER"],
+        badge: "Compliance Ready",
+      },
+      {
+        icon: "dashboard",
+        title: "Executive Dashboard",
+        desc: "Visualize KPIs, environmental performance, trends, risks, and AI recommendations in one executive platform.",
+        bullets: ["Real-time KPI", "Carbon Trend", "Compliance Status", "AI Insights", "Executive Reports"],
+        badge: "Live Dashboard",
+      },
+    ],
+    summary: {
+      title: "One Connected Sustainability Platform",
+      desc: "Instead of managing environmental monitoring, carbon accounting, life cycle assessment, waste management, compliance, and reporting through separate spreadsheets, ENVI centralizes every sustainability workflow into one integrated enterprise platform.",
+      cta1: "Explore Platform",
+      cta2: "View Dashboard",
+    },
   },
   frameworks: [
     { key: "iso14001", name: "ISO 14001", full: "Environmental Management", desc: "The global standard for environmental management systems.", how: "ensPR maintains certified EMS alignment with audit-ready evidence for every control." },
@@ -823,11 +985,11 @@ const id: SiteContent = {
     infoTitle: "Penjualan enterprise",
     infoDesc: "Untuk pengadaan, ulasan keamanan, dan pilot.",
     salesLabel: "Penjualan",
-    salesValue: "enterprise@enspr.io",
+    salesValue: "linkproductive@gmail.com",
     hqLabel: "Kantor pusat",
-    hqValue: "Jakarta, Indonesia",
+    hqValue: "Cilegon, Banten, Indonesia",
     regionsLabel: "Region",
-    regionsValue: "Asia Pasifik · Timur Tengah · Eropa",
+    regionsValue: "Asia Pasifik",
   },
   footer: {
     desc: "Intelijen keberlanjutan enterprise untuk perusahaan industri — dari lantai pabrik hingga ruang direksi.",
@@ -1202,6 +1364,139 @@ const id: SiteContent = {
         metricLabel: "Waktu pengajuan",
         metricValue: "-70%",
       },
+    },
+    oilgas: {
+      slug: "oilgas",
+      name: "Minyak & Gas",
+      heroTitle: "Keberlanjutan untuk minyak & gas.",
+      heroDesc: "Deteksi anomali metana, pencatatan flaring dan venting, serta validasi emisi fugitif di bawah regulasi yang makin ketat.",
+      challenges: [
+        { title: "Kebocoran metana", desc: "Emisi fugitif dan vented sulit dilacak." },
+        { title: "Flaring & venting", desc: "Lepasan volum besar dengan regulasi ketat." },
+        { title: "Aset tersebar", desc: "Sumur, pabrik, dan pipa lintas wilayah." },
+      ],
+      solutions: [
+        { title: "Deteksi metana", desc: "Anomali ditandai dari sensor dan data satelit." },
+        { title: "Pencatatan flaring", desc: "Volume dan intensitas per aset." },
+        { title: "Validasi framework", desc: "Dilaporkan sesuai program metana." },
+      ],
+      modules: ["environmental-monitoring", "carbon-accounting", "compliance-management", "ai-insights"],
+      caseStudy: {
+        quote: "ensPR mengubah lembar sebar metana yang tersebar menjadi satu catatan defensif yang diterima auditor tanpa tindak lanjut.",
+        name: "Putra Mahendra",
+        role: "Manajer HSE",
+        company: "Medco E&P",
+        metricLabel: "Temuan audit",
+        metricValue: "-90%",
+      },
+    },
+  },
+  industriesLanding: [
+    {
+      slug: "chemical",
+      icon: "chemical",
+      name: "Kimia",
+      desc: "Pantau emisi berbahaya, kualitas air limbah, dan kinerja lingkungan tingkat proses.",
+      challenges: ["Emisi berbahaya", "Pengolahan limbah cair", "Kepatuhan multi-site"],
+      modules: ["environmental-monitoring", "carbon-accounting", "compliance-management"],
+    },
+    {
+      slug: "manufacturing",
+      icon: "manufacturing",
+      name: "Manufaktur",
+      desc: "Hubungkan meter lantai pabrik ke pelaporan ESG korporat tanpa rekonsiliasi manual.",
+      challenges: ["Jejak multi-site", "Ketiadaan data lantai", "Risiko pemasok"],
+      modules: ["environmental-monitoring", "carbon-accounting", "waste-management"],
+    },
+    {
+      slug: "mining",
+      icon: "mining",
+      name: "Pertambangan",
+      desc: "Pantau dampak lahan, air, dan energi di site terpencil dalam satu tampilan.",
+      challenges: ["Dampak site terpencil", "Kepatuhan biodiversitas", "Pengelolaan tailing"],
+      modules: ["environmental-monitoring", "water-monitoring", "compliance-management"],
+    },
+    {
+      slug: "steel",
+      icon: "steel",
+      name: "Baja & Logam",
+      desc: "Atribusikan emisi ke tungku tertentu dan modelkan jalur dekarbonisasi kredibel.",
+      challenges: ["Intensitas emisi tinggi", "Detail tingkat tungku", "Target dekarbonisasi"],
+      modules: ["environmental-monitoring", "carbon-accounting", "life-cycle-assessment"],
+    },
+    {
+      slug: "utilities",
+      icon: "utilities",
+      name: "Utilitas",
+      desc: "Laporkan bauran pembangkitan dan emisi tingkat grid dengan ketertelusuran penuh.",
+      challenges: ["Bauran pembangkitan", "Emisi grid", "Pengajuan regulator"],
+      modules: ["environmental-monitoring", "carbon-accounting", "compliance-management"],
+    },
+    {
+      slug: "oilgas",
+      icon: "oilgas",
+      name: "Minyak & Gas",
+      desc: "Deteksi anomali metana serta validasi flaring, venting, dan emisi fugitif.",
+      challenges: ["Kebocoran metana", "Flaring & venting", "Aset tersebar"],
+      modules: ["environmental-monitoring", "carbon-accounting", "compliance-management"],
+    },
+  ],
+  industriesSection: {
+    eyebrow: "Industri",
+    title: "Dirancang untuk kompleksitas operasional industri berat.",
+    desc: "Modul khusus untuk sektor dengan masalah keberlanjutan tersulit.",
+  },
+  industriesLandingLabels: {
+    challenges: "Tantangan Utama",
+    modules: "Modul",
+    learnMore: "Pelajari",
+  },
+  howWorks: {
+    label: "BAGAIMANA ENVI BEKERJA",
+    title: "Dari Data Operasional menjadi Kecerdasan Keberlanjutan.",
+    subtitle: "ENVI mengubah data lingkungan dari berbagai sumber industri menjadi wawasan yang dapat ditindaklanjuti, pelaporan otomatis, dan kepatuhan regulasi melalui satu platform terpadu.",
+    steps: [
+      {
+        icon: "database",
+        title: "Kumpulkan Data",
+        desc: "Kumpulkan informasi lingkungan dari setiap sumber operasional di seluruh fasilitas.",
+        bullets: ["Sensor IoT", "Sistem SCADA", "ERP", "Unggah Excel", "Inspeksi Manual", "Hasil Laboratorium"],
+        badge: "Pengumpulan Waktu Nyata",
+      },
+      {
+        icon: "shield",
+        title: "Validasi",
+        desc: "Validasi data operasional yang masuk secara otomatis untuk memastikan konsistensi, akurasi, dan ketertelusuran.",
+        bullets: ["Validasi Data AI", "Deteksi Data Hilang", "Alur Persetujuan", "Jejak Audit"],
+        badge: "Data Terverifikasi",
+      },
+      {
+        icon: "brain",
+        title: "Analisis",
+        desc: "Ubah data operasional menjadi kecerdasan lingkungan menggunakan analitik keberlanjutan tingkat lanjut.",
+        bullets: ["Akuntansi Karbon", "Life Cycle Assessment", "Manajemen Limbah", "Pemantauan Air", "Pemantauan Energi"],
+        badge: "Didukung AI",
+      },
+      {
+        icon: "clipboard",
+        title: "Kepatuhan",
+        desc: "Siapkan informasi keberlanjutan secara otomatis sesuai kerangka pelaporan global.",
+        bullets: ["ISO 14001", "GRI", "CDP", "TCFD", "PROPER"],
+        badge: "Siap Kepatuhan",
+      },
+      {
+        icon: "dashboard",
+        title: "Dasbor Eksekutif",
+        desc: "Visualisasikan KPI, kinerja lingkungan, tren, risiko, dan rekomendasi AI dalam satu platform eksekutif.",
+        bullets: ["KPI Waktu Nyata", "Tren Karbon", "Status Kepatuhan", "Insight AI", "Laporan Eksekutif"],
+        badge: "Dasbor Langsung",
+      },
+    ],
+    summary: {
+      title: "Satu Platform Keberlanjutan Terhubung",
+      desc: "Alih-alih mengelola pemantauan lingkungan, akuntansi karbon, life cycle assessment, manajemen limbah, kepatuhan, dan pelaporan melalui spreadsheet terpisah, ENVI memusatkan setiap alur kerja keberlanjutan ke dalam satu platform enterprise terintegrasi.",
+      cta1: "Jelajahi Platform",
+      cta2: "Lihat Dasbor",
     },
   },
   frameworks: [
