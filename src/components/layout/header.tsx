@@ -8,7 +8,6 @@ import type { Locale } from "@/lib/i18n"
 import { id } from "@/locales/id"
 import { en } from "@/locales/en"
 import { t } from "@/lib/i18n"
-import { ThemeToggle } from "@/components/theme/theme-toggle"
 import { clearRole } from "@/app/actions/role"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -128,8 +127,6 @@ export function Header({ locale }: { locale: Locale }) {
           </button>
         </div>
 
-        <ThemeToggle locale={locale} />
-
         <div className="relative" ref={notifRef}>
           <button
             onClick={() => setNotifOpen((v) => !v)}
@@ -195,7 +192,7 @@ export function Header({ locale }: { locale: Locale }) {
               </Link>
               <button
                 onClick={signOut}
-                className="flex w-full items-center gap-2 border-t border-token px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
+                className="flex w-full items-center gap-2 border-t border-token px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
               >
                 <LogOut className="h-4 w-4" /> {t(dict, "datahub.user.signout")}
               </button>

@@ -278,8 +278,8 @@ export default function DataHubPage() {
                 key={v.key}
                 className={cn(
                   "rounded-xl border border-token bg-surface-2 p-4",
-                  v.tone === "danger" && "border-red-200 dark:border-red-900",
-                  v.tone === "warning" && "border-amber-200 dark:border-amber-900",
+                  v.tone === "danger" && "border-red-200",
+                  v.tone === "warning" && "border-amber-200",
                 )}
               >
                 <div className="flex items-center gap-2 text-muted">
@@ -310,8 +310,8 @@ export default function DataHubPage() {
                 <span
                   className={cn(
                     "absolute -left-[31px] flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-surface",
-                    item.tone === "success" && "bg-emerald-100 text-emerald-600 dark:bg-emerald-950",
-                    item.tone === "info" && "bg-sky-100 text-sky-600 dark:bg-sky-950",
+                    item.tone === "success" && "bg-emerald-100 text-emerald-600",
+                    item.tone === "info" && "bg-sky-100 text-sky-600",
                     item.tone === "brand" && "bg-[color:var(--brand-soft)] text-[color:var(--brand)]",
                   )}
                 >

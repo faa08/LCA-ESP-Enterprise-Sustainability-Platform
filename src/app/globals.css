@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 @theme inline {
   --color-background: #ffffff;
   --color-foreground: #111827;
@@ -91,15 +89,13 @@ body {
 }
 
 /* ===========================================================
-   Theme tokens — light / dark (class strategy: .dark on <html>)
+   App tokens (light design system — emerald brand)
    =========================================================== */
 :root {
   --bg-app: #f6f8fa;
   --bg-surface: #ffffff;
   --bg-surface-2: #f7f8fa;
-  --bg-elevated: #ffffff;
   --border-subtle: #e7eaee;
-  --border-strong: #d6dae0;
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
@@ -110,24 +106,7 @@ body {
   --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -16px rgba(16, 24, 40, 0.18);
 }
 
-.dark {
-  --bg-app: #0a0f14;
-  --bg-surface: #0f171e;
-  --bg-surface-2: #131c24;
-  --bg-elevated: #16212b;
-  --border-subtle: #1e2a35;
-  --border-strong: #2a3947;
-  --text-primary: #e8eef3;
-  --text-secondary: #9fb0bf;
-  --text-muted: #647585;
-  --brand: #34d399;
-  --brand-strong: #10b981;
-  --brand-soft: #0c2e22;
-  --brand-soft-border: #14503c;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -18px rgba(0, 0, 0, 0.7);
-}
-
-/* Surfaces driven by theme tokens */
+/* Surfaces driven by tokens */
 .bg-app { background-color: var(--bg-app); }
 .bg-surface { background-color: var(--bg-surface); }
 .bg-surface-2 { background-color: var(--bg-surface-2); }
@@ -136,7 +115,7 @@ body {
 .text-secondary { color: var(--text-secondary); }
 .text-muted { color: var(--text-muted); }
 
-/* Theme-aware card: emerald-tinted border, subtle shadow, 16px radius, hover lift */
+/* Enterprise card: emerald-tinted border, subtle shadow, 16px radius, hover lift */
 .enterprise-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
@@ -148,9 +127,4 @@ body {
   border-color: var(--brand-soft-border);
   transform: translateY(-2px);
   box-shadow: 0 16px 40px -20px rgba(15, 139, 95, 0.35);
-}
-
-/* Prevent flash of wrong theme on load */
-.dark-flash-prevention {
-  background-color: var(--bg-app);
 }
