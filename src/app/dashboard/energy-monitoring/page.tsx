@@ -3,13 +3,11 @@
 import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Zap, Flame, Fuel, Gauge, Thermometer, Plus } from "lucide-react"
-import Link from "next/link"
+import { Zap, Flame, Fuel, Thermometer } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from "recharts"
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
-import { getRoleClient, canEdit } from "@/lib/role"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
@@ -46,24 +44,12 @@ const energyIntensity = [
 export default function EnergyMonitoring() {
   const locale = getLocaleClient()
   const dict = dicts[locale]
-  const role = getRoleClient()
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-neutral-900">{t(dict, "energy.page_title")}</h1>
-          <p className="text-sm text-neutral-500">{t(dict, "energy.page_desc")}</p>
-        </div>
-        {canEdit(role) && (
-          <Link
-            href="/energy-monitoring/input"
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-          >
-            <Plus className="h-4 w-4" />
-            {t(dict, "input_data")}
-          </Link>
-        )}
+      <div>
+        <h1 className="text-lg font-semibold text-neutral-900">{t(dict, "energy.page_title")}</h1>
+        <p className="text-sm text-neutral-500">{t(dict, "energy.page_desc")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

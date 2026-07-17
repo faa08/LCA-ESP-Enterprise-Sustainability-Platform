@@ -23,7 +23,6 @@ import {
   FolderOpen,
   Lightbulb,
   Settings,
-  PencilLine,
   LogOut,
   PanelLeftClose,
   PanelLeft,
@@ -37,7 +36,6 @@ type NavItem = {
   labelKey: string
   href: string
   icon: LucideIcon
-  inputHref?: string
 }
 
 type NavGroup = {
@@ -56,17 +54,17 @@ const navGroups: NavGroup[] = [
     label: "SUSTAINABILITY",
     items: [
       { labelKey: "sidebar.lca", href: "/dashboard/lca", icon: Cpu },
-      { labelKey: "sidebar.carbon", href: "/dashboard/carbon-accounting", icon: BarChart3, inputHref: "/dashboard/carbon-accounting/input" },
-      { labelKey: "sidebar.environmental", href: "/dashboard/environmental-monitoring", icon: Leaf, inputHref: "/dashboard/environmental-monitoring/input" },
+      { labelKey: "sidebar.carbon", href: "/dashboard/carbon-accounting", icon: BarChart3 },
+      { labelKey: "sidebar.environmental", href: "/dashboard/environmental-monitoring", icon: Leaf },
       { labelKey: "sidebar.esg", href: "/dashboard/esg-reporting", icon: FileText },
     ],
   },
   {
     label: "OPERATIONS",
     items: [
-      { labelKey: "sidebar.energy", href: "/dashboard/energy-monitoring", icon: Zap, inputHref: "/dashboard/energy-monitoring/input" },
-      { labelKey: "sidebar.water", href: "/dashboard/water-monitoring", icon: Droplets, inputHref: "/dashboard/water-monitoring/input" },
-      { labelKey: "sidebar.waste", href: "/dashboard/waste-management", icon: Recycle, inputHref: "/dashboard/waste-management/input" },
+      { labelKey: "sidebar.energy", href: "/dashboard/energy-monitoring", icon: Zap },
+      { labelKey: "sidebar.water", href: "/dashboard/water-monitoring", icon: Droplets },
+      { labelKey: "sidebar.waste", href: "/dashboard/waste-management", icon: Recycle },
     ],
   },
   {
@@ -128,7 +126,6 @@ export function Sidebar({
   const router = useRouter()
   const dict = dicts[locale]
   const [hovered, setHovered] = useState(false)
-  const canEdit = role === "admin" || role === "manager"
   const isCollapsed = collapsed && !hovered
 
   const handleSwitch = useCallback(async () => {
@@ -210,17 +207,6 @@ export function Sidebar({
                         />
                       )}
                     </Link>
-
-                    {!isCollapsed && canEdit && item.inputHref && (
-                      <Link
-                        href={item.inputHref}
-                        onClick={(e) => e.stopPropagation()}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100 text-muted hover:bg-surface-2 hover:text-muted"
-                        title={t(dict, "sidebar.input")}
-                      >
-                        <PencilLine className="h-3.5 w-3.5" />
-                      </Link>
-                    )}
                   </li>
                 )
               })}
