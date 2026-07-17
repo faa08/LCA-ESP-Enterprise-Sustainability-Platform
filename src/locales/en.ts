@@ -1,5 +1,5 @@
 export const en: Record<string, string> = {
-  "brand.name": "SIP",
+  "brand.name": "ensPR",
   "brand.subtitle": "Platform",
 
   "role_picker.title": "Who are you?",

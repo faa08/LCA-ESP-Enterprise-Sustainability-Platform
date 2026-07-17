@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, L
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
+import { getRoleClient, canEdit } from "@/lib/role"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
@@ -37,6 +38,7 @@ const reductionTargets = [
 export default function CarbonAccounting() {
   const locale = getLocaleClient()
   const dict = dicts[locale]
+  const role = getRoleClient()
 
   return (
     <div className="space-y-6">
@@ -45,13 +47,15 @@ export default function CarbonAccounting() {
           <h1 className="text-lg font-semibold text-neutral-900">{t(dict, "carbon.page_title")}</h1>
           <p className="text-sm text-neutral-500">{t(dict, "carbon.page_desc")}</p>
         </div>
-        <Link
-          href="/carbon-accounting/input"
-          className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-        >
-          <Plus className="h-4 w-4" />
-          {t(dict, "input_data")}
-        </Link>
+        {canEdit(role) && (
+          <Link
+            href="/carbon-accounting/input"
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            <Plus className="h-4 w-4" />
+            {t(dict, "input_data")}
+          </Link>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -28,7 +28,7 @@ export function Header({ locale }: { locale: Locale }) {
   const pathname = usePathname()
   const dict = dicts[locale]
   const titleKey = moduleTitles[pathname]
-  const title = titleKey ? t(dict, titleKey) : "SIP"
+  const title = titleKey ? t(dict, titleKey) : "ensPR"
 
   function switchLang(lang: string) {
     document.cookie = `lang=${lang}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`

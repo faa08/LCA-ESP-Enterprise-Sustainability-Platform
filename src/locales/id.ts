@@ -1,5 +1,5 @@
 export const id = {
-  "brand.name": "SIP",
+  "brand.name": "ensPR",
   "brand.subtitle": "Platform",
 
   "role_picker.title": "Siapa Anda?",

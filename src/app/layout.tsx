@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "SIP - Sustainability Intelligence Platform",
+  title: "ensPR - Sustainability Intelligence Platform",
   description: "Enterprise sustainability management platform",
 }
 

@@ -69,7 +69,7 @@ export default function Settings() {
       <Card>
         <div className="flex items-start gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-emerald-50 text-2xl font-bold text-emerald-600">
-            SIP
+            ensPR
           </div>
           <div className="flex-1">
             <p className="text-lg font-semibold text-neutral-900">{t(dict, "settings.profile_name")}</p>
