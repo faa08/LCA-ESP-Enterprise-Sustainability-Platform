@@ -7,6 +7,7 @@ import { StatCard } from "@/components/ui/stat-card"
 import { KpiProgress } from "@/components/ui/kpi-progress"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { ProperRankCard } from "@/components/dashboard/proper-rank-card"
 import {
   Cloud,
   Zap,
@@ -83,6 +84,8 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
           icon={Recycle}
         />
       </div>
+
+      <ProperRankCard compact />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

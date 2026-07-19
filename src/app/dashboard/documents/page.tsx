@@ -33,8 +33,35 @@ export default function Documents() {
   const locale = getLocaleClient()
   const dict = dicts[locale]
 
+  const properDocs = [
+    { key: "documents.proper.ukl", status: "ok" as const },
+    { key: "documents.proper.tps", status: "ok" as const },
+    { key: "documents.proper.manifest", status: "warn" as const },
+    { key: "documents.proper.form", status: "warn" as const },
+    { key: "documents.proper.monitoring", status: "ok" as const },
+    { key: "documents.proper.permit_pl", status: "fail" as const },
+    { key: "documents.proper.permit_parmen", status: "ok" as const },
+  ]
+
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t(dict, "documents.proper_title")}</CardTitle>
+          <p className="mt-1 text-sm text-neutral-500">{t(dict, "documents.proper_desc")}</p>
+        </CardHeader>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {properDocs.map((d, i) => (
+            <div key={i} className="flex items-center justify-between rounded-lg border border-neutral-100 px-3 py-2.5">
+              <span className="text-sm text-neutral-800">{t(dict, d.key)}</span>
+              <Badge variant={d.status === "ok" ? "success" : d.status === "warn" ? "warning" : "danger"}>
+                {d.status === "ok" ? t(dict, "common.active") : d.status === "warn" ? t(dict, "proper.status_warn") : t(dict, "proper.status_fail")}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </Card>
+
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />

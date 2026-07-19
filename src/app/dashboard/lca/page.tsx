@@ -48,6 +48,10 @@ export default function LCAPage() {
         <StatCard title={t(dict, "lca.water_footprint")} value="120 L/kg" description={t(dict, "lca.average")} icon={Beaker} />
       </div>
 
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+        <p className="text-sm text-emerald-800">{t(dict, "lca.proper_link")}</p>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -161,6 +165,81 @@ export default function LCAPage() {
           </div>
         </Card>
       </div>
+
+      {/* Methodology & Scope */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t(dict, "lca.methodology_title")}</CardTitle>
+          <p className="mt-1 text-sm text-neutral-500">{t(dict, "lca.methodology_desc")}</p>
+        </CardHeader>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { k: t(dict, "lca.standard_iso"), v: t(dict, "lca.standard_iso_desc") },
+            { k: t(dict, "lca.standard_sni"), v: t(dict, "lca.standard_sni_desc") },
+            { k: t(dict, "lca.standard_perpres"), v: t(dict, "lca.standard_perpres_desc") },
+            { k: t(dict, "lca.standard_tek"), v: t(dict, "lca.standard_tek_desc") },
+          ].map((s, i) => (
+            <div key={i} className="rounded-xl border border-neutral-100 p-4">
+              <div className="text-sm font-semibold text-neutral-900">{s.k}</div>
+              <p className="mt-1 text-xs leading-relaxed text-neutral-500">{s.v}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl bg-neutral-50 p-4">
+            <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "lca.functional_unit")}</div>
+            <div className="mt-1 text-sm text-neutral-800">{t(dict, "lca.functional_unit_val")}</div>
+          </div>
+          <div className="rounded-xl bg-neutral-50 p-4">
+            <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "lca.system_boundary")}</div>
+            <div className="mt-1 text-sm text-neutral-800">{t(dict, "lca.system_boundary_val")}</div>
+          </div>
+          <div className="rounded-xl bg-neutral-50 p-4">
+            <div className="text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "lca.cutoff")}</div>
+            <div className="mt-1 text-sm text-neutral-800">{t(dict, "lca.cutoff_val")}</div>
+          </div>
+        </div>
+      </Card>
+
+      {/* LCIA Impact Categories */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t(dict, "lca.impact_title")}</CardTitle>
+          <p className="mt-1 text-sm text-neutral-500">{t(dict, "lca.impact_desc")}</p>
+        </CardHeader>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-200">
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "lca.impact_category")}</th>
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "lca.impact_indicator")}</th>
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "lca.impact_unit")}</th>
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "lca.impact_value")}</th>
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "lca.impact_method")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { cat: "Climate Change", ind: "GWP", unit: "kg CO₂e", val: "4.2", method: "IPCC 2021" },
+                { cat: "Acidification", ind: "AP", unit: "kg SO₂e", val: "0.031", method: "CML-IA" },
+                { cat: "Eutrophication", ind: "EP", unit: "kg PO₄³⁻e", val: "0.012", method: "CML-IA" },
+                { cat: "Photochem. Ozone", ind: "POCP", unit: "kg C₂H₄e", val: "0.008", method: "CML-IA" },
+                { cat: "Ozone Depletion", ind: "ODP", unit: "kg CFC-11e", val: "1.2e-6", method: "CML-IA" },
+                { cat: "Ecotoxicity (fresh)", ind: "ET", unit: "kg 1,4-DBe", val: "0.42", method: "ReCiPe" },
+              ].map((row, i) => (
+                <tr key={i} className="border-b border-neutral-100">
+                  <td className="px-3 py-2.5 font-medium text-neutral-900">{row.cat}</td>
+                  <td className="px-3 py-2.5 text-neutral-600">{row.ind}</td>
+                  <td className="px-3 py-2.5 text-neutral-600">{row.unit}</td>
+                  <td className="px-3 py-2.5 text-neutral-600">{row.val}</td>
+                  <td className="px-3 py-2.5 text-neutral-600">{row.method}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 px-3 text-xs italic text-neutral-400">{t(dict, "lca.disclaimer")}</p>
+      </Card>
     </div>
   )
 }

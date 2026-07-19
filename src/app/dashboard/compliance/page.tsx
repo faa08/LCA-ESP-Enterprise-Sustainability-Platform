@@ -3,11 +3,36 @@
 import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ShieldCheck, AlertTriangle, ClipboardCheck, CalendarDays, Gauge } from "lucide-react"
+import { ShieldCheck, AlertTriangle, ClipboardCheck, CalendarDays, Gauge, Wind, Droplets, Recycle } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
+import { useIndustryId } from "@/lib/use-industry-id"
+import {
+  INDUSTRIES,
+  EMISSIONS_PARAMS,
+  LIMBAH_B3_PARAMS,
+  evaluateParam,
+  predictRank,
+  type ComplianceStatus,
+  type ProperRank,
+  type ProperParam,
+} from "@/lib/proper"
+
+const rankColor: Record<ProperRank, string> = {
+  Emas: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  Hijau: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  Biru: "bg-blue-100 text-blue-700 border-blue-200",
+  Merah: "bg-red-100 text-red-700 border-red-200",
+  Hitam: "bg-neutral-800 text-white border-neutral-700",
+}
+
+const statusMeta: Record<ComplianceStatus, { dot: string; labelKey: string }> = {
+  ok: { dot: "bg-emerald-500", labelKey: "proper.status_ok" },
+  warn: { dot: "bg-amber-500", labelKey: "proper.status_warn" },
+  fail: { dot: "bg-red-500", labelKey: "proper.status_fail" },
+}
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
@@ -107,9 +132,92 @@ const riskItems = [
 export default function Compliance() {
   const locale = getLocaleClient()
   const dict = dicts[locale]
+  const industryId = useIndustryId()
+
+  const industry = INDUSTRIES.find((i) => i.id === industryId) ?? null
+
+  // Build evaluation groups from mock data
+  const airParams = industry ? industry.params.filter((p) => p.category === "air_limbah") : []
+  const airResults = airParams.map((p) => ({ p, s: evaluateParam(p, (p as { mock: number | boolean }).mock) }))
+  const emResults = EMISSIONS_PARAMS.map((p) => ({ p, s: evaluateParam(p, (p as { mock: number | boolean }).mock) }))
+  const b3Results = LIMBAH_B3_PARAMS.map((p) => ({ p, s: evaluateParam(p, (p as { mock: number | boolean }).mock) }))
+
+  const countFails = (arr: { s: ComplianceStatus }[]) => arr.filter((r) => r.s === "fail").length
+  const countWarn = (arr: { s: ComplianceStatus }[]) => arr.filter((r) => r.s === "warn").length
+
+  const rank = predictRank(countFails(emResults), countFails(airResults), countFails(b3Results))
+
+  const renderGroup = (
+    title: string,
+    icon: React.ReactNode,
+    results: { p: ProperParam; s: ComplianceStatus }[],
+  ) => (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">{icon}</div>
+          <CardTitle>{title}</CardTitle>
+        </div>
+      </CardHeader>
+      <div className="space-y-2">
+        {results.map((r, i) => (
+          <div key={i} className="flex items-center justify-between rounded-lg border border-neutral-100 px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-neutral-900">{r.p.name}</p>
+              <p className="text-xs text-neutral-500">
+                {r.p.kind === "checklist"
+                  ? (r.p as { mock: boolean }).mock ? t(dict, "proper.yes") : t(dict, "proper.no")
+                  : `${(r.p as { mock: number }).mock} ${r.p.unit || ""}`}
+                {r.p.kind === "numeric" && (r.p as { max?: number }).max !== undefined ? ` / max ${(r.p as { max: number }).max} ${r.p.unit}` : ""}
+                {r.p.kind === "range" ? ` / ${(r.p as { min: number }).min}–${(r.p as { max: number }).max}` : ""}
+              </p>
+            </div>
+            <span className={`flex items-center gap-1.5 text-xs font-medium ${statusMeta[r.s].dot === "bg-emerald-500" ? "text-emerald-600" : statusMeta[r.s].dot === "bg-amber-500" ? "text-amber-600" : "text-red-600"}`}>
+              <span className={`h-2 w-2 rounded-full ${statusMeta[r.s].dot}`} />
+              {t(dict, statusMeta[r.s].labelKey)}
+            </span>
+          </div>
+        ))}
+        <div className="flex items-center justify-between pt-1 text-xs">
+          <span className="text-neutral-500">{t(dict, "proper.fails")}: <b className="text-red-600">{countFails(results)}</b> · {t(dict, "proper.warn")}: <b className="text-amber-600">{countWarn(results)}</b></span>
+        </div>
+      </div>
+    </Card>
+  )
 
   return (
     <div className="space-y-6">
+      {/* PROPER Snapshot */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle>{t(dict, "proper.snapshot_title")}</CardTitle>
+              <p className="mt-1 text-sm text-neutral-500">{t(dict, "proper.snapshot_desc")}</p>
+            </div>
+            <div className={`rounded-xl border px-5 py-3 text-center ${rankColor[rank]}`}>
+              <p className="text-xs font-medium opacity-80">{t(dict, "proper.predicted_rank")}</p>
+              <p className="text-2xl font-bold">{rank}</p>
+            </div>
+          </div>
+          {!industry && (
+            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              {t(dict, "proper.no_industry")}
+            </p>
+          )}
+          {industry && industry.isMock && (
+            <p className="mt-2 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-500">
+              {t(dict, "proper.mock_note")}
+            </p>
+          )}
+        </CardHeader>
+        <div className="grid gap-4 lg:grid-cols-3">
+          {renderGroup(t(dict, "proper.air_limbah"), <Droplets className="h-4 w-4" />, airResults)}
+          {renderGroup(t(dict, "proper.emisi"), <Wind className="h-4 w-4" />, emResults)}
+          {renderGroup(t(dict, "proper.limbah_b3"), <Recycle className="h-4 w-4" />, b3Results)}
+        </div>
+      </Card>
+
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title={t(dict, "compliance.score")} value="94/100" description={t(dict, "compliance.across_standards")} change="+2 pts" changeType="positive" trend="up" icon={ShieldCheck} />

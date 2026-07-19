@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, L
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
+import { ProperStrip } from "@/components/layout/proper-strip"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
@@ -45,6 +46,8 @@ export default function EnvironmentalMonitoring() {
         <h1 className="text-lg font-semibold text-neutral-900">{t(dict, "env.page_title")}</h1>
         <p className="text-sm text-neutral-500">{t(dict, "env.page_desc")}</p>
       </div>
+
+      <ProperStrip category="emisi" titleKey="proper.emisi" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title={t(dict, "env.air_emissions")} value="126 t" description={t(dict, "common.ytd")} change="-5% vs target" changeType="positive" trend="down" icon={Wind} />

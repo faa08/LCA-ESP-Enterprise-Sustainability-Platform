@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
+import { ProperStrip } from "@/components/layout/proper-strip"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
@@ -50,6 +51,8 @@ export default function WasteManagement() {
         <h1 className="text-lg font-semibold text-neutral-900">{t(dict, "waste.page_title")}</h1>
         <p className="text-sm text-neutral-500">{t(dict, "waste.page_desc")}</p>
       </div>
+
+      <ProperStrip category="limbah_b3" titleKey="proper.limbah_b3" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title={t(dict, "waste.total_generated")} value="1,240 t" description={t(dict, "common.ytd")} change="-8% YoY" changeType="positive" trend="down" icon={Trash2} />

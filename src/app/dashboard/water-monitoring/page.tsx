@@ -8,6 +8,7 @@ import { XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianG
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
+import { ProperStrip } from "@/components/layout/proper-strip"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
@@ -45,6 +46,8 @@ export default function WaterMonitoring() {
         <h1 className="text-lg font-semibold text-neutral-900">{t(dict, "water.page_title")}</h1>
         <p className="text-sm text-neutral-500">{t(dict, "water.page_desc")}</p>
       </div>
+
+      <ProperStrip category="air_limbah" titleKey="proper.air_limbah" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title={t(dict, "water.intake")} value="115,000 m³" description={t(dict, "common.ytd")} change="-5% YoY" changeType="positive" trend="down" icon={ArrowDownToLine} />

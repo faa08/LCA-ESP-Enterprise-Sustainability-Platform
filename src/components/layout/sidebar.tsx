@@ -15,12 +15,12 @@ import {
   Cpu,
   BarChart3,
   Leaf,
-  FileText,
   Zap,
   Droplets,
   Recycle,
   ShieldCheck,
   FolderOpen,
+  BadgeDollarSign,
   Lightbulb,
   Settings,
   LogOut,
@@ -55,8 +55,8 @@ const navGroups: NavGroup[] = [
     items: [
       { labelKey: "sidebar.lca", href: "/dashboard/lca", icon: Cpu },
       { labelKey: "sidebar.carbon", href: "/dashboard/carbon-accounting", icon: BarChart3 },
+      { labelKey: "sidebar.carbon_credit", href: "/dashboard/carbon-credit", icon: BadgeDollarSign },
       { labelKey: "sidebar.environmental", href: "/dashboard/environmental-monitoring", icon: Leaf },
-      { labelKey: "sidebar.esg", href: "/dashboard/esg-reporting", icon: FileText },
     ],
   },
   {
@@ -128,6 +128,10 @@ export function Sidebar({
   const [hovered, setHovered] = useState(false)
   const isCollapsed = collapsed && !hovered
 
+  const visibleGroups = navGroups
+    .map((g) => (g.label === "DATA MANAGEMENT" && role !== "admin" && role !== "manager" ? { ...g, items: [] } : g))
+    .filter((g) => g.items.length > 0)
+
   const handleSwitch = useCallback(async () => {
     await clearRole()
     router.refresh()
@@ -169,7 +173,7 @@ export function Sidebar({
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4">
-        {navGroups.map((group, gi) => (
+        {visibleGroups.map((group, gi) => (
           <div key={group.label} className={gi > 0 ? (isCollapsed ? "mt-3" : "mt-5") : ""}>
             {!isCollapsed && (
               <div className="mb-1.5 px-3">
