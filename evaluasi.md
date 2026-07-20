@@ -215,6 +215,44 @@ terbukti naik rank/hemat lapor, baru kontrak tahunan besar.
 
 ---
 
+## 11. Tiering vs Kepatuhan Pemerintah (PROPER)
+
+**Risiko desain:** jika fitur PROPER dibedakan per tier (Starter cuma LCA/PROPER "dasar"),
+pabrik bisa **tidak memenuhi kewajiban lapor KLHK** karena datanya tidak cukup untuk penilaian
+resmi. Khusus BUMN (KS/Pertamina) yang wajib lapor PROPER lengkap, ini berbahaya & merusak citra
+("jual compliance" tapi tidak compliant).
+
+**Prinsip pemetaan fitur per tier**
+- **Baseline PROPER = SAMA untuk semua tier (wajib ada).** Setiap tier wajib bisa: input baku
+  mutu, hitung rank PROPER (Merah→Emas), dan ekspor lapor format KLHK. Ini hakikat produk,
+  tidak boleh di-lock di tier mahal. Memotong kepatuhan = produk menjadi tidak compliant.
+- **Yang dibedakan antar tier = kapasitas & kenyamanan, BUKAN kepatuhan:**
+  - **Starter**: 1 site, manual input, LCA 1 produk, PROPER dasar (cukup untuk pabrik kecil
+    dengan 1 cerobong).
+  - **Pro**: multi-user, CEMS/ERP auto-ingest, karbon kredit, AI insights, LCA multi-produk.
+  - **Enterprise**: multi-site, private AI, profil industri khusus (baja/refinery), SLA,
+    simulasi CAPEX.
+- **BUMN (KS/Pertamina) = otomatis minimal Pro/Enterprise** karena wajib lapor lengkap +
+  multi-site. Baseline PROPER sama, sehingga tidak ada yang "tidak sesuai".
+- Opsi **paket "Compliance Mandatory"** (harga fixed rendah) sebagai syarat minimal, lalu
+  add-on di atasnya.
+
+**Framing yang aman (copy jualan):**
+> "Semua paket EnsPR sudah lengkap untuk penilaian PROPER KLHK. Perbedaan paket ada di jumlah
+> pabrik, otomatisasi data (CEMS/ERP), dan analitik lanjutan (LCA mendalam, karbon kredit,
+> simulasi) — bukan di kepatuhan dasarnya."
+
+**Hindari:**
+- ❌ Tier murah tanpa kemampuan hitung rank PROPER (pabrik tertipu).
+- ❌ BUMN harus beli fitur "tambahan" hanya untuk lapor wajib (protes).
+- ✅ Baseline kepatuhan = komoditas (sama rata), premium = value-add (skala & intelijensi).
+
+**Kesimpulan:** tiering dibedakan di **skala & intelijensi**, bukan kepatuhan. PROPER ranking &
+lapor KLHK adalah baseline wajib semua tier → pabrik kecil tetap patuh, BUMN tetap dapat
+penilaian lengkap, dan lo tetap bisa charge mahal untuk fitur enterprise.
+
+---
+
 ## Prioritas Eksekusi (sesuai niat)
 
 1. 🔴 **Karbon Kredit dihitung beneran** dari LCA + carbon accounting (gap paling nyata).
