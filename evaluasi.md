@@ -166,6 +166,55 @@ multi-tenant backend**.
 
 ---
 
+## 9. Arah Bisnis & Target User
+
+**Keputusan arah**
+- **Jangan jadikan KLHK sebagai target utama (B2G sulit danannya).** Tender pemerintah =
+  proses lambat, DP susah, bayar telat, budget KLHK terbatas.
+- **Duit dari pabrik & konsultan (B2B), bukan dari pemerintah.** KS, Pertamina, pabrik
+  tekstil/kulit punya budget EHS & sustainability yang bisa bayar langganan cepat.
+- **KLHK cukup jadi "efek samping" gratis/soft:** pabrik yang pakai EnsPR otomatis menghasilkan
+  laporan compatible format KLHK → regulator menikmati data tanpa lo tagih. Atau masuk lewat
+  program/pendampingan (CSR, donor, asosiasi seperti APINDO/KADIN) yang **mereka yang bayar**,
+  bukan APBN langsung.
+- **Jangan buang energi bangun sistem regulator yang berat** kalau dananya tidak jelas. Fokus
+  bangun **EnsPR Factory (pabrik)** sebagai produk utama yang dijual.
+
+**Produk inti yang dijual:** EnsPR Factory — sistem LCA + PROPER ranking + Karbon Kredit untuk
+pabrik naungan KLHK (B2B SaaS).
+
+---
+
+## 10. Model Harga (SaaS Berlangganan)
+
+**Prinsip:** pakai langganan bulanan/tahunan, bukan sekali bayar — butuh duit rutin untuk
+server/AI, dan pabrik lebih terbiasa langganan daripada lisensi. Harga dibuat "enak" karena
+pabrik sudah punya budget EHS/CSR besar; tools ini ibarat asuransi murah vs denda PROPER.
+
+### Kisaran harga (IDR, B2B pabrik)
+
+| Tier | Target | Harga/bulan | Isi |
+|---|---|---|---|
+| **Starter** | Pabrik kecil (tekstil, kulit, makanan) | Rp 3–5 jt | 1 site, manual/Excel, LCA + PROPER dasar |
+| **Pro** | Pabrik menengah | Rp 8–15 jt | multi-user, CEMS/ERP ingest, karbon kredit, AI insights |
+| **Enterprise** | KS, Pertamina, grup | Rp 30–80 jt | multi-site, private AI, profil industri khusus, SLA |
+
+- **Setup/onboarding sekali:** Rp 5–20 jt (migrasi data, training tim EHS).
+- **Freemium demo:** gratis untuk 1 pabrik, data terbatas (KS/Pertamina bisa coba tanpa commit).
+- **Langganan tahunan:** diskon 2 bulan → cashflow lebih stabil.
+- **Add-on Karbon Kredit:** persen dari nilai kredit yang dijual (mis. 10–15%) → ikut cuan
+  kalau pabrik jual offset.
+- **Alternatif per laporan:** Rp 2–5 jt/lapor KLHK (cocok pabrik kecil yang males langganan).
+
+### Pendekatan pabrik gede (KS/Pertamina)
+Jangan pakai list price. **Nego enterprise + pilot gratis 3–6 bulan untuk 1 site**; kalau
+terbukti naik rank/hemat lapor, baru kontrak tahunan besar.
+
+> Catatan: angka di atas perkiraan pasar; harga final tergantung cost operasional (server,
+> Supabase, API AI, dev). Perlu dihitung break-even & margin setelah cost diketahui.
+
+---
+
 ## Prioritas Eksekusi (sesuai niat)
 
 1. 🔴 **Karbon Kredit dihitung beneran** dari LCA + carbon accounting (gap paling nyata).
