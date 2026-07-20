@@ -124,6 +124,48 @@
 
 ---
 
+## 8. Kesiapan Enterprise BUMN (KS / Pertamina)
+
+**Konteks:** Untuk pabrik padat modal & audit KLHK ketat seperti **Krakatau Steel (KS)** dan
+**Pertamina**, pendekatan platform harus beda jauh dari pabrik tekstil/kulit menengah.
+
+**Temuan / gap terhadap kebutuhan BUMN**
+- **Skala & profil industri:** KS (peleburan baja — blast furnace, coke oven) & Pertamina
+  (refinery, petrokimia) punya emisi & limbah B3 raksasa. `EMISSION_PROFILES` saat ini (hanya
+  batubara/biomassa/gas/minyak boiler kecil) **kurang** — butuh profil pembangkit, furnace,
+  dan refinery unit dengan baku mutu spesifik (RKL-RPL + izin lingkungan, bukan cuma Permen
+  LH 7/2007 umum). `LCA_PARAMS` (GWP/water/eutro/recycled) terlalu generik → butuh LCA baja &
+  LCA produk migas.
+- **Kebutuhan sesungguhnya:** bukan sekadar "tahu rank PROPER" (mereka sudah punya tim EHS).
+  Yang mereka mau: (a) otomatisasi lapor ke KLHK (e-RKL-RPL, Profil Lingkungan); (b) early
+  warning pelanggaran baku mutu dari CEMS/DCS; (c) simulasi "ganti bahan bakar/teknologi →
+  rank naik ke Hijau/Emas?"; (d) perhitungan **Karbon Kredit beneran** untuk dijual.
+- **Integrasi data:** mereka **tidak manual input Excel**. Data dari CEMS/SCADA/DCS/ERP (SAP)
+  → harus lewat **API/streaming ke server**, bukan localStorage. Supabase (atau bahkan
+  Kafka/timeseries DB seperti InfluxDB) **wajib**. `useIndustryId` saat ini single-tenant →
+  butuh **multi-tenant** (tiap site industri beda).
+- **Privasi & audit:** data emisi BUMN sensitif & bisa diaudit hukum. AI API cloud (OpenAI/
+  Gemini) = data keluar negeri → risiko. Lebih aman **on-prem / private LLM (Ollama/Qwen di
+  server mereka)** atau Gemini Enterprise dengan data residency. Audit trail harus
+  **tamper-proof** (server-authoritative + signature).
+- **Positioning jualan:** jangan jual "aplikasi PROPER" (mereka sudah punya). Jual **"Sistem
+  LCA + Command Center kepatuhan yang nyambung langsung ke CEMS/ERP, lengkap simulasi rank
+  PROPER & perhitungan Karbon Kredit otomatis."** LCA tetap core (butuh ISO 14040 / report
+  ESG ke investor), PROPER + Karbon Kredit = value-add.
+
+**Syarat arsitektur untuk level enterprise**
+1. **Multi-tenant + server-based** (Supabase wajib; localStorage tidak cukup).
+2. **Profil industri spesifik** (baja, refinery), bukan cuma tekstil/kulit.
+3. **Real-time dari CEMS/ERP**, bukan manual.
+4. **Private AI** (on-prem LLM) demi privasi & audit.
+5. Fokus ke **simulasi + lapor otomatis + karbon kredit**, bukan sekadar lihat rank.
+
+**Kesimpulan:** Arsitektur saat ini (client-only, single industry, localStorage) **baru cocok
+untuk pilot/demo ke pabrik menengah**. Untuk KS/Pertamina harus naik ke **enterprise
+multi-tenant backend**.
+
+---
+
 ## Prioritas Eksekusi (sesuai niat)
 
 1. 🔴 **Karbon Kredit dihitung beneran** dari LCA + carbon accounting (gap paling nyata).
