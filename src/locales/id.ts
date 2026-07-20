@@ -626,6 +626,7 @@ export const id = {
   "datahub.devices.plant": "Pabrik",
   "datahub.devices.module": "Modul",
   "datahub.devices.sync": "Sinkron Terakhir",
+  "datahub.devices.live": "Live",
   "datahub.devices.status": "Status",
   "datahub.validation.title": "Validasi Data",
   "datahub.validation.errors": "Total Error",
@@ -671,6 +672,17 @@ export const id = {
   "datahub.ingest.erp_token": "Token API",
   "datahub.ingest.save_cfg": "Simpan koneksi",
   "datahub.ingest.saved": "Koneksi tersimpan",
+
+  // Real-state sections
+  "datahub.empty": "Belum ada data — tambahkan data pengukuran lewat panel di atas.",
+  "datahub.sources.none": "Belum ada sumber eksternal terhubung.",
+  "datahub.recent.empty": "Belum ada impor tercatat.",
+  "datahub.devices.none": "Belum ada perangkat terhubung. Atur sumber IoT untuk melihat meter live.",
+  "datahub.timeline.empty": "Belum ada aktivitas. Impor atau hubungkan sumber untuk mengisi linimasa.",
+  "datahub.validation.coverage": "Cakupan data",
+  "datahub.validation.entered": "Parameter diisi",
+  "datahub.validation.toreview": "Perlu tinjauan",
+  "datahub.validation.configured": "Sumber terkonfigurasi",
 
   // Manual input page
   "input.page_title": "Input Data Manual",

@@ -28,6 +28,7 @@ import {
   type ProperCategory,
 } from "@/lib/proper"
 import { useIndustryId } from "@/lib/use-industry-id"
+import { recordImport } from "@/lib/measurements"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -226,6 +227,15 @@ export default function InputPage() {
   const handleSave = () => {
     if (!industryId) return
     localStorage.setItem(STORAGE_PREFIX + industryId, JSON.stringify(values))
+    const count = Object.values(values).filter((v) => v !== "").length
+    recordImport(industryId, {
+      source: "manual",
+      file: t(dict, "input.page_title"),
+      module: industry ? industry.name : t(dict, "datahub.page_title"),
+      by: "Operator",
+      status: "success",
+      count,
+    })
     setSaved(true)
   }
 

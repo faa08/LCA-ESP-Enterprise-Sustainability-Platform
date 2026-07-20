@@ -61,3 +61,62 @@ export function useMeasurements(industryId: string): Record<string, string> {
 
   return values
 }
+
+/* ---------- Ingestion log (no demo data; only real imports recorded) ---------- */
+
+export type ImportSource = "manual" | "excel" | "iot" | "erp"
+export type ImportStatus = "success" | "failed" | "processing"
+
+export interface ImportLogEntry {
+  id: string
+  source: ImportSource
+  file: string
+  module: string
+  by: string
+  time: string
+  status: ImportStatus
+  count: number
+}
+
+const LOG_PREFIX = "enspr_import_log_"
+
+export function getImportLog(industryId: string | null): ImportLogEntry[] {
+  if (!industryId || typeof window === "undefined") return []
+  const stored = localStorage.getItem(LOG_PREFIX + industryId)
+  if (!stored) return []
+  try {
+    return JSON.parse(stored) as ImportLogEntry[]
+  } catch {
+    return []
+  }
+}
+
+export function recordImport(industryId: string, entry: Omit<ImportLogEntry, "id" | "time">) {
+  const log = getImportLog(industryId)
+  const now = new Date()
+  const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  log.unshift({ ...entry, id: String(now.getTime()), time })
+  localStorage.setItem(LOG_PREFIX + industryId, JSON.stringify(log.slice(0, 50)))
+}
+
+// Hook: live import log for the current industry.
+export function useImportLog(industryId: string): ImportLogEntry[] {
+  const [log, setLog] = useState<ImportLogEntry[]>([])
+
+  useEffect(() => {
+    if (!industryId) {
+      setLog([])
+      return
+    }
+    const update = () => setLog(getImportLog(industryId))
+    update()
+    window.addEventListener("storage", update)
+    const interval = setInterval(update, 1000)
+    return () => {
+      window.removeEventListener("storage", update)
+      clearInterval(interval)
+    }
+  }, [industryId])
+
+  return log
+}

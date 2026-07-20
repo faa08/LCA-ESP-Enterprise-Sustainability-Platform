@@ -627,6 +627,7 @@ export const en: Record<string, string> = {
   "datahub.devices.plant": "Plant",
   "datahub.devices.module": "Module",
   "datahub.devices.sync": "Last Sync",
+  "datahub.devices.live": "Live",
   "datahub.devices.status": "Status",
   "datahub.validation.title": "Data Validation",
   "datahub.validation.errors": "Total Error",
@@ -672,6 +673,17 @@ export const en: Record<string, string> = {
   "datahub.ingest.erp_token": "API token",
   "datahub.ingest.save_cfg": "Save connection",
   "datahub.ingest.saved": "Connection saved",
+
+  // Real-state sections
+  "datahub.empty": "No data yet — add measurement data via the panel above.",
+  "datahub.sources.none": "No external source connected yet.",
+  "datahub.recent.empty": "No imports recorded yet.",
+  "datahub.devices.none": "No connected devices. Configure an IoT source to see live meters.",
+  "datahub.timeline.empty": "No activity yet. Import or connect a source to populate the timeline.",
+  "datahub.validation.coverage": "Data coverage",
+  "datahub.validation.entered": "Parameters entered",
+  "datahub.validation.toreview": "Need review",
+  "datahub.validation.configured": "Sources configured",
 
   // Manual input page
   "input.page_title": "Manual Data Entry",

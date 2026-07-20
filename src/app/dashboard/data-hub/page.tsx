@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
   Database,
   FileSpreadsheet,
@@ -14,8 +14,6 @@ import {
   XCircle,
   Clock,
   AlertTriangle,
-  Copy,
-  CircleSlash,
   ArrowRight,
   MoreHorizontal,
   ShieldAlert,
@@ -40,75 +38,9 @@ import {
 import { cn } from "@/lib/utils"
 import { useIndustryId } from "@/lib/use-industry-id"
 import { INDUSTRIES, EMISSIONS_PARAMS, LIMBAH_B3_PARAMS, type ProperParam } from "@/lib/proper"
-import { getMeasurements, saveMeasurements } from "@/lib/measurements"
+import { getMeasurements, saveMeasurements, recordImport, useImportLog } from "@/lib/measurements"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
-
-/* ---------- Representative single-source-of-truth data ---------- */
-
-const kpis = [
-  { key: "datahub.kpi.devices", value: "128", diff: "+12 this month", icon: Cpu },
-  { key: "datahub.kpi.imports", value: "342", diff: "QTD", icon: FileSpreadsheet },
-  { key: "datahub.kpi.sources", value: "11", diff: "3 IoT · 4 API", icon: Plug },
-  { key: "datahub.kpi.validation", value: "96.4%", diff: "3.6% needs review", icon: ShieldAlert },
-]
-
-const sources = [
-  {
-    key: "datahub.source.manual.title",
-    desc: "datahub.source.manual.desc",
-    icon: PencilLine,
-    status: "ready" as const,
-  },
-  {
-    key: "datahub.source.excel.title",
-    desc: "datahub.source.excel.desc",
-    icon: FileSpreadsheet,
-    status: "ready" as const,
-  },
-  {
-    key: "datahub.source.iot.title",
-    desc: "datahub.source.iot.desc",
-    icon: Radio,
-    status: "connected" as const,
-  },
-  {
-    key: "datahub.source.api.title",
-    desc: "datahub.source.api.desc",
-    icon: Plug,
-    status: "available" as const,
-  },
-]
-
-const recentImports = [
-  { file: "emissions_q2.xlsx", module: "Carbon Accounting", by: "Tim IT", time: "10:42", status: "success" as const },
-  { file: "water_log.csv", module: "Water Monitoring", by: "Anita", time: "09:18", status: "failed" as const },
-  { file: "energy_meter_mar.xlsx", module: "Energy Monitoring", by: "Tim IT", time: "08:55", status: "processing" as const },
-  { file: "lca_petrokimia.xlsx", module: "Life Cycle Assessment", by: "Sandra", time: "Yesterday", status: "success" as const },
-  { file: "waste_manifest.csv", module: "Waste Management", by: "Budi", time: "Yesterday", status: "success" as const },
-]
-
-const devices = [
-  { name: "Steam Meter #A12", plant: "Plant A", module: "Energy Monitoring", sync: "2m ago", status: "online" as const },
-  { name: "Stack Analyzer B3", plant: "Plant B", module: "Environmental Monitoring", sync: "5m ago", status: "online" as const },
-  { name: "Flow Sensor C7", plant: "Plant C", module: "Water Monitoring", sync: "11m ago", status: "online" as const },
-  { name: "Bin Scale D2", plant: "Plant A", module: "Waste Management", sync: "1h ago", status: "offline" as const },
-  { name: "Power Meter A04", plant: "Plant A", module: "Energy Monitoring", sync: "3m ago", status: "online" as const },
-]
-
-const validation = [
-  { key: "datahub.validation.errors", value: "7", icon: XCircle, tone: "danger" as const },
-  { key: "datahub.validation.warnings", value: "23", icon: AlertTriangle, tone: "warning" as const },
-  { key: "datahub.validation.duplicates", value: "14", icon: Copy, tone: "neutral" as const },
-  { key: "datahub.validation.missing", value: "9", icon: CircleSlash, tone: "neutral" as const },
-]
-
-const timeline = [
-  { key: "datahub.timeline.excel", detail: "emissions_q2.xlsx", time: "10:42", icon: FileSpreadsheet, tone: "success" as const },
-  { key: "datahub.timeline.iot", detail: "Meter Plant A synced", time: "10:40", icon: Radio, tone: "info" as const },
-  { key: "datahub.timeline.manual", detail: "Manual entry · Water", time: "09:18", icon: PencilLine, tone: "brand" as const },
-  { key: "datahub.timeline.api", detail: "SAP ERP connected", time: "08:02", icon: Plug, tone: "success" as const },
-]
 
 /* ---------- Ingestion: Manual / Excel / IoT / ERP ---------- */
 
@@ -186,6 +118,14 @@ function IngestPanel() {
       return
     }
     saveMeasurements(industryId, store)
+    recordImport(industryId, {
+      source: "excel",
+      file: t(dict, "datahub.ingest.excel"),
+      module: industry ? industry.name : t(dict, "datahub.page_title"),
+      by: "Operator",
+      status: "success",
+      count: matched,
+    })
     setExcelMsg({
       tone: "ok",
       text: t(dict, "datahub.ingest.imported").replace("{n}", String(matched)) + (unmatched ? ` (${unmatched} ${t(dict, "datahub.ingest.unmatched")})` : ""),
@@ -202,6 +142,16 @@ function IngestPanel() {
 
   const saveCfg = (kind: "iot" | "erp", cfg: Record<string, string>) => {
     localStorage.setItem(CONFIG_PREFIX + kind, JSON.stringify(cfg))
+    if (industryId) {
+      recordImport(industryId, {
+        source: kind,
+        file: kind === "iot" ? (cfg.endpoint || "IoT") : (cfg.url || "ERP"),
+        module: industry ? industry.name : t(dict, "datahub.page_title"),
+        by: "Operator",
+        status: "success",
+        count: 0,
+      })
+    }
     setCfgSaved(true)
     setTimeout(() => setCfgSaved(false), 2000)
   }
@@ -368,6 +318,81 @@ const deviceStatus = (status: "online" | "offline") =>
 export default function DataHubPage() {
   const locale = getLocaleClient()
   const dict = dicts[locale]
+  const industryId = useIndustryId()
+  const industry = INDUSTRIES.find((i) => i.id === industryId) ?? null
+  const importLog = useImportLog(industryId ?? "")
+
+  // Reactive read of saved source configs.
+  const [iotCfg, setIotCfg] = useState<Record<string, string>>({})
+  const [erpCfg, setErpCfg] = useState<Record<string, string>>({})
+  useEffect(() => {
+    const read = () => {
+      setIotCfg(loadConfig("iot"))
+      setErpCfg(loadConfig("erp"))
+    }
+    read()
+    window.addEventListener("storage", read)
+    const interval = setInterval(read, 1000)
+    return () => {
+      window.removeEventListener("storage", read)
+      clearInterval(interval)
+    }
+  }, [])
+
+  const measurements = getMeasurements(industryId)
+  const allParamsList = allParams(industryId)
+  const enteredCount = allParamsList.filter((p) => measurements[p.code] !== undefined && measurements[p.code] !== "").length
+  const coverage = allParamsList.length ? Math.round((enteredCount / allParamsList.length) * 100) : 0
+  const reviewCount = allParamsList.length - enteredCount
+
+  const iotConnected = Boolean(iotCfg.endpoint)
+  const erpConnected = Boolean(erpCfg.url)
+  const sourcesConfigured = (iotConnected ? 1 : 0) + (erpConnected ? 1 : 0)
+
+  const kpis = [
+    { key: "datahub.kpi.devices", value: iotConnected ? "1" : "0", diff: iotConnected ? t(dict, "datahub.sources.connected") : t(dict, "datahub.sources.none"), icon: Cpu },
+    { key: "datahub.kpi.imports", value: String(importLog.length), diff: "log", icon: FileSpreadsheet },
+    { key: "datahub.kpi.sources", value: String(2 + sourcesConfigured), diff: `${sourcesConfigured} IoT/ERP`, icon: Plug },
+    { key: "datahub.kpi.validation", value: `${coverage}%`, diff: t(dict, "datahub.validation.coverage"), icon: ShieldAlert },
+  ]
+
+  const sources = [
+    { key: "datahub.source.manual.title", desc: "datahub.source.manual.desc", icon: PencilLine, status: "ready" as const },
+    { key: "datahub.source.excel.title", desc: "datahub.source.excel.desc", icon: FileSpreadsheet, status: "ready" as const },
+    { key: "datahub.source.iot.title", desc: "datahub.source.iot.desc", icon: Radio, status: iotConnected ? ("connected" as const) : ("available" as const) },
+    { key: "datahub.source.api.title", desc: "datahub.source.api.desc", icon: Plug, status: erpConnected ? ("connected" as const) : ("available" as const) },
+  ]
+
+  const devices = useMemo(
+    () =>
+      iotConnected
+        ? [
+            {
+              name: iotCfg.topic ? `Topic: ${iotCfg.topic}` : "IoT Source",
+              plant: industry ? industry.name : "—",
+              module: "Emissions Monitoring",
+              sync: t(dict, "datahub.devices.live"),
+              status: "online" as const,
+            },
+          ]
+        : [],
+    [iotConnected, iotCfg.topic, industry, dict],
+  )
+
+  const validation: { key: string; value: string; icon: typeof Cpu; tone: "danger" | "warning" | "neutral" }[] = [
+    { key: "datahub.validation.entered", value: String(enteredCount), icon: CheckCircle2, tone: "neutral" },
+    { key: "datahub.validation.coverage", value: `${coverage}%`, icon: ShieldAlert, tone: "neutral" },
+    { key: "datahub.validation.toreview", value: String(reviewCount), icon: AlertTriangle, tone: reviewCount > 0 ? "warning" : "neutral" },
+    { key: "datahub.validation.configured", value: String(sourcesConfigured), icon: Plug, tone: "neutral" },
+  ]
+
+  const timeline = importLog.slice(0, 6).map((e) => ({
+    key: e.source === "excel" ? "datahub.timeline.excel" : e.source === "iot" ? "datahub.timeline.iot" : e.source === "manual" ? "datahub.timeline.manual" : "datahub.timeline.api",
+    detail: e.file,
+    time: e.time,
+    icon: e.source === "excel" ? FileSpreadsheet : e.source === "iot" ? Radio : e.source === "manual" ? PencilLine : Plug,
+    tone: (e.status === "success" ? "success" : e.status === "processing" ? "info" : "brand") as "success" | "info" | "brand",
+  }))
 
   return (
     <div className="space-y-8">
@@ -443,34 +468,38 @@ export default function DataHubPage() {
           </Button>
         </div>
         <div className="enterprise-card overflow-hidden p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead>{t(dict, "datahub.recent.file")}</TableHead>
-                <TableHead>{t(dict, "datahub.recent.module")}</TableHead>
-                <TableHead>{t(dict, "datahub.recent.by")}</TableHead>
-                <TableHead>{t(dict, "datahub.recent.time")}</TableHead>
-                <TableHead>{t(dict, "datahub.recent.status")}</TableHead>
-                <TableHead className="text-right">{t(dict, "datahub.recent.action")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recentImports.map((row) => (
-                <TableRow key={row.file}>
-                  <TableCell className="font-medium">{row.file}</TableCell>
-                  <TableCell className="text-secondary">{row.module}</TableCell>
-                  <TableCell className="text-secondary">{row.by}</TableCell>
-                  <TableCell className="text-muted">{row.time}</TableCell>
-                  <TableCell>{statusBadge(locale, row.status)}</TableCell>
-                  <TableCell className="text-right">
-                    <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-[color:var(--brand)]">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
-                  </TableCell>
+          {importLog.length === 0 ? (
+            <p className="p-6 text-sm text-muted">{t(dict, "datahub.recent.empty")}</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>{t(dict, "datahub.recent.file")}</TableHead>
+                  <TableHead>{t(dict, "datahub.recent.module")}</TableHead>
+                  <TableHead>{t(dict, "datahub.recent.by")}</TableHead>
+                  <TableHead>{t(dict, "datahub.recent.time")}</TableHead>
+                  <TableHead>{t(dict, "datahub.recent.status")}</TableHead>
+                  <TableHead className="text-right">{t(dict, "datahub.recent.action")}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {importLog.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-medium">{row.file}</TableCell>
+                    <TableCell className="text-secondary">{row.module}</TableCell>
+                    <TableCell className="text-secondary">{row.by}</TableCell>
+                    <TableCell className="text-muted">{row.time}</TableCell>
+                    <TableCell>{statusBadge(locale, row.status)}</TableCell>
+                    <TableCell className="text-right">
+                      <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-[color:var(--brand)]">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </section>
 
@@ -478,28 +507,32 @@ export default function DataHubPage() {
       <section>
         <h2 className="mb-3 text-base font-semibold text-primary">{t(dict, "datahub.devices.title")}</h2>
         <div className="enterprise-card overflow-hidden p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead>{t(dict, "datahub.devices.device")}</TableHead>
-                <TableHead>{t(dict, "datahub.devices.plant")}</TableHead>
-                <TableHead>{t(dict, "datahub.devices.module")}</TableHead>
-                <TableHead>{t(dict, "datahub.devices.sync")}</TableHead>
-                <TableHead>{t(dict, "datahub.devices.status")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {devices.map((d) => (
-                <TableRow key={d.name}>
-                  <TableCell className="font-medium">{d.name}</TableCell>
-                  <TableCell className="text-secondary">{d.plant}</TableCell>
-                  <TableCell className="text-secondary">{d.module}</TableCell>
-                  <TableCell className="text-muted">{d.sync}</TableCell>
-                  <TableCell>{deviceStatus(d.status)}</TableCell>
+          {devices.length === 0 ? (
+            <p className="p-6 text-sm text-muted">{t(dict, "datahub.devices.none")}</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>{t(dict, "datahub.devices.device")}</TableHead>
+                  <TableHead>{t(dict, "datahub.devices.plant")}</TableHead>
+                  <TableHead>{t(dict, "datahub.devices.module")}</TableHead>
+                  <TableHead>{t(dict, "datahub.devices.sync")}</TableHead>
+                  <TableHead>{t(dict, "datahub.devices.status")}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {devices.map((d) => (
+                  <TableRow key={d.name}>
+                    <TableCell className="font-medium">{d.name}</TableCell>
+                    <TableCell className="text-secondary">{d.plant}</TableCell>
+                    <TableCell className="text-secondary">{d.module}</TableCell>
+                    <TableCell className="text-muted">{d.sync}</TableCell>
+                    <TableCell>{deviceStatus(d.status)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </section>
 
@@ -549,29 +582,33 @@ export default function DataHubPage() {
       <section>
         <h2 className="mb-3 text-base font-semibold text-primary">{t(dict, "datahub.timeline.title")}</h2>
         <div className="enterprise-card p-6">
-          <ol className="relative space-y-5 border-l border-token pl-6">
-            {timeline.map((item) => (
-              <li key={item.key} className="relative">
-                <span
-                  className={cn(
-                    "absolute -left-[31px] flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-surface",
-                    item.tone === "success" && "bg-emerald-100 text-emerald-600",
-                    item.tone === "info" && "bg-sky-100 text-sky-600",
-                    item.tone === "brand" && "bg-[color:var(--brand-soft)] text-[color:var(--brand)]",
-                  )}
-                >
-                  <item.icon className="h-3.5 w-3.5" />
-                </span>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-primary">{t(dict, item.key)}</p>
-                    <p className="text-xs text-muted">{item.detail}</p>
+          {timeline.length === 0 ? (
+            <p className="text-sm text-muted">{t(dict, "datahub.timeline.empty")}</p>
+          ) : (
+            <ol className="relative space-y-5 border-l border-token pl-6">
+              {timeline.map((item, idx) => (
+                <li key={idx} className="relative">
+                  <span
+                    className={cn(
+                      "absolute -left-[31px] flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-surface",
+                      item.tone === "success" && "bg-emerald-100 text-emerald-600",
+                      item.tone === "info" && "bg-sky-100 text-sky-600",
+                      item.tone === "brand" && "bg-[color:var(--brand-soft)] text-[color:var(--brand)]",
+                    )}
+                  >
+                    <item.icon className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-primary">{t(dict, item.key)}</p>
+                      <p className="text-xs text-muted">{item.detail}</p>
+                    </div>
+                    <span className="shrink-0 text-xs text-muted">{item.time}</span>
                   </div>
-                  <span className="shrink-0 text-xs text-muted">{item.time}</span>
-                </div>
-              </li>
-            ))}
-          </ol>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       </section>
     </div>
