@@ -16,8 +16,10 @@ Tanpa angka ini, sistem cuma bisa pakai placeholder.
 
 - [x] **Penyamakan Kulit** (sudah dari PDF lu)
   - pH 6–9, BOD 30, COD 200, NH₃-N 2, TKN 30, Krom 0,6, Minyak&Lemak 5, Sulfida 0,8, TSS 60, Volume 40 m³/ton
-- [ ] Makanan & Minuman
-- [ ] Tekstil / Pencelupan
+- [x] **Minyak Goreng (proses basah)** — Permen LH 5/2014
+  - pH 6–9, BOD 75, COD 150, TSS 60, Minyak&Lemak 5, MBAS 3, Fosfat 2
+- [x] **Tekstil / Pencelupan** — Permen LH 5/2014 Lampiran XLII (P.16/2019)
+  - pH 6–9, BOD 60, COD 150, TSS 50, Fenol 0,5, Cr 1,0, NH₃-N 8, Sulfida 0,3, Minyak&Lemak 3
 - [ ] Kertas / Pulp & Paper
 - [ ] Kimia / Petrokimia
 - [ ] Semen
@@ -39,7 +41,8 @@ Tanpa angka ini, sistem cuma bisa pakai placeholder.
 - [ ] Petrokimia
 - [ ] Industri lain (sebutkan)
 
-> Rujukan: PermenLHK No. 13/2010 + revisinya.
+> Rujukan: Permen LH 7/2007 (bukan 13/2010 — itu untuk migas). Baku mutu beda per bahan bakar
+> (batubara: TSP 230 / SO₂ 850 / NOx 400; gas: SO₂ 150 / NOx 650; minyak: SO₂ 850 / NOx 450; biomassa: TSP 300).
 
 ### 1C. Limbah B3 (SP LB3) — checklist kepatuhan
 > Bukan angka, tapi status admin/operasional (✅/❌)

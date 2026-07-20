@@ -1,7 +1,7 @@
-// PROPER reference data (mock / placeholder).
-// Baku mutu mengacu pada PermenLHK (SP PL 5/2014, SP Parmen 13/2010, PP 101/2014).
-// Penyamakan Kulit menggunakan angka riil dari dokumen yang diberikan.
-// Industri lainnya BERSTATUS MOCK — angka hanya contoh, akan diganti saat data riil tersedia.
+// PROPER reference data.
+// Baku mutu mengacu pada Permen LHK (Permen LH 5/2014 + P.16/2019, Permen LH 7/2007, PP 101/2014).
+// Air limbah: Penyamakan Kulit (PDF user), Minyak Goreng & Tekstil (Permen LH 5/2014) = RIIL.
+// Emisi boiler: masih MOCK, menunggu input jenis bahan bakar (lihat komentar emisiBoiler).
 
 export type ProperCategory = "emisi" | "air_limbah" | "limbah_b3"
 
@@ -67,35 +67,43 @@ const penyamakanKulit: IndustryProfile = {
   ],
 }
 
-// --- Makanan & Minuman: MOCK ---
+// --- Minyak Goreng (proses basah): RIIL, Permen LH 5/2014 Lampiran Minyak Goreng ---
 const makananMinuman: IndustryProfile = {
   id: "makanan_minuman",
-  name: "Industri Makanan & Minuman",
-  isMock: true,
+  name: "Industri Minyak Goreng (proses basah)",
+  isMock: false,
   params: [
     { code: "ph", name: "pH", unit: "-", kind: "range", category: "air_limbah", min: 6, max: 9, mock: 7.0 },
-    { code: "bod", name: "BOD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 50, mock: 35 },
-    { code: "cod", name: "COD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 200, mock: 160 },
-    { code: "tss", name: "TSS", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 100, mock: 70 },
-    { code: "oil_fat", name: "Minyak dan Lemak", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 10, mock: 6 },
+    { code: "bod", name: "BOD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 75, mock: 50 },
+    { code: "cod", name: "COD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 150, mock: 110 },
+    { code: "tss", name: "TSS", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 60, mock: 40 },
+    { code: "oil_fat", name: "Minyak dan Lemak", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 5, mock: 3 },
+    { code: "mbas", name: "MBAS (Surfaktan)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 3, mock: 1.5 },
+    { code: "phosphat", name: "Fosfat (PO4)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 2, mock: 1.0 },
   ],
 }
 
-// --- Tekstil: MOCK ---
+// --- Tekstil / Pencelupan: RIIL, Permen LH 5/2014 Lampiran XLII (diubah P.16/MENLHK/2019) ---
 const tekstil: IndustryProfile = {
   id: "tekstil",
   name: "Industri Tekstil / Pencelupan",
-  isMock: true,
+  isMock: false,
   params: [
     { code: "ph", name: "pH", unit: "-", kind: "range", category: "air_limbah", min: 6, max: 9, mock: 8.0 },
     { code: "bod", name: "BOD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 60, mock: 45 },
-    { code: "cod", name: "COD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 300, mock: 220 },
-    { code: "tss", name: "TSS", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 100, mock: 80 },
-    { code: "sulfide", name: "Sulfida", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 1, mock: 0.5 },
+    { code: "cod", name: "COD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 150, mock: 110 },
+    { code: "tss", name: "TSS", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 50, mock: 35 },
+    { code: "phenol", name: "Fenol Total", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 0.5, mock: 0.2 },
+    { code: "cr", name: "Krom Total (Cr)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 1.0, mock: 0.4 },
+    { code: "nh3n", name: "Amonia Total (NH3-N)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 8.0, mock: 5.0 },
+    { code: "sulfide", name: "Sulfida (S)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 0.3, mock: 0.15 },
+    { code: "oil_fat", name: "Minyak dan Lemak", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 3.0, mock: 1.5 },
   ],
 }
 
-// --- Emisi (Boiler): MOCK, semua sektor pakai contoh ini dulu ---
+// --- Emisi (Boiler batubara): MOCK - menunggu input jenis bahan bakar & permen spesifik ---
+// Acuan sementara: Permen LH 7/2007 (batubara: TSP 230, SO2 850, NOx 400).
+// Perlu dipisah per bahan bakar (batubara/biomassa/gas/minyak) sesuai lampiran Permen LH 7/2007.
 const emisiBoiler: ProperParam[] = [
   { code: "tsp", name: "Partikulat (TSP)", unit: "mg/Nm³", kind: "numeric", category: "emisi", max: 200, mock: 120 },
   { code: "so2", name: "SO₂", unit: "mg/Nm³", kind: "numeric", category: "emisi", max: 850, mock: 600 },
