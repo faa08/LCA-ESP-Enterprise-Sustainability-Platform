@@ -6,6 +6,7 @@ import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
 import { useIndustryId } from "@/lib/use-industry-id"
+import { getMeasurements, paramValue } from "@/lib/measurements"
 import {
   INDUSTRIES,
   EMISSIONS_PARAMS,
@@ -48,9 +49,10 @@ export function ProperRankCard({ compact = false }: { compact?: boolean }) {
   }
 
   const air = industry.params.filter((p) => p.category === "air_limbah")
-  const airFails = air.filter((p) => evaluateParam(p, (p as { mock: number | boolean }).mock) === "fail").length
-  const emFails = EMISSIONS_PARAMS.filter((p) => evaluateParam(p, (p as { mock: number | boolean }).mock) === "fail").length
-  const b3Fails = LIMBAH_B3_PARAMS.filter((p) => evaluateParam(p, (p as { mock: number | boolean }).mock) === "fail").length
+  const measurements = getMeasurements(industryId)
+  const airFails = air.filter((p) => evaluateParam(p, paramValue(p, measurements)) === "fail").length
+  const emFails = EMISSIONS_PARAMS.filter((p) => evaluateParam(p, paramValue(p, measurements)) === "fail").length
+  const b3Fails = LIMBAH_B3_PARAMS.filter((p) => evaluateParam(p, paramValue(p, measurements)) === "fail").length
   const rank = predictRank(emFails, airFails, b3Fails)
   const totalFails = airFails + emFails + b3Fails
 

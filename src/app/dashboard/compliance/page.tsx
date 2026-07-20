@@ -9,6 +9,7 @@ import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
 import { useIndustryId } from "@/lib/use-industry-id"
+import { getMeasurements, paramValue } from "@/lib/measurements"
 import {
   INDUSTRIES,
   EMISSIONS_PARAMS,
@@ -136,11 +137,12 @@ export default function Compliance() {
 
   const industry = INDUSTRIES.find((i) => i.id === industryId) ?? null
 
-  // Build evaluation groups from mock data
+  // Build evaluation groups from measurements (falls back to demo values)
+  const measurements = getMeasurements(industryId)
   const airParams = industry ? industry.params.filter((p) => p.category === "air_limbah") : []
-  const airResults = airParams.map((p) => ({ p, s: evaluateParam(p, (p as { mock: number | boolean }).mock) }))
-  const emResults = EMISSIONS_PARAMS.map((p) => ({ p, s: evaluateParam(p, (p as { mock: number | boolean }).mock) }))
-  const b3Results = LIMBAH_B3_PARAMS.map((p) => ({ p, s: evaluateParam(p, (p as { mock: number | boolean }).mock) }))
+  const airResults = airParams.map((p) => ({ p, v: paramValue(p, measurements), s: evaluateParam(p, paramValue(p, measurements)) }))
+  const emResults = EMISSIONS_PARAMS.map((p) => ({ p, v: paramValue(p, measurements), s: evaluateParam(p, paramValue(p, measurements)) }))
+  const b3Results = LIMBAH_B3_PARAMS.map((p) => ({ p, v: paramValue(p, measurements), s: evaluateParam(p, paramValue(p, measurements)) }))
 
   const countFails = (arr: { s: ComplianceStatus }[]) => arr.filter((r) => r.s === "fail").length
   const countWarn = (arr: { s: ComplianceStatus }[]) => arr.filter((r) => r.s === "warn").length
@@ -150,7 +152,7 @@ export default function Compliance() {
   const renderGroup = (
     title: string,
     icon: React.ReactNode,
-    results: { p: ProperParam; s: ComplianceStatus }[],
+    results: { p: ProperParam; v: number | boolean; s: ComplianceStatus }[],
   ) => (
     <Card>
       <CardHeader>
@@ -166,8 +168,8 @@ export default function Compliance() {
               <p className="truncate text-sm font-medium text-neutral-900">{r.p.name}</p>
               <p className="text-xs text-neutral-500">
                 {r.p.kind === "checklist"
-                  ? (r.p as { mock: boolean }).mock ? t(dict, "proper.yes") : t(dict, "proper.no")
-                  : `${(r.p as { mock: number }).mock} ${r.p.unit || ""}`}
+                  ? r.v ? t(dict, "proper.yes") : t(dict, "proper.no")
+                  : `${r.v} ${r.p.unit || ""}`}
                 {r.p.kind === "numeric" && (r.p as { max?: number }).max !== undefined ? ` / max ${(r.p as { max: number }).max} ${r.p.unit}` : ""}
                 {r.p.kind === "range" ? ` / ${(r.p as { min: number }).min}–${(r.p as { max: number }).max}` : ""}
               </p>

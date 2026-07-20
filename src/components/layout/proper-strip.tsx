@@ -7,6 +7,7 @@ import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
 import { useIndustryId } from "@/lib/use-industry-id"
+import { getMeasurements, paramValue } from "@/lib/measurements"
 import {
   INDUSTRIES,
   EMISSIONS_PARAMS,
@@ -44,7 +45,7 @@ export function ProperStrip({ category, titleKey }: { category: ProperCategory; 
   else if (category === "emisi") params = EMISSIONS_PARAMS
   else params = LIMBAH_B3_PARAMS
 
-  const results = params.map((p) => ({ p, s: evaluateParam(p, (p as { mock: number | boolean }).mock) }))
+  const results = params.map((p) => ({ p, s: evaluateParam(p, paramValue(p, getMeasurements(industryId))) }))
   const fails = results.filter((r) => r.s === "fail").length
   const warns = results.filter((r) => r.s === "warn").length
 
