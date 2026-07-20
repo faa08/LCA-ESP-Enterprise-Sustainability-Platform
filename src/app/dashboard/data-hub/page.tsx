@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import {
   Database,
   FileSpreadsheet,
@@ -142,9 +143,11 @@ export default function DataHubPage() {
           <p className="mt-1 max-w-xl text-sm text-secondary">{t(dict, "datahub.page_desc")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" size="lg">
-            <PencilLine className="h-4 w-4" /> {t(dict, "datahub.action.manual_entry")}
-          </Button>
+          <Link href="/dashboard/input">
+            <Button variant="secondary" size="lg">
+              <PencilLine className="h-4 w-4" /> {t(dict, "datahub.action.manual_entry")}
+            </Button>
+          </Link>
           <Button variant="secondary" size="lg">
             <Upload className="h-4 w-4" /> {t(dict, "datahub.action.import_excel")}
           </Button>

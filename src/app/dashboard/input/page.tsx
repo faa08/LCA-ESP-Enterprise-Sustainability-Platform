@@ -1,0 +1,328 @@
+"use client"
+
+import { useEffect, useMemo, useState } from "react"
+import {
+  Database,
+  Droplets,
+  Factory,
+  Flame,
+  Recycle,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  CircleDashed,
+  Save,
+  RotateCcw,
+  ArrowLeft,
+} from "lucide-react"
+import { t, type Locale, getLocaleClient } from "@/lib/i18n"
+import { id as idDict } from "@/locales/id"
+import { en as enDict } from "@/locales/en"
+import {
+  INDUSTRIES,
+  EMISSIONS_PARAMS,
+  LIMBAH_B3_PARAMS,
+  evaluateParam,
+  type ComplianceStatus,
+  type ProperParam,
+  type ProperCategory,
+} from "@/lib/proper"
+import { useIndustryId } from "@/lib/use-industry-id"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import Link from "next/link"
+
+const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
+
+type ValueMap = Record<string, string>
+
+const STORAGE_PREFIX = "enspr_measurements_"
+
+function statusTone(status: ComplianceStatus | "na") {
+  if (status === "ok") return "success" as const
+  if (status === "warn") return "warning" as const
+  if (status === "fail") return "danger" as const
+  return "neutral" as const
+}
+
+function statusLabel(dict: Record<string, string>, status: ComplianceStatus | "na") {
+  if (status === "ok") return t(dict, "input.status.ok")
+  if (status === "warn") return t(dict, "input.status.warn")
+  if (status === "fail") return t(dict, "input.status.fail")
+  return t(dict, "input.status.na")
+}
+
+function StatusBadge({
+  dict,
+  status,
+}: {
+  dict: Record<string, string>
+  status: ComplianceStatus | "na"
+}) {
+  const tone = statusTone(status)
+  const Icon =
+    status === "ok" ? CheckCircle2 : status === "warn" ? AlertTriangle : status === "fail" ? XCircle : CircleDashed
+  return (
+    <Badge variant={tone}>
+      <Icon className="h-3 w-3" />
+      {statusLabel(dict, status)}
+    </Badge>
+  )
+}
+
+function limitText(p: ProperParam): string {
+  if (p.kind === "checklist") return "—"
+  if (p.kind === "range") return `${p.min} – ${p.max}`
+  if (p.max !== undefined) return `≤ ${p.max}`
+  return "—"
+}
+
+function ParamRow({
+  dict,
+  param,
+  value,
+  onChange,
+}: {
+  dict: Record<string, string>
+  param: ProperParam
+  value: string
+  onChange: (code: string, v: string) => void
+}) {
+  if (param.kind === "checklist") {
+    const checked = value === "true"
+    const status: ComplianceStatus | "na" = value === "" ? "na" : checked ? "ok" : "fail"
+    return (
+      <div className="flex items-center justify-between gap-4 border-b border-neutral-100 py-3 last:border-0">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-neutral-800">{param.name}</p>
+          <p className="text-xs text-neutral-400">{t(dict, "input.param.limit")}: —</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <StatusBadge dict={dict} status={status} />
+          <div className="flex overflow-hidden rounded-lg border border-neutral-200 text-xs font-medium">
+            <button
+              type="button"
+              onClick={() => onChange(param.code, "true")}
+              className={`px-3 py-1.5 ${checked ? "bg-emerald-600 text-white" : "bg-white text-neutral-600 hover:bg-neutral-50"}`}
+            >
+              {t(dict, "input.checklist.yes")}
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange(param.code, "false")}
+              className={`px-3 py-1.5 ${value === "false" ? "bg-red-600 text-white" : "bg-white text-neutral-600 hover:bg-neutral-50"}`}
+            >
+              {t(dict, "input.checklist.no")}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const numeric = value === "" ? null : Number(value)
+  const status: ComplianceStatus | "na" =
+    numeric === null ? "na" : evaluateParam(param, numeric)
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-neutral-100 py-3 last:border-0">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-neutral-800">{param.name}</p>
+        <p className="text-xs text-neutral-400">
+          {t(dict, "input.param.limit")}: {limitText(param)} {param.unit}
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <StatusBadge dict={dict} status={status} />
+        <input
+          type="number"
+          inputMode="decimal"
+          value={value}
+          onChange={(e) => onChange(param.code, e.target.value)}
+          placeholder="—"
+          className="w-28 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-right text-sm text-neutral-800 focus:border-emerald-500 focus:outline-none"
+        />
+        <span className="w-14 text-xs text-neutral-400">{param.unit}</span>
+      </div>
+    </div>
+  )
+}
+
+function Section({
+  dict,
+  icon: Icon,
+  title,
+  params,
+  values,
+  onChange,
+  note,
+}: {
+  dict: Record<string, string>
+  icon: typeof Droplets
+  title: string
+  params: ProperParam[]
+  values: ValueMap
+  onChange: (code: string, v: string) => void
+  note?: string
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--brand-soft)] text-[color:var(--brand)]">
+            <Icon className="h-4 w-4" />
+          </div>
+          <CardTitle>{title}</CardTitle>
+        </div>
+      </CardHeader>
+      <div className="px-5 pb-2">
+        {params.length === 0 ? (
+          <p className="py-4 text-sm text-neutral-400">—</p>
+        ) : (
+          params.map((p) => (
+            <ParamRow key={p.code} dict={dict} param={p} value={values[p.code] ?? ""} onChange={onChange} />
+          ))
+        )}
+        {note && <p className="pb-3 pt-2 text-xs italic text-amber-600">{note}</p>}
+      </div>
+    </Card>
+  )
+}
+
+export default function InputPage() {
+  const locale = getLocaleClient()
+  const dict = dicts[locale]
+  const industryId = useIndustryId()
+
+  const industry = useMemo(() => INDUSTRIES.find((i) => i.id === industryId) ?? null, [industryId])
+
+  const [values, setValues] = useState<ValueMap>({})
+  const [saved, setSaved] = useState(true)
+
+  // Load saved measurements when industry changes
+  useEffect(() => {
+    if (!industryId) {
+      setValues({})
+      return
+    }
+    const stored = localStorage.getItem(STORAGE_PREFIX + industryId)
+    if (stored) {
+      try {
+        setValues(JSON.parse(stored))
+      } catch {
+        setValues({})
+      }
+    } else {
+      setValues({})
+    }
+    setSaved(true)
+  }, [industryId])
+
+  const handleChange = (code: string, v: string) => {
+    setValues((prev) => ({ ...prev, [code]: v }))
+    setSaved(false)
+  }
+
+  const handleSave = () => {
+    if (!industryId) return
+    localStorage.setItem(STORAGE_PREFIX + industryId, JSON.stringify(values))
+    setSaved(true)
+  }
+
+  const handleReset = () => {
+    setValues({})
+    setSaved(true)
+    if (industryId) localStorage.removeItem(STORAGE_PREFIX + industryId)
+  }
+
+  const airParams = industry ? industry.params.filter((p) => p.category === "air_limbah") : []
+  const emisiMock = EMISSIONS_PARAMS.some((p) => p.category === "emisi")
+
+  if (!industry) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2 text-sm text-neutral-500">
+          <Link href="/dashboard/data-hub" className="inline-flex items-center gap-1 hover:text-[color:var(--brand)]">
+            <ArrowLeft className="h-4 w-4" /> {t(dict, "sidebar.data_hub")}
+          </Link>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t(dict, "input.page_title")}</CardTitle>
+            <CardDescription>{t(dict, "input.page_desc")}</CardDescription>
+          </CardHeader>
+          <div className="px-5 pb-5">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              {t(dict, "input.industry_prompt")}
+            </div>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[color:var(--brand-soft-border)] bg-[color:var(--brand-soft)] px-3 py-1 text-xs font-medium text-[color:var(--brand)]">
+            <Database className="h-3.5 w-3.5" />
+            {t(dict, "input.from_datahub")}
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-primary">{t(dict, "input.page_title")}</h1>
+          <p className="mt-1 max-w-2xl text-sm text-secondary">{t(dict, "input.page_desc")}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={handleReset}>
+            <RotateCcw className="h-4 w-4" /> {t(dict, "input.reset")}
+          </Button>
+          <Button onClick={handleSave}>
+            <Save className="h-4 w-4" /> {saved ? t(dict, "input.saved") : t(dict, "input.save")}
+          </Button>
+        </div>
+      </div>
+
+      {/* Industry chip */}
+      <div className="flex items-center gap-2 text-sm">
+        <Factory className="h-4 w-4 text-neutral-400" />
+        <span className="font-medium text-neutral-700">{industry.name}</span>
+        <Badge variant={industry.isMock ? "neutral" : "success"}>
+          {industry.isMock ? t(dict, "settings.industry_mock") : t(dict, "settings.industry_real")}
+        </Badge>
+        {!saved && <span className="text-xs font-medium text-amber-600">• {t(dict, "input.unsaved")}</span>}
+      </div>
+
+      {/* Sections */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Section
+          dict={dict}
+          icon={Droplets}
+          title={t(dict, "input.section.air")}
+          params={airParams}
+          values={values}
+          onChange={handleChange}
+        />
+        <Section
+          dict={dict}
+          icon={Flame}
+          title={t(dict, "input.section.emisi")}
+          params={EMISSIONS_PARAMS}
+          values={values}
+          onChange={handleChange}
+          note={emisiMock ? t(dict, "input.emisi_mock_note") : undefined}
+        />
+        <div className="lg:col-span-2">
+          <Section
+            dict={dict}
+            icon={Recycle}
+            title={t(dict, "input.section.b3")}
+            params={LIMBAH_B3_PARAMS}
+            values={values}
+            onChange={handleChange}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}

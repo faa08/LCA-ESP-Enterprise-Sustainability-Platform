@@ -27,6 +27,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Database,
+  PencilLine,
   type LucideIcon,
 } from "lucide-react"
 
@@ -71,6 +72,7 @@ const navGroups: NavGroup[] = [
     label: "DATA MANAGEMENT",
     items: [
       { labelKey: "sidebar.data_hub", href: "/dashboard/data-hub", icon: Database },
+    { labelKey: "sidebar.manual_input", href: "/dashboard/input", icon: PencilLine },
     ],
   },
   {
