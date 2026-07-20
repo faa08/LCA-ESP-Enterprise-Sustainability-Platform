@@ -101,16 +101,25 @@ const tekstil: IndustryProfile = {
   ],
 }
 
-// --- Emisi (Boiler batubara): MOCK - menunggu input jenis bahan bakar & permen spesifik ---
-// Acuan sementara: Permen LH 7/2007 (batubara: TSP 230, SO2 850, NOx 400).
-// Perlu dipisah per bahan bakar (batubara/biomassa/gas/minyak) sesuai lampiran Permen LH 7/2007.
+// --- Emisi cerobong (boiler) — RIIL, Permen LH 7/2007 ---
+// Baku mutu beda per bahan bakar. Default di bawah = batubara (paling umum).
+// Untuk bahan bakar lain, lihat EMISSION_PROFILES (gas/minyak/biomassa).
 const emisiBoiler: ProperParam[] = [
-  { code: "tsp", name: "Partikulat (TSP)", unit: "mg/Nm³", kind: "numeric", category: "emisi", max: 200, mock: 120 },
+  { code: "tsp", name: "Partikulat (TSP)", unit: "mg/Nm³", kind: "numeric", category: "emisi", max: 230, mock: 120 },
   { code: "so2", name: "SO₂", unit: "mg/Nm³", kind: "numeric", category: "emisi", max: 850, mock: 600 },
   { code: "nox", name: "NOx", unit: "mg/Nm³", kind: "numeric", category: "emisi", max: 400, mock: 300 },
   { code: "co", name: "CO", unit: "mg/Nm³", kind: "numeric", category: "emisi", max: 150, mock: 90 },
   { code: "opacity", name: "Opasitas", unit: "%", kind: "numeric", category: "emisi", max: 20, mock: 12 },
 ]
+
+// Baku mutu emisi per jenis bahan bakar (Permen LH 7/2007), kg/Nm³ / mg/Nm³.
+// Dipakai bila nanti user memilih bahan bakar boiler di profil pabrik.
+export const EMISSION_PROFILES: Record<string, { label: string; limits: Record<string, number> }> = {
+  batubara: { label: "Batubara", limits: { tsp: 230, so2: 850, nox: 400, co: 150, opacity: 20 } },
+  biomassa: { label: "Biomassa (serabut/cangkang)", limits: { tsp: 300, so2: 850, nox: 400, co: 150, opacity: 20 } },
+  gas: { label: "Gas", limits: { tsp: 230, so2: 150, nox: 650, co: 150, opacity: 20 } },
+  minyak: { label: "Minyak", limits: { tsp: 230, so2: 850, nox: 450, co: 150, opacity: 20 } },
+}
 
 // --- Limbah B3: checklist (riil, sesuai PP 101/2014) ---
 const limbahB3: ProperParam[] = [

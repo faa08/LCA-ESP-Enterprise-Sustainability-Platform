@@ -236,7 +236,6 @@ export default function InputPage() {
   }
 
   const airParams = industry ? industry.params.filter((p) => p.category === "air_limbah") : []
-  const emisiMock = EMISSIONS_PARAMS.some((p) => p.category === "emisi")
 
   if (!industry) {
     return (
@@ -310,7 +309,6 @@ export default function InputPage() {
           params={EMISSIONS_PARAMS}
           values={values}
           onChange={handleChange}
-          note={emisiMock ? t(dict, "input.emisi_mock_note") : undefined}
         />
         <div className="lg:col-span-2">
           <Section
