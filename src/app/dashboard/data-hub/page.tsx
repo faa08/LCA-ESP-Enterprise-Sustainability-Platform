@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import {
   Database,
   FileSpreadsheet,
@@ -19,12 +20,15 @@ import {
   MoreHorizontal,
   ShieldAlert,
   ClipboardList,
+  Server,
+  Settings2,
 } from "lucide-react"
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -34,6 +38,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
+import { useIndustryId } from "@/lib/use-industry-id"
+import { INDUSTRIES, EMISSIONS_PARAMS, LIMBAH_B3_PARAMS, type ProperParam } from "@/lib/proper"
+import { getMeasurements, saveMeasurements } from "@/lib/measurements"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
@@ -103,6 +110,238 @@ const timeline = [
   { key: "datahub.timeline.api", detail: "SAP ERP connected", time: "08:02", icon: Plug, tone: "success" as const },
 ]
 
+/* ---------- Ingestion: Manual / Excel / IoT / ERP ---------- */
+
+const CONFIG_PREFIX = "enspr_source_"
+
+function loadConfig(kind: string): Record<string, string> {
+  if (typeof window === "undefined") return {}
+  const raw = localStorage.getItem(CONFIG_PREFIX + kind)
+  if (!raw) return {}
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return {}
+  }
+}
+
+function allParams(industryId: string | null): ProperParam[] {
+  const industry = INDUSTRIES.find((i) => i.id === industryId)
+  const air = industry ? industry.params.filter((p) => p.category === "air_limbah") : []
+  return [...air, ...EMISSIONS_PARAMS, ...LIMBAH_B3_PARAMS]
+}
+
+// Parse CSV text: expects columns "code,value" or "parameter,value" (header optional).
+function parseCsv(text: string): Record<string, string> {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+  const out: Record<string, string> = {}
+  if (lines.length === 0) return out
+  const header = lines[0].toLowerCase()
+  const hasHeader = header.includes("code") || header.includes("parameter") || header.includes("value")
+  const start = hasHeader ? 1 : 0
+  for (let i = start; i < lines.length; i++) {
+    const cols = lines[i].split(/[,;\t]/)
+    if (cols.length < 2) continue
+    const code = cols[0].trim().toLowerCase()
+    const val = cols[1].trim()
+    out[code] = val
+  }
+  return out
+}
+
+function IngestPanel() {
+  const locale = getLocaleClient()
+  const dict = dicts[locale]
+  const industryId = useIndustryId()
+  const industry = INDUSTRIES.find((i) => i.id === industryId) ?? null
+
+  const [tab, setTab] = useState<"manual" | "excel" | "iot" | "erp">("manual")
+  const [excelText, setExcelText] = useState("")
+  const [excelMsg, setExcelMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null)
+  const [iotCfg, setIotCfg] = useState<Record<string, string>>(() => loadConfig("iot"))
+  const [erpCfg, setErpCfg] = useState<Record<string, string>>(() => loadConfig("erp"))
+  const [cfgSaved, setCfgSaved] = useState(false)
+
+  const params = allParams(industryId)
+
+  const applyImport = (raw: Record<string, string>) => {
+    if (!industryId) {
+      setExcelMsg({ tone: "err", text: t(dict, "datahub.ingest.need_industry") })
+      return
+    }
+    const store = { ...getMeasurements(industryId) }
+    let matched = 0
+    let unmatched = 0
+    for (const [code, val] of Object.entries(raw)) {
+      const found = params.find((p) => p.code === code)
+      if (found) {
+        store[found.code] = val
+        matched++
+      } else {
+        unmatched++
+      }
+    }
+    if (matched === 0) {
+      setExcelMsg({ tone: "err", text: t(dict, "datahub.ingest.no_match") })
+      return
+    }
+    saveMeasurements(industryId, store)
+    setExcelMsg({
+      tone: "ok",
+      text: t(dict, "datahub.ingest.imported").replace("{n}", String(matched)) + (unmatched ? ` (${unmatched} ${t(dict, "datahub.ingest.unmatched")})` : ""),
+    })
+  }
+
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => applyImport(parseCsv(String(reader.result)))
+    reader.readAsText(file)
+  }
+
+  const saveCfg = (kind: "iot" | "erp", cfg: Record<string, string>) => {
+    localStorage.setItem(CONFIG_PREFIX + kind, JSON.stringify(cfg))
+    setCfgSaved(true)
+    setTimeout(() => setCfgSaved(false), 2000)
+  }
+
+  const tabBtn = (key: "manual" | "excel" | "iot" | "erp", icon: typeof Cpu, labelKey: string) => (
+    <button
+      onClick={() => setTab(key)}
+      className={cn(
+        "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        tab === key ? "bg-[color:var(--brand)] text-white" : "text-neutral-600 hover:bg-neutral-100",
+      )}
+    >
+      {(() => {
+        const Icon = icon
+        return <Icon className="h-4 w-4" />
+      })()}
+      {t(dict, labelKey)}
+    </button>
+  )
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t(dict, "datahub.ingest.title")}</CardTitle>
+        <p className="mt-1 text-sm text-neutral-500">{t(dict, "datahub.ingest.desc")}</p>
+      </CardHeader>
+      <div className="flex flex-wrap gap-2 px-5">
+        {tabBtn("manual", PencilLine, "datahub.ingest.manual")}
+        {tabBtn("excel", FileSpreadsheet, "datahub.ingest.excel")}
+        {tabBtn("iot", Radio, "datahub.ingest.iot")}
+        {tabBtn("erp", Server, "datahub.ingest.erp")}
+      </div>
+
+      <div className="px-5 pb-5 pt-1">
+        {!industry && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {t(dict, "datahub.ingest.need_industry")}
+          </div>
+        )}
+
+        {industry && tab === "manual" && (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-neutral-600">{t(dict, "datahub.ingest.manual_desc")}</p>
+            <Link href="/dashboard/input">
+              <Button>
+                <PencilLine className="h-4 w-4" /> {t(dict, "datahub.ingest.open_manual")}
+              </Button>
+            </Link>
+          </div>
+        )}
+
+        {industry && tab === "excel" && (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-neutral-600">{t(dict, "datahub.ingest.excel_desc")}</p>
+            <input
+              type="file"
+              accept=".csv,.txt"
+              onChange={onFile}
+              className="block w-full text-sm text-neutral-600 file:mr-3 file:rounded-lg file:border-0 file:bg-[color:var(--brand)] file:px-4 file:py-2 file:text-white hover:file:opacity-90"
+            />
+            <textarea
+              value={excelText}
+              onChange={(e) => setExcelText(e.target.value)}
+              placeholder="code,value&#10;ph,7.5&#10;bod,45&#10;tsp,120"
+              className="h-28 w-full rounded-lg border border-neutral-200 p-3 font-mono text-xs text-neutral-700 focus:border-emerald-500 focus:outline-none"
+            />
+            <div className="flex items-center gap-2">
+              <Button onClick={() => applyImport(parseCsv(excelText))} variant="secondary">
+                <Upload className="h-4 w-4" /> {t(dict, "datahub.ingest.apply")}
+              </Button>
+              {excelMsg && (
+                <span className={cn("flex items-center gap-1 text-xs font-medium", excelMsg.tone === "ok" ? "text-emerald-600" : "text-red-600")}>
+                  {excelMsg.tone === "ok" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+                  {excelMsg.text}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {industry && tab === "iot" && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-neutral-600">{t(dict, "datahub.ingest.iot_endpoint")}</label>
+              <input
+                value={iotCfg.endpoint ?? ""}
+                onChange={(e) => setIotCfg((c) => ({ ...c, endpoint: e.target.value }))}
+                placeholder="mqtt://plant-a.local:1883"
+                className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-neutral-600">{t(dict, "datahub.ingest.iot_topic")}</label>
+              <input
+                value={iotCfg.topic ?? ""}
+                onChange={(e) => setIotCfg((c) => ({ ...c, topic: e.target.value }))}
+                placeholder="factory/emissions/+"
+                className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Button onClick={() => saveCfg("iot", iotCfg)}>
+                <Settings2 className="h-4 w-4" /> {cfgSaved ? t(dict, "datahub.ingest.saved") : t(dict, "datahub.ingest.save_cfg")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {industry && tab === "erp" && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-neutral-600">{t(dict, "datahub.ingest.erp_url")}</label>
+              <input
+                value={erpCfg.url ?? ""}
+                onChange={(e) => setErpCfg((c) => ({ ...c, url: e.target.value }))}
+                placeholder="https://sap.pabrik.id/api/emissions"
+                className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-neutral-600">{t(dict, "datahub.ingest.erp_token")}</label>
+              <input
+                value={erpCfg.token ?? ""}
+                onChange={(e) => setErpCfg((c) => ({ ...c, token: e.target.value }))}
+                placeholder="••••••••"
+                className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Button onClick={() => saveCfg("erp", erpCfg)}>
+                <Settings2 className="h-4 w-4" /> {cfgSaved ? t(dict, "datahub.ingest.saved") : t(dict, "datahub.ingest.save_cfg")}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 /* ---------- Status helpers ---------- */
 
 const statusBadge = (locale: Locale, status: "success" | "processing" | "failed") => {
@@ -156,6 +395,9 @@ export default function DataHubPage() {
           </Button>
         </div>
       </div>
+
+      {/* Ingestion panel — Manual / Excel / IoT / ERP */}
+      <IngestPanel />
 
       {/* Section 2 — Quick statistics */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

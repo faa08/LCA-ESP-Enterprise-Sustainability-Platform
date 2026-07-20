@@ -1,12 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import type { ProperParam } from "@/lib/proper"
+import { evaluateParam, type ComplianceStatus, type ProperParam } from "@/lib/proper"
+
+export type EvalResult = "empty" | ComplianceStatus
 
 const STORAGE_PREFIX = "enspr_measurements_"
 
-// Read user-entered measurements for an industry, falling back to the
-// demo (mock) value on each parameter when nothing has been saved yet.
+// Read user-entered measurements for an industry.
 export function getMeasurements(industryId: string | null): Record<string, string> {
   if (!industryId || typeof window === "undefined") return {}
   const stored = localStorage.getItem(STORAGE_PREFIX + industryId)
@@ -18,15 +19,31 @@ export function getMeasurements(industryId: string | null): Record<string, strin
   }
 }
 
-// Resolve the effective value for a param: user input if present, else demo value.
-export function paramValue(param: ProperParam, measurements: Record<string, string>): number | boolean {
+export function saveMeasurements(industryId: string, values: Record<string, string>) {
+  localStorage.setItem(STORAGE_PREFIX + industryId, JSON.stringify(values))
+}
+
+export function clearMeasurements(industryId: string) {
+  localStorage.removeItem(STORAGE_PREFIX + industryId)
+}
+
+export type MeasureValue = number | boolean | null
+
+// Resolve the effective value for a param from user input only.
+// Returns null when nothing has been entered yet (no demo fallback).
+export function paramValue(param: ProperParam, measurements: Record<string, string>): MeasureValue {
   const raw = measurements[param.code]
-  if (raw === undefined || raw === "") {
-    return (param as { mock: number | boolean }).mock
-  }
+  if (raw === undefined || raw === "") return null
   if (param.kind === "checklist") return raw === "true"
   const n = Number(raw)
-  return Number.isNaN(n) ? (param as { mock: number }).mock : n
+  return Number.isNaN(n) ? null : n
+}
+
+// Evaluate a param against its entered value, returning "empty" when no data.
+export function evaluate(param: ProperParam, measurements: Record<string, string>): { value: MeasureValue; status: EvalResult } {
+  const value = paramValue(param, measurements)
+  if (value === null) return { value: null, status: "empty" }
+  return { value, status: evaluateParam(param, value) }
 }
 
 // Hook: live measurements for the current industry (reactive to storage changes).

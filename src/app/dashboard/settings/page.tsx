@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Building2, Factory, Users, Key, Bell, Link2, Shield, UserCircle, ChevronRight, Check } from "lucide-react"
+import { Building2, Factory, Users, Key, Link2, Shield, ChevronRight, Check } from "lucide-react"
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
@@ -37,12 +37,6 @@ const settingsSections = [
     color: "text-purple-600 bg-purple-50",
   },
   {
-    icon: Bell,
-    nameKey: "settings.notifications",
-    descKey: "settings.notifications_desc",
-    color: "text-rose-600 bg-rose-50",
-  },
-  {
     icon: Link2,
     nameKey: "settings.integrations",
     descKey: "settings.integrations_desc",
@@ -53,12 +47,6 @@ const settingsSections = [
     nameKey: "settings.api_keys",
     descKey: "settings.api_keys_desc",
     color: "text-orange-600 bg-orange-50",
-  },
-  {
-    icon: UserCircle,
-    nameKey: "settings.security",
-    descKey: "settings.security_desc",
-    color: "text-indigo-600 bg-indigo-50",
   },
 ]
 

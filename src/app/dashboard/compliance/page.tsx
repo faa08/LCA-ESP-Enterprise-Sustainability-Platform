@@ -9,12 +9,11 @@ import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
 import { useIndustryId } from "@/lib/use-industry-id"
-import { getMeasurements, paramValue } from "@/lib/measurements"
+import { getMeasurements, evaluate } from "@/lib/measurements"
 import {
   INDUSTRIES,
   EMISSIONS_PARAMS,
   LIMBAH_B3_PARAMS,
-  evaluateParam,
   predictRank,
   type ComplianceStatus,
   type ProperRank,
@@ -29,10 +28,11 @@ const rankColor: Record<ProperRank, string> = {
   Hitam: "bg-neutral-800 text-white border-neutral-700",
 }
 
-const statusMeta: Record<ComplianceStatus, { dot: string; labelKey: string }> = {
+const statusMeta: Record<ComplianceStatus | "empty", { dot: string; labelKey: string }> = {
   ok: { dot: "bg-emerald-500", labelKey: "proper.status_ok" },
   warn: { dot: "bg-amber-500", labelKey: "proper.status_warn" },
   fail: { dot: "bg-red-500", labelKey: "proper.status_fail" },
+  empty: { dot: "bg-neutral-300", labelKey: "proper.status_empty" },
 }
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
@@ -137,22 +137,24 @@ export default function Compliance() {
 
   const industry = INDUSTRIES.find((i) => i.id === industryId) ?? null
 
-  // Build evaluation groups from measurements (falls back to demo values)
+  // Build evaluation groups from user-entered measurements only (no demo fallback)
   const measurements = getMeasurements(industryId)
   const airParams = industry ? industry.params.filter((p) => p.category === "air_limbah") : []
-  const airResults = airParams.map((p) => ({ p, v: paramValue(p, measurements), s: evaluateParam(p, paramValue(p, measurements)) }))
-  const emResults = EMISSIONS_PARAMS.map((p) => ({ p, v: paramValue(p, measurements), s: evaluateParam(p, paramValue(p, measurements)) }))
-  const b3Results = LIMBAH_B3_PARAMS.map((p) => ({ p, v: paramValue(p, measurements), s: evaluateParam(p, paramValue(p, measurements)) }))
+  const airResults = airParams.map((p) => ({ p, ...evaluate(p, measurements) }))
+  const emResults = EMISSIONS_PARAMS.map((p) => ({ p, ...evaluate(p, measurements) }))
+  const b3Results = LIMBAH_B3_PARAMS.map((p) => ({ p, ...evaluate(p, measurements) }))
 
-  const countFails = (arr: { s: ComplianceStatus }[]) => arr.filter((r) => r.s === "fail").length
-  const countWarn = (arr: { s: ComplianceStatus }[]) => arr.filter((r) => r.s === "warn").length
+  const countFails = (arr: { status: ComplianceStatus | "empty" }[]) => arr.filter((r) => r.status === "fail").length
+  const countWarn = (arr: { status: ComplianceStatus | "empty" }[]) => arr.filter((r) => r.status === "warn").length
+  const countEmpty = (arr: { status: ComplianceStatus | "empty" }[]) => arr.filter((r) => r.status === "empty").length
 
   const rank = predictRank(countFails(emResults), countFails(airResults), countFails(b3Results))
+  const entered = airResults.length + emResults.length + b3Results.length - countEmpty(airResults) - countEmpty(emResults) - countEmpty(b3Results)
 
   const renderGroup = (
     title: string,
     icon: React.ReactNode,
-    results: { p: ProperParam; v: number | boolean; s: ComplianceStatus }[],
+    results: { p: ProperParam; value: number | boolean | null; status: ComplianceStatus | "empty" }[],
   ) => (
     <Card>
       <CardHeader>
@@ -167,21 +169,23 @@ export default function Compliance() {
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-neutral-900">{r.p.name}</p>
               <p className="text-xs text-neutral-500">
-                {r.p.kind === "checklist"
-                  ? r.v ? t(dict, "proper.yes") : t(dict, "proper.no")
-                  : `${r.v} ${r.p.unit || ""}`}
+                {r.value === null
+                  ? `— / ${r.p.kind === "range" ? `${(r.p as { min: number }).min}–${(r.p as { max: number }).max}` : r.p.kind === "numeric" && (r.p as { max?: number }).max !== undefined ? `max ${(r.p as { max: number }).max}` : "—"} ${(r.p as { unit?: string }).unit || ""}`
+                  : r.p.kind === "checklist"
+                    ? r.value ? t(dict, "proper.yes") : t(dict, "proper.no")
+                    : `${r.value} ${r.p.unit || ""}`}
                 {r.p.kind === "numeric" && (r.p as { max?: number }).max !== undefined ? ` / max ${(r.p as { max: number }).max} ${r.p.unit}` : ""}
                 {r.p.kind === "range" ? ` / ${(r.p as { min: number }).min}–${(r.p as { max: number }).max}` : ""}
               </p>
             </div>
-            <span className={`flex items-center gap-1.5 text-xs font-medium ${statusMeta[r.s].dot === "bg-emerald-500" ? "text-emerald-600" : statusMeta[r.s].dot === "bg-amber-500" ? "text-amber-600" : "text-red-600"}`}>
-              <span className={`h-2 w-2 rounded-full ${statusMeta[r.s].dot}`} />
-              {t(dict, statusMeta[r.s].labelKey)}
+            <span className={`flex items-center gap-1.5 text-xs font-medium ${statusMeta[r.status].dot === "bg-emerald-500" ? "text-emerald-600" : statusMeta[r.status].dot === "bg-amber-500" ? "text-amber-600" : statusMeta[r.status].dot === "bg-red-500" ? "text-red-600" : "text-neutral-400"}`}>
+              <span className={`h-2 w-2 rounded-full ${statusMeta[r.status].dot}`} />
+              {t(dict, statusMeta[r.status].labelKey)}
             </span>
           </div>
         ))}
         <div className="flex items-center justify-between pt-1 text-xs">
-          <span className="text-neutral-500">{t(dict, "proper.fails")}: <b className="text-red-600">{countFails(results)}</b> · {t(dict, "proper.warn")}: <b className="text-amber-600">{countWarn(results)}</b></span>
+          <span className="text-neutral-500">{t(dict, "proper.fails")}: <b className="text-red-600">{countFails(results)}</b> · {t(dict, "proper.warn")}: <b className="text-amber-600">{countWarn(results)}</b> · {t(dict, "proper.no_data_short")}: <b className="text-neutral-400">{countEmpty(results)}</b></span>
         </div>
       </div>
     </Card>
@@ -207,9 +211,9 @@ export default function Compliance() {
               {t(dict, "proper.no_industry")}
             </p>
           )}
-          {industry && industry.isMock && (
-            <p className="mt-2 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-500">
-              {t(dict, "proper.mock_note")}
+          {industry && entered === 0 && (
+            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              {t(dict, "proper.no_data_note")}
             </p>
           )}
         </CardHeader>

@@ -1,17 +1,17 @@
 "use client"
 
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { ShieldCheck } from "lucide-react"
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
 import { useIndustryId } from "@/lib/use-industry-id"
-import { getMeasurements, paramValue } from "@/lib/measurements"
+import { getMeasurements, evaluate } from "@/lib/measurements"
 import {
   INDUSTRIES,
   EMISSIONS_PARAMS,
   LIMBAH_B3_PARAMS,
-  evaluateParam,
   predictRank,
   type ProperRank,
 } from "@/lib/proper"
@@ -50,9 +50,13 @@ export function ProperRankCard({ compact = false }: { compact?: boolean }) {
 
   const air = industry.params.filter((p) => p.category === "air_limbah")
   const measurements = getMeasurements(industryId)
-  const airFails = air.filter((p) => evaluateParam(p, paramValue(p, measurements)) === "fail").length
-  const emFails = EMISSIONS_PARAMS.filter((p) => evaluateParam(p, paramValue(p, measurements)) === "fail").length
-  const b3Fails = LIMBAH_B3_PARAMS.filter((p) => evaluateParam(p, paramValue(p, measurements)) === "fail").length
+  const airFails = air.filter((p) => evaluate(p, measurements).status === "fail").length
+  const emFails = EMISSIONS_PARAMS.filter((p) => evaluate(p, measurements).status === "fail").length
+  const b3Fails = LIMBAH_B3_PARAMS.filter((p) => evaluate(p, measurements).status === "fail").length
+  const entered =
+    air.filter((p) => evaluate(p, measurements).status !== "empty").length +
+    EMISSIONS_PARAMS.filter((p) => evaluate(p, measurements).status !== "empty").length +
+    LIMBAH_B3_PARAMS.filter((p) => evaluate(p, measurements).status !== "empty").length
   const rank = predictRank(emFails, airFails, b3Fails)
   const totalFails = airFails + emFails + b3Fails
 
@@ -77,10 +81,11 @@ export function ProperRankCard({ compact = false }: { compact?: boolean }) {
             <span className="text-red-600"><b>{airFails}</b> {t(dict, "proper.air_limbah")}</span>
             <span className="text-red-600"><b>{emFails}</b> {t(dict, "proper.emisi")}</span>
             <span className="text-red-600"><b>{b3Fails}</b> {t(dict, "proper.limbah_b3")}</span>
+            {entered === 0 && <Badge variant="neutral">{t(dict, "proper.no_data_short")}</Badge>}
           </div>
         </div>
-        {industry.isMock && (
-          <p className="mt-2 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-500">{t(dict, "proper.mock_note")}</p>
+        {entered === 0 && (
+          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">{t(dict, "proper.no_data_note")}</p>
         )}
       </Card>
     )
@@ -119,10 +124,10 @@ export function ProperRankCard({ compact = false }: { compact?: boolean }) {
           <p className="text-xs text-neutral-500">{t(dict, "proper.limbah_b3")}</p>
         </div>
       </div>
-      {industry.isMock && (
-        <p className="mt-3 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-500">{t(dict, "proper.mock_note")}</p>
+      {entered === 0 && (
+        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">{t(dict, "proper.no_data_note")}</p>
       )}
-      <p className="mt-2 text-xs text-neutral-400">{totalFails} {t(dict, "proper.fails").toLowerCase()}</p>
+      <p className="mt-2 text-xs text-neutral-400">{entered} {t(dict, "proper.entered").toLowerCase()} · {totalFails} {t(dict, "proper.fails").toLowerCase()}</p>
     </Card>
   )
 }

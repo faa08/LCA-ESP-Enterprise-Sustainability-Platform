@@ -7,11 +7,11 @@ import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
 import { useIndustryId } from "@/lib/use-industry-id"
+import { getMeasurements, evaluate } from "@/lib/measurements"
 import {
   INDUSTRIES,
   EMISSIONS_PARAMS,
   LIMBAH_B3_PARAMS,
-  evaluateParam,
   predictRank,
   type ComplianceStatus,
   type ProperParam,
@@ -28,10 +28,11 @@ const rankColor: Record<ProperRank, string> = {
   Hitam: "bg-neutral-800 text-white border-neutral-700",
 }
 
-const statusMeta: Record<ComplianceStatus, { dot: string; labelKey: string; adviceKey: string }> = {
+const statusMeta: Record<ComplianceStatus | "empty", { dot: string; labelKey: string; adviceKey: string }> = {
   ok: { dot: "bg-emerald-500", labelKey: "proper.status_ok", adviceKey: "ai.proper_ok" },
   warn: { dot: "bg-amber-500", labelKey: "proper.status_warn", adviceKey: "ai.proper_risk_warn" },
   fail: { dot: "bg-red-500", labelKey: "proper.status_fail", adviceKey: "ai.proper_risk_high" },
+  empty: { dot: "bg-neutral-300", labelKey: "proper.status_empty", adviceKey: "ai.proper_ok" },
 }
 
 export default function AIInsights() {
@@ -68,17 +69,17 @@ export default function AIInsights() {
     { titleKey: "proper.limbah_b3", icon: <CheckCircle2 className="h-4 w-4" />, params: LIMBAH_B3_PARAMS },
   ]
 
-  const allResults = groups.flatMap((g) =>
-    g.params.map((p) => ({ p, s: evaluateParam(p, (p as { mock: number | boolean }).mock) })),
-  )
+  const measurements = getMeasurements(industryId)
+  const allResults = groups.flatMap((g) => g.params.map((p) => ({ p, ...evaluate(p, measurements) })))
 
-  const fails = allResults.filter((r) => r.s === "fail")
-  const warns = allResults.filter((r) => r.s === "warn")
+  const fails = allResults.filter((r) => r.status === "fail")
+  const warns = allResults.filter((r) => r.status === "warn")
   const rank = predictRank(
-    groups[1].params.filter((p) => evaluateParam(p, (p as { mock: number | boolean }).mock) === "fail").length,
-    groups[0].params.filter((p) => evaluateParam(p, (p as { mock: number | boolean }).mock) === "fail").length,
-    groups[2].params.filter((p) => evaluateParam(p, (p as { mock: number | boolean }).mock) === "fail").length,
+    groups[1].params.filter((p) => evaluate(p, measurements).status === "fail").length,
+    groups[0].params.filter((p) => evaluate(p, measurements).status === "fail").length,
+    groups[2].params.filter((p) => evaluate(p, measurements).status === "fail").length,
   )
+  const entered = allResults.filter((r) => r.status !== "empty").length
 
   const atRisk = [...fails, ...warns]
 
@@ -110,8 +111,8 @@ export default function AIInsights() {
             <p className="text-xs text-neutral-500">{industry.name}</p>
           </div>
         </div>
-        {industry.isMock && (
-          <p className="mt-3 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-500">{t(dict, "proper.mock_note")}</p>
+        {entered === 0 && (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">{t(dict, "proper.no_data_note")}</p>
         )}
       </Card>
 
@@ -134,7 +135,7 @@ export default function AIInsights() {
               </thead>
               <tbody>
                 {atRisk.map((r, i) => {
-                  const meta = statusMeta[r.s]
+                  const meta = statusMeta[r.status]
                   return (
                     <tr key={i} className="border-b border-neutral-100">
                       <td className="px-3 py-2.5 font-medium text-neutral-900">{r.p.name}</td>
@@ -174,8 +175,8 @@ export default function AIInsights() {
             ) : (
               atRisk.map((r, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-neutral-600">
-                  <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${r.s === "fail" ? "text-red-500" : "text-amber-500"}`} />
-                  <span><b className="text-neutral-900">{r.p.name}:</b> {t(dict, statusMeta[r.s].adviceKey)}</span>
+<AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${r.status === "fail" ? "text-red-500" : "text-amber-500"}`} />
+<span><b className="text-neutral-900">{r.p.name}:</b> {t(dict, statusMeta[r.status].adviceKey)}</span>
                 </li>
               ))
             )}
