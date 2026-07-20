@@ -7,6 +7,9 @@ import {
   Factory,
   Flame,
   Recycle,
+  Leaf,
+  Zap,
+  Cpu,
   CheckCircle2,
   AlertTriangle,
   XCircle,
@@ -22,6 +25,9 @@ import {
   INDUSTRIES,
   EMISSIONS_PARAMS,
   LIMBAH_B3_PARAMS,
+  CARBON_PARAMS,
+  ENERGY_PARAMS,
+  LCA_PARAMS,
   evaluateParam,
   type ComplianceStatus,
   type ProperParam,
@@ -326,6 +332,32 @@ export default function InputPage() {
             icon={Recycle}
             title={t(dict, "input.section.b3")}
             params={LIMBAH_B3_PARAMS}
+            values={values}
+            onChange={handleChange}
+          />
+        </div>
+        <Section
+          dict={dict}
+          icon={Leaf}
+          title={t(dict, "input.section.carbon")}
+          params={CARBON_PARAMS}
+          values={values}
+          onChange={handleChange}
+        />
+        <Section
+          dict={dict}
+          icon={Zap}
+          title={t(dict, "input.section.energy")}
+          params={ENERGY_PARAMS}
+          values={values}
+          onChange={handleChange}
+        />
+        <div className="lg:col-span-2">
+          <Section
+            dict={dict}
+            icon={Cpu}
+            title={t(dict, "input.section.lca")}
+            params={LCA_PARAMS}
             values={values}
             onChange={handleChange}
           />

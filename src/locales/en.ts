@@ -239,6 +239,8 @@ export const en: Record<string, string> = {
   "common.search": "Search documents...",
   "common.filter": "Filter",
   "common.upload": "Upload",
+  "common.no_data": "No data yet",
+  "common.entered_value": "Entered value",
 
   "carbon.page_title": "Carbon Accounting",
   "carbon.page_desc": "Track and manage greenhouse gas emissions across all scopes",
@@ -268,6 +270,7 @@ export const en: Record<string, string> = {
   "energy.equipment": "Equipment Efficiency",
   "energy.cost_overview": "Energy Cost Overview",
   "energy.total": "Total",
+  "energy.renewable_share": "Renewable Share",
 
   "env.page_title": "Emissions Monitoring",
   "env.page_desc": "Monitor stack emission parameters (TSP, SO2, NOx, CO, opacity) against Permen LH emission standards for PROPER compliance",
@@ -693,6 +696,9 @@ export const en: Record<string, string> = {
   "input.section.air": "Air Limbah (wastewater)",
   "input.section.emisi": "Emisi Cerobong (stack emission)",
   "input.section.b3": "Limbah B3 (hazardous waste)",
+  "input.section.carbon": "Carbon Accounting (GHG)",
+  "input.section.energy": "Energy Monitoring",
+  "input.section.lca": "Life Cycle Assessment (LCA)",
   "input.param.value": "Measured value",
   "input.param.limit": "Baku mutu",
   "input.param.na": "n/a",

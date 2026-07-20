@@ -3,7 +3,7 @@
 // Air limbah: Penyamakan Kulit (PDF user), Minyak Goreng & Tekstil (Permen LH 5/2014) = RIIL.
 // Emisi boiler: masih MOCK, menunggu input jenis bahan bakar (lihat komentar emisiBoiler).
 
-export type ProperCategory = "emisi" | "air_limbah" | "limbah_b3"
+export type ProperCategory = "emisi" | "air_limbah" | "limbah_b3" | "lainnya"
 
 export type ParamKind = "numeric" | "range" | "checklist"
 
@@ -141,6 +141,30 @@ export const INDUSTRIES: IndustryProfile[] = [
 
 export const EMISSIONS_PARAMS: ProperParam[] = emisiBoiler
 export const LIMBAH_B3_PARAMS: ProperParam[] = limbahB3
+
+// --- Modul pendukung (bukan parameter penilaian PROPER langsung) ---
+// Data diisi lewat Data Hub agar modul Carbon / Energi / LCA konsisten dengan satu sumber.
+export const CARBON_PARAMS: ProperParam[] = [
+  { code: "ghg_scope1", name: "Emisi Gas Rumah Kaca Scope 1", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "ghg_scope2", name: "Emisi Gas Rumah Kaca Scope 2 (listrik)", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "ghg_scope3", name: "Emisi Gas Rumah Kaca Scope 3", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "carbon_captured", name: "Karbon terserap / dikurangi", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 0 },
+]
+
+export const ENERGY_PARAMS: ProperParam[] = [
+  { code: "energy_total", name: "Total Energi", unit: "MWh/tahun", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "energy_renewable", name: "Energi Terbarukan", unit: "MWh/tahun", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "energy_intensity", name: "Intensitas Energi", unit: "kWh/unit produk", kind: "numeric", category: "lainnya", mock: 0 },
+]
+
+export const LCA_PARAMS: ProperParam[] = [
+  { code: "lca_gwp", name: "Global Warming Potential (GWP)", unit: "kg CO₂e/unit", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "lca_water", name: "Dampak Air (Water Depletion)", unit: "L/unit", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "lca_eutro", name: "Eutrofikasi", unit: "kg PO₄e/unit", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "lca_recycled", name: "Kandungan Material Daur Ulang", unit: "%", kind: "numeric", category: "lainnya", mock: 0 },
+]
+
+export const OTHER_PARAMS: ProperParam[] = [...CARBON_PARAMS, ...ENERGY_PARAMS, ...LCA_PARAMS]
 
 export function getIndustry(id: string | null): IndustryProfile | null {
   if (!id) return null

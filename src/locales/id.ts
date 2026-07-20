@@ -239,6 +239,8 @@ export const id = {
   "common.search": "Cari...",
   "common.filter": "Filter",
   "common.upload": "Unggah",
+  "common.no_data": "Belum ada data",
+  "common.entered_value": "Nilai yang dimasukkan",
 
   "carbon.page_title": "Carbon Accounting",
   "carbon.page_desc": "Lacak dan kelola emisi gas rumah kaca di seluruh scope",
@@ -268,6 +270,7 @@ export const id = {
   "energy.equipment": "Efisiensi Peralatan",
   "energy.cost_overview": "Ikhtisar Biaya Energi",
   "energy.total": "Total",
+  "energy.renewable_share": "Porsi Terbarukan",
 
   "env.page_title": "Pemantauan Emisi",
   "env.page_desc": "Pantau parameter emisi cerobong (TSP, SO2, NOx, CO, opasitas) terhadap baku mutu emisi Permen LH untuk kepatuhan PROPER",
@@ -692,6 +695,9 @@ export const id = {
   "input.section.air": "Air Limbah",
   "input.section.emisi": "Emisi Cerobong",
   "input.section.b3": "Limbah B3",
+  "input.section.carbon": "Carbon Accounting (GRK)",
+  "input.section.energy": "Pemantauan Energi",
+  "input.section.lca": "Analisis Dampak (LCA)",
   "input.param.value": "Nilai terukur",
   "input.param.limit": "Baku mutu",
   "input.param.na": "n/a",

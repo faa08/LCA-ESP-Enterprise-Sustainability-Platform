@@ -8,6 +8,11 @@ import { KpiProgress } from "@/components/ui/kpi-progress"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ProperRankCard } from "@/components/dashboard/proper-rank-card"
+import { useIndustryId } from "@/lib/use-industry-id"
+import { getMeasurements, paramValue } from "@/lib/measurements"
+import {
+  OTHER_PARAMS,
+} from "@/lib/proper"
 import {
   Cloud,
   Zap,
@@ -22,65 +27,68 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, L
 
 const dicts: Record<Locale, Record<string, string>> = { id, en }
 
-const weeklyTrend = [
-  { day: "Mon", emissions: 420, energy: 2800, water: 520 },
-  { day: "Tue", emissions: 385, energy: 2650, water: 490 },
-  { day: "Wed", emissions: 410, energy: 2900, water: 510 },
-  { day: "Thu", emissions: 395, energy: 2750, water: 480 },
-  { day: "Fri", emissions: 370, energy: 2500, water: 460 },
-  { day: "Sat", emissions: 340, energy: 2200, water: 430 },
-  { day: "Sun", emissions: 320, energy: 2100, water: 410 },
-]
-
-const monthlyEmissions = [
-  { month: "Jan", scope1: 280, scope2: 420, scope3: 180 },
-  { month: "Feb", scope1: 260, scope2: 400, scope3: 170 },
-  { month: "Mar", scope1: 290, scope2: 430, scope3: 190 },
-  { month: "Apr", scope1: 270, scope2: 410, scope3: 175 },
-  { month: "May", scope1: 250, scope2: 390, scope3: 165 },
-  { month: "Jun", scope1: 240, scope2: 380, scope3: 160 },
-]
-
 export function ExecutiveOverview({ locale }: { locale: Locale }) {
   const dict = dicts[locale]
+  const industryId = useIndustryId()
+  const measurements = getMeasurements(industryId)
+
+  const get = (code: string) => {
+    const p = OTHER_PARAMS.find((x) => x.code === code)
+    if (!p) return null
+    const v = paramValue(p, measurements)
+    return typeof v === "number" ? v : null
+  }
+
+  const scope1 = get("ghg_scope1") ?? 0
+  const scope2 = get("ghg_scope2") ?? 0
+  const scope3 = get("ghg_scope3") ?? 0
+  const carbonTotal = scope1 + scope2 + scope3
+  const energyTotal = get("energy_total") ?? 0
+  const energyRenewable = get("energy_renewable") ?? 0
+
+  const hasData = (code: string) => get(code) !== null
+  const hasCarbon = hasData("ghg_scope1") || hasData("ghg_scope2") || hasData("ghg_scope3")
+  const hasEnergy = hasData("energy_total")
+  const hasRenewable = hasData("energy_renewable")
+
+  const renewablePct = energyTotal > 0 ? Math.round((energyRenewable / energyTotal) * 100) : 0
+
+  const fmt = (n: number) =>
+    n === 0 ? "0" : n.toLocaleString("en-US", { maximumFractionDigits: 2 })
+
+  // Time-series derived from user-entered monthly totals (single cumulative point, no demo series)
+  const hasSeries = hasCarbon || hasEnergy
+  const emissionsSeries = hasSeries
+    ? [{ period: "YTD", scope1, scope2, scope3, energy: energyTotal, water: 0 }]
+    : []
+
+  const enteredCount = OTHER_PARAMS.filter((p) => paramValue(p, measurements) !== null).length
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title={t(dict, "dashboard.kpi.carbon")}
-          value="2,847 tCO₂e"
+          value={hasCarbon ? `${fmt(carbonTotal)} tCO₂e` : "0"}
           description={t(dict, "dashboard.kpi.carbon_desc")}
-          change={t(dict, "dashboard.kpi.carbon_change")}
-          changeType="positive"
-          trend="down"
           icon={Cloud}
         />
         <StatCard
           title={t(dict, "dashboard.kpi.energy")}
-          value="18,420 MWh"
+          value={hasEnergy ? `${fmt(energyTotal)} MWh` : "0"}
           description={t(dict, "dashboard.kpi.energy_desc")}
-          change={t(dict, "dashboard.kpi.energy_change")}
-          changeType="negative"
-          trend="up"
           icon={Zap}
         />
         <StatCard
           title={t(dict, "dashboard.kpi.water")}
-          value="92,500 m³"
+          value="0"
           description={t(dict, "dashboard.kpi.water_desc")}
-          change={t(dict, "dashboard.kpi.water_change")}
-          changeType="positive"
-          trend="down"
           icon={Droplets}
         />
         <StatCard
           title={t(dict, "dashboard.kpi.recycled")}
-          value="64.2%"
+          value={hasRenewable && energyTotal > 0 ? `${renewablePct}%` : "0"}
           description={t(dict, "dashboard.kpi.recycled_desc")}
-          change={t(dict, "dashboard.kpi.recycled_change")}
-          changeType="positive"
-          trend="up"
           icon={Recycle}
         />
       </div>
@@ -90,35 +98,26 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title={t(dict, "dashboard.kpi.compliance")}
-          value="94/100"
+          value="0/100"
           description={t(dict, "dashboard.kpi.compliance_desc")}
-          change={t(dict, "dashboard.kpi.compliance_change")}
-          changeType="positive"
-          trend="up"
           icon={ShieldCheck}
         />
         <StatCard
           title={t(dict, "dashboard.kpi.esg")}
-          value="A-"
+          value="—"
           description={t(dict, "dashboard.kpi.esg_desc")}
-          change={t(dict, "dashboard.kpi.esg_change")}
-          changeType="positive"
-          trend="up"
           icon={TrendingUp}
         />
         <StatCard
           title={t(dict, "dashboard.kpi.facilities")}
-          value="12"
+          value="0"
           description={t(dict, "dashboard.kpi.facilities_desc")}
           icon={Factory}
         />
         <StatCard
           title={t(dict, "dashboard.kpi.issues")}
-          value="8"
+          value="0"
           description={t(dict, "dashboard.kpi.issues_desc")}
-          change={t(dict, "dashboard.kpi.issues_change")}
-          changeType="negative"
-          trend="up"
           icon={AlertTriangle}
         />
       </div>
@@ -129,16 +128,22 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
             <CardTitle>{t(dict, "dashboard.chart.weekly")}</CardTitle>
           </CardHeader>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={weeklyTrend}>
-                <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#a3a3a3" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" />
-                <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
-                <Line type="monotone" dataKey="emissions" stroke="#059669" strokeWidth={2} name="CO₂ (t)" dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="energy" stroke="#d97706" strokeWidth={2} name="Energy (MWh)" dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="water" stroke="#0284c7" strokeWidth={2} name="Water (m³)" dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            {emissionsSeries.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-neutral-400">
+                {t(dict, "datahub.empty")}
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={emissionsSeries}>
+                  <XAxis dataKey="period" tick={{ fontSize: 12 }} stroke="#a3a3a3" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" />
+                  <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
+                  <Line type="monotone" dataKey="scope1" stroke="#059669" strokeWidth={2} name="Scope 1" dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="scope2" stroke="#d97706" strokeWidth={2} name="Scope 2" dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="scope3" stroke="#0284c7" strokeWidth={2} name="Scope 3" dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
 
@@ -147,16 +152,22 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
             <CardTitle>{t(dict, "dashboard.chart.scope")}</CardTitle>
           </CardHeader>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyEmissions}>
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a3a3a3" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" />
-                <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
-                <Bar dataKey="scope1" fill="#059669" radius={[4, 4, 0, 0]} name="Scope 1" />
-                <Bar dataKey="scope2" fill="#0ea5e9" radius={[4, 4, 0, 0]} name="Scope 2" />
-                <Bar dataKey="scope3" fill="#a855f7" radius={[4, 4, 0, 0]} name="Scope 3" />
-              </BarChart>
-            </ResponsiveContainer>
+            {emissionsSeries.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-neutral-400">
+                {t(dict, "datahub.empty")}
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={emissionsSeries}>
+                  <XAxis dataKey="period" tick={{ fontSize: 12 }} stroke="#a3a3a3" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" />
+                  <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
+                  <Bar dataKey="scope1" fill="#059669" radius={[4, 4, 0, 0]} name="Scope 1" />
+                  <Bar dataKey="scope2" fill="#0ea5e9" radius={[4, 4, 0, 0]} name="Scope 2" />
+                  <Bar dataKey="scope3" fill="#a855f7" radius={[4, 4, 0, 0]} name="Scope 3" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
       </div>
@@ -167,11 +178,11 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
             <CardTitle>{t(dict, "dashboard.kpi.title")}</CardTitle>
           </CardHeader>
           <div className="space-y-4">
-            <KpiProgress label={t(dict, "dashboard.kpi.carbon_red")} current={2847} target={3500} unit="tCO₂e" />
-            <KpiProgress label={t(dict, "dashboard.kpi.renewable")} current={35} target={50} unit="%" />
-            <KpiProgress label={t(dict, "dashboard.kpi.water_eff")} current={78} target={85} unit="%" />
-            <KpiProgress label={t(dict, "dashboard.kpi.waste_div")} current={64} target={75} unit="%" />
-            <KpiProgress label={t(dict, "dashboard.kpi.compliance_kpi")} current={94} target={100} unit="%" />
+            <KpiProgress label={t(dict, "dashboard.kpi.carbon_red")} current={hasCarbon ? carbonTotal : 0} target={3500} unit="tCO₂e" />
+            <KpiProgress label={t(dict, "dashboard.kpi.renewable")} current={renewablePct} target={50} unit="%" />
+            <KpiProgress label={t(dict, "dashboard.kpi.water_eff")} current={0} target={85} unit="%" />
+            <KpiProgress label={t(dict, "dashboard.kpi.waste_div")} current={0} target={75} unit="%" />
+            <KpiProgress label={t(dict, "dashboard.kpi.compliance_kpi")} current={0} target={100} unit="%" />
           </div>
         </Card>
 
@@ -180,26 +191,24 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
             <CardTitle>{t(dict, "dashboard.issues.title")}</CardTitle>
           </CardHeader>
           <div className="space-y-3">
-            {[
-              { facility: "Plant A - Production Hall 2", issue: "Air emission exceedance", severity: "critical" as const, date: "2h ago" },
-              { facility: "Plant B - Wastewater Treatment", issue: "pH level out of range", severity: "high" as const, date: "5h ago" },
-              { facility: "Plant C - Boiler Room", issue: "High energy consumption", severity: "medium" as const, date: "1d ago" },
-              { facility: "Plant A - Cooling Tower", issue: "Water leak detected", severity: "high" as const, date: "2d ago" },
-              { facility: "Plant B - Chemical Storage", issue: "Permit renewal pending", severity: "medium" as const, date: "3d ago" },
-            ].map((item, i) => (
-              <div key={i} className="flex items-start justify-between rounded-lg border border-neutral-100 p-3">
-                <div>
-                  <p className="text-sm font-medium text-neutral-900">{item.facility}</p>
-                  <p className="text-xs text-neutral-500">{item.issue}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={item.severity === "critical" ? "danger" : item.severity === "high" ? "warning" : "neutral"}>
-                    {item.severity}
-                  </Badge>
-                  <span className="text-xs text-neutral-400">{item.date}</span>
-                </div>
-              </div>
-            ))}
+            {enteredCount === 0 ? (
+              <p className="px-1 py-6 text-center text-sm text-neutral-400">
+                {t(dict, "datahub.empty")}
+              </p>
+            ) : (
+              OTHER_PARAMS.filter((p) => paramValue(p, measurements) !== null).map((p) => {
+                const v = paramValue(p, measurements)
+                return (
+                  <div key={p.code} className="flex items-start justify-between rounded-lg border border-neutral-100 p-3">
+                    <div>
+                      <p className="text-sm font-medium text-neutral-900">{p.name}</p>
+                      <p className="text-xs text-neutral-500">{typeof v === "number" ? `${fmt(v)} ${(p as { unit?: string }).unit || ""}` : t(dict, "proper.yes")}</p>
+                    </div>
+                    <Badge variant="neutral">{t(dict, "proper.status_ok")}</Badge>
+                  </div>
+                )
+              })
+            )}
           </div>
         </Card>
       </div>

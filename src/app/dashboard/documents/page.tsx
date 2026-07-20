@@ -9,39 +9,30 @@ import { en as enDict } from "@/locales/en"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
-const documentCategories = [
-  { icon: FileCheck, nameKey: "documents.permit", count: 12, color: "text-blue-600 bg-blue-50" },
-  { icon: BookOpen, nameKey: "documents.sop", count: 24, color: "text-emerald-600 bg-emerald-50" },
-  { icon: FileText, nameKey: "documents.audit", count: 18, color: "text-amber-600 bg-amber-50" },
-  { icon: Award, nameKey: "documents.certificate", count: 9, color: "text-purple-600 bg-purple-50" },
-  { icon: ScrollText, nameKey: "documents.policy", count: 15, color: "text-rose-600 bg-rose-50" },
-  { icon: FolderOpen, nameKey: "documents.reports", count: 32, color: "text-cyan-600 bg-cyan-50" },
-]
-
-const allDocs = [
-  { name: "Plant A - Environmental Permit 2026", folderKey: "documents.permit", type: "PDF", status: "active" as const, size: "2.4 MB", date: "2 days ago" },
-  { name: "ISO 14001 Surveillance Audit Report", folderKey: "documents.audit", type: "PDF", status: "active" as const, size: "4.1 MB", date: "1 week ago" },
-  { name: "Waste Management SOP v3", folderKey: "documents.sop", type: "DOCX", status: "draft" as const, size: "1.2 MB", date: "2 weeks ago" },
-  { name: "GHG Verification Statement 2025", folderKey: "documents.certificate", type: "PDF", status: "active" as const, size: "0.8 MB", date: "3 weeks ago" },
-  { name: "Environmental Policy 2026", folderKey: "documents.policy", type: "PDF", status: "active" as const, size: "0.5 MB", date: "1 month ago" },
-  { name: "PROPER Self-Assessment Report", folderKey: "documents.reports", type: "XLSX", status: "active" as const, size: "3.2 MB", date: "1 month ago" },
-  { name: "Water Discharge Permit - Plant B", folderKey: "documents.permit", type: "PDF", status: "expired" as const, size: "1.8 MB", date: "3 months ago" },
-  { name: "Emergency Response Procedure", folderKey: "documents.sop", type: "PDF", status: "active" as const, size: "0.9 MB", date: "3 months ago" },
-]
-
 export default function Documents() {
   const locale = getLocaleClient()
   const dict = dicts[locale]
 
-  const properDocs = [
-    { key: "documents.proper.ukl", status: "ok" as const },
-    { key: "documents.proper.tps", status: "ok" as const },
-    { key: "documents.proper.manifest", status: "warn" as const },
-    { key: "documents.proper.form", status: "warn" as const },
-    { key: "documents.proper.monitoring", status: "ok" as const },
-    { key: "documents.proper.permit_pl", status: "fail" as const },
-    { key: "documents.proper.permit_parmen", status: "ok" as const },
+  const documentCategories = [
+    { icon: FileCheck, nameKey: "documents.permit", color: "text-blue-600 bg-blue-50" },
+    { icon: BookOpen, nameKey: "documents.sop", color: "text-emerald-600 bg-emerald-50" },
+    { icon: FileText, nameKey: "documents.audit", color: "text-amber-600 bg-amber-50" },
+    { icon: Award, nameKey: "documents.certificate", color: "text-purple-600 bg-purple-50" },
+    { icon: ScrollText, nameKey: "documents.policy", color: "text-rose-600 bg-rose-50" },
+    { icon: FolderOpen, nameKey: "documents.reports", color: "text-cyan-600 bg-cyan-50" },
   ]
+
+  const properDocs = [
+    { key: "documents.proper.ukl" },
+    { key: "documents.proper.tps" },
+    { key: "documents.proper.manifest" },
+    { key: "documents.proper.form" },
+    { key: "documents.proper.monitoring" },
+    { key: "documents.proper.permit_pl" },
+    { key: "documents.proper.permit_parmen" },
+  ]
+
+  const allDocs: { name: string; folderKey: string; type: string; status: "active" | "draft" | "expired"; size: string; date: string }[] = []
 
   return (
     <div className="space-y-6">
@@ -54,9 +45,7 @@ export default function Documents() {
           {properDocs.map((d, i) => (
             <div key={i} className="flex items-center justify-between rounded-lg border border-neutral-100 px-3 py-2.5">
               <span className="text-sm text-neutral-800">{t(dict, d.key)}</span>
-              <Badge variant={d.status === "ok" ? "success" : d.status === "warn" ? "warning" : "danger"}>
-                {d.status === "ok" ? t(dict, "common.active") : d.status === "warn" ? t(dict, "proper.status_warn") : t(dict, "proper.status_fail")}
-              </Badge>
+              <Badge variant="neutral">{t(dict, "common.no_data")}</Badge>
             </div>
           ))}
         </div>
@@ -90,7 +79,7 @@ export default function Documents() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-neutral-900">{t(dict, cat.nameKey)}</p>
-                <p className="text-xs text-neutral-500">{t(dict, "documents.count").replace("{n}", String(cat.count))}</p>
+                <p className="text-xs text-neutral-500">{t(dict, "common.no_data")}</p>
               </div>
             </div>
           </Card>
@@ -104,46 +93,52 @@ export default function Documents() {
             <span>{t(dict, "documents.sort_by")}</span>
           </div>
         </div>
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-neutral-200">
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.name")}</th>
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.folder")}</th>
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.type")}</th>
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.size")}</th>
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.status")}</th>
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.date")}</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {allDocs.map((doc, i) => (
-                <tr key={i} className="border-b border-neutral-100 hover:bg-neutral-50">
-                  <td className="px-3 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-neutral-400" />
-                      <span className="font-medium text-neutral-900">{doc.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2.5 text-neutral-600">{t(dict, doc.folderKey)}</td>
-                  <td className="px-3 py-2.5">
-                    <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">{doc.type}</span>
-                  </td>
-                  <td className="px-3 py-2.5 text-neutral-600">{doc.size}</td>
-                  <td className="px-3 py-2.5">
-                    <Badge variant={doc.status === "active" ? "success" : doc.status === "draft" ? "neutral" : "danger"}>
-                      {t(dict, "common." + doc.status)}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-2.5 text-xs text-neutral-500">{doc.date}</td>
-                  <td className="px-3 py-2.5">
-                    <MoreHorizontal className="h-4 w-4 cursor-pointer text-neutral-400 hover:text-neutral-600" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="mt-4">
+          {allDocs.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-200">
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.name")}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.folder")}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.type")}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.size")}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.status")}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.date")}</th>
+                    <th className="px-3 py-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {allDocs.map((doc, i) => (
+                    <tr key={i} className="border-b border-neutral-100 hover:bg-neutral-50">
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-neutral-400" />
+                          <span className="font-medium text-neutral-900">{doc.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 text-neutral-600">{t(dict, doc.folderKey)}</td>
+                      <td className="px-3 py-2.5">
+                        <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">{doc.type}</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-neutral-600">{doc.size}</td>
+                      <td className="px-3 py-2.5">
+                        <Badge variant={doc.status === "active" ? "success" : doc.status === "draft" ? "neutral" : "danger"}>
+                          {t(dict, "common." + doc.status)}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-neutral-500">{doc.date}</td>
+                      <td className="px-3 py-2.5">
+                        <MoreHorizontal className="h-4 w-4 cursor-pointer text-neutral-400 hover:text-neutral-600" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="py-10 text-center text-sm text-neutral-400">{t(dict, "common.no_data")}</div>
+          )}
         </div>
       </Card>
     </div>

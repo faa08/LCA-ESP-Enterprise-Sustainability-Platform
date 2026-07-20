@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import { useIndustryId } from "@/lib/use-industry-id"
-import { INDUSTRIES, EMISSIONS_PARAMS, LIMBAH_B3_PARAMS, type ProperParam } from "@/lib/proper"
+import { INDUSTRIES, EMISSIONS_PARAMS, LIMBAH_B3_PARAMS, OTHER_PARAMS, type ProperParam } from "@/lib/proper"
 import { getMeasurements, saveMeasurements, recordImport, useImportLog } from "@/lib/measurements"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
@@ -60,7 +60,7 @@ function loadConfig(kind: string): Record<string, string> {
 function allParams(industryId: string | null): ProperParam[] {
   const industry = INDUSTRIES.find((i) => i.id === industryId)
   const air = industry ? industry.params.filter((p) => p.category === "air_limbah") : []
-  return [...air, ...EMISSIONS_PARAMS, ...LIMBAH_B3_PARAMS]
+  return [...air, ...EMISSIONS_PARAMS, ...LIMBAH_B3_PARAMS, ...OTHER_PARAMS]
 }
 
 // Parse CSV text: expects columns "code,value" or "parameter,value" (header optional).
