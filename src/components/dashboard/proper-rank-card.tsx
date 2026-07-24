@@ -12,6 +12,7 @@ import {
   INDUSTRIES,
   EMISSIONS_PARAMS,
   LIMBAH_B3_PARAMS,
+  LCA_PARAMS,
   predictRank,
   type ProperRank,
 } from "@/lib/proper"
@@ -53,11 +54,15 @@ export function ProperRankCard({ compact = false }: { compact?: boolean }) {
   const airFails = air.filter((p) => evaluate(p, measurements).status === "fail").length
   const emFails = EMISSIONS_PARAMS.filter((p) => evaluate(p, measurements).status === "fail").length
   const b3Fails = LIMBAH_B3_PARAMS.filter((p) => evaluate(p, measurements).status === "fail").length
+  const lcaFilledCount = LCA_PARAMS.filter((p) => {
+    const raw = measurements[p.code]
+    return raw !== undefined && raw !== "" && Number(raw) > 0
+  }).length
   const entered =
     air.filter((p) => evaluate(p, measurements).status !== "empty").length +
     EMISSIONS_PARAMS.filter((p) => evaluate(p, measurements).status !== "empty").length +
     LIMBAH_B3_PARAMS.filter((p) => evaluate(p, measurements).status !== "empty").length
-  const rank = predictRank(emFails, airFails, b3Fails)
+  const rank = predictRank(emFails, airFails, b3Fails, lcaFilledCount)
   const totalFails = airFails + emFails + b3Fails
 
   if (compact) {

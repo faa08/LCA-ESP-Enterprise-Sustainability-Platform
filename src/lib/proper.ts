@@ -101,19 +101,36 @@ const tekstil: IndustryProfile = {
   ],
 }
 
-// --- Emisi cerobong (boiler) — RIIL, Permen LH 7/2007 ---
-// Baku mutu beda per bahan bakar. Default di bawah = batubara (paling umum).
-// Untuk bahan bakar lain, lihat EMISSION_PROFILES (gas/minyak/biomassa).
-const emisiBoiler: ProperParam[] = [
-  { code: "tsp", name: "Partikulat (TSP)", unit: "mg/Nm³", kind: "numeric", category: "emisi", max: 230, mock: 120 },
-  { code: "so2", name: "SO₂", unit: "mg/Nm³", kind: "numeric", category: "emisi", max: 850, mock: 600 },
-  { code: "nox", name: "NOx", unit: "mg/Nm³", kind: "numeric", category: "emisi", max: 400, mock: 300 },
-  { code: "co", name: "CO", unit: "mg/Nm³", kind: "numeric", category: "emisi", max: 150, mock: 90 },
-  { code: "opacity", name: "Opasitas", unit: "%", kind: "numeric", category: "emisi", max: 20, mock: 12 },
-]
+// --- Kelapa Sawit (CPO): Permen LH 5/2014 Lampiran III ---
+const kelapaSawit: IndustryProfile = {
+  id: "kelapa_sawit",
+  name: "Industri Kelapa Sawit (CPO)",
+  isMock: false,
+  params: [
+    { code: "ph", name: "pH", unit: "-", kind: "range", category: "air_limbah", min: 6, max: 9, mock: 7.2 },
+    { code: "bod", name: "BOD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 100, mock: 70 },
+    { code: "cod", name: "COD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 350, mock: 250 },
+    { code: "tss", name: "TSS", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 250, mock: 150 },
+    { code: "oil_fat", name: "Minyak dan Lemak", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 50, mock: 30 },
+    { code: "nitrogen", name: "Nitrogen Total", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 50, mock: 30 },
+  ],
+}
 
-// Baku mutu emisi per jenis bahan bakar (Permen LH 7/2007), kg/Nm³ / mg/Nm³.
-// Dipakai bila nanti user memilih bahan bakar boiler di profil pabrik.
+// --- Pulp & Paper: Permen LH 5/2014 Lampiran I ---
+const pulpPaper: IndustryProfile = {
+  id: "pulp_paper",
+  name: "Industri Pulp & Kertas",
+  isMock: false,
+  params: [
+    { code: "ph", name: "pH", unit: "-", kind: "range", category: "air_limbah", min: 6, max: 9, mock: 7.5 },
+    { code: "bod", name: "BOD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 150, mock: 100 },
+    { code: "cod", name: "COD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 400, mock: 300 },
+    { code: "tss", name: "TSS", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 100, mock: 80 },
+    { code: "ao", name: "Senyawa Organik Terhalogenasi (AOX)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 2, mock: 1.5 },
+  ],
+}
+
+// --- Emisi cerobong (boiler) ---
 export const EMISSION_PROFILES: Record<string, { label: string; limits: Record<string, number> }> = {
   batubara: { label: "Batubara", limits: { tsp: 230, so2: 850, nox: 400, co: 150, opacity: 20 } },
   biomassa: { label: "Biomassa (serabut/cangkang)", limits: { tsp: 300, so2: 850, nox: 400, co: 150, opacity: 20 } },
@@ -121,72 +138,96 @@ export const EMISSION_PROFILES: Record<string, { label: string; limits: Record<s
   minyak: { label: "Minyak", limits: { tsp: 230, so2: 850, nox: 450, co: 150, opacity: 20 } },
 }
 
-// --- Limbah B3: checklist (riil, sesuai PP 101/2014) ---
+/**
+ * Kembalikan daftar ProperParam emisi sesuai jenis bahan bakar yang dipilih.
+ * Gunakan ini di Compliance page agar batas emisi dinamis per pabrik.
+ * @param fuelType - salah satu key dari EMISSION_PROFILES (default: "batubara")
+ */
+export function getEmissionParams(fuelType: string = "batubara"): ProperParam[] {
+  const profile = EMISSION_PROFILES[fuelType] ?? EMISSION_PROFILES.batubara
+  const limits = profile.limits
+  return [
+    { code: "tsp",     name: "Partikulat (TSP)", unit: "mg/Nm³", kind: "numeric", category: "emisi", max: limits.tsp,     mock: Math.round(limits.tsp     * 0.52) },
+    { code: "so2",     name: "SO₂",              unit: "mg/Nm³", kind: "numeric", category: "emisi", max: limits.so2,     mock: Math.round(limits.so2     * 0.71) },
+    { code: "nox",     name: "NOx",              unit: "mg/Nm³", kind: "numeric", category: "emisi", max: limits.nox,     mock: Math.round(limits.nox     * 0.75) },
+    { code: "co",      name: "CO",               unit: "mg/Nm³", kind: "numeric", category: "emisi", max: limits.co,      mock: Math.round(limits.co      * 0.60) },
+    { code: "opacity", name: "Opasitas",          unit: "%",       kind: "numeric", category: "emisi", max: limits.opacity, mock: Math.round(limits.opacity * 0.60) },
+  ]
+}
+
+// --- Limbah B3: Data Operasional Riil (Permen LHK No. 6/2021) ---
 const limbahB3: ProperParam[] = [
-  { code: "tps_izin", name: "TPS B3 memiliki izin", kind: "checklist", category: "limbah_b3", mock: true },
-  { code: "label", name: "Label sesuai ketentuan", kind: "checklist", category: "limbah_b3", mock: true },
-  { code: "simbol", name: "Simbol B3 lengkap", kind: "checklist", category: "limbah_b3", mock: false },
-  { code: "manifest", name: "Manifest limbah B3 lengkap", kind: "checklist", category: "limbah_b3", mock: true },
-  { code: "angkut", name: "Pengangkutan sesuai aturan", kind: "checklist", category: "limbah_b3", mock: true },
-  { code: "masa_simpan", name: "Masa simpan ≤ 90 hari", kind: "checklist", category: "limbah_b3", mock: false },
-  { code: "pemanfaatan", name: "Pemanfaatan / daur ulang", kind: "checklist", category: "limbah_b3", mock: true },
-  { code: "olahan", name: "Pengolahan & penimbunan akhir", kind: "checklist", category: "limbah_b3", mock: true },
+  { code: "b3_storage_days", name: "Lama Masa Simpan B3 di TPS", unit: "Hari", kind: "numeric", category: "limbah_b3", max: 90, mock: 45 },
+  { code: "b3_permit_days", name: "Masa Berlaku Izin TPS B3 (Sisa)", unit: "Hari", kind: "numeric", category: "limbah_b3", min: 1, mock: 180 },
+  { code: "b3_festronik_pct", name: "Kelengkapan Festronik KLHK", unit: "%", kind: "numeric", category: "limbah_b3", min: 100, mock: 100 },
+  { code: "b3_recycle_pct", name: "Tingkat Pemanfaatan / Daur Ulang B3", unit: "%", kind: "numeric", category: "limbah_b3", mock: 65 },
+  { code: "b3_tonnage", name: "Total Generasi Limbah B3", unit: "Ton/bulan", kind: "numeric", category: "limbah_b3", mock: 12 },
 ]
 
 export const INDUSTRIES: IndustryProfile[] = [
   penyamakanKulit,
   makananMinuman,
   tekstil,
+  kelapaSawit,
+  pulpPaper,
 ]
 
-export const EMISSIONS_PARAMS: ProperParam[] = emisiBoiler
 export const LIMBAH_B3_PARAMS: ProperParam[] = limbahB3
 
-// --- Modul pendukung (bukan parameter penilaian PROPER langsung) ---
-// Data diisi lewat Data Hub agar modul Carbon / Energi / LCA konsisten dengan satu sumber.
+// --- Modul pendukung (11 LCA Categories) ---
 export const CARBON_PARAMS: ProperParam[] = [
   { code: "ghg_scope1", name: "Emisi Gas Rumah Kaca Scope 1", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "ghg_scope2", name: "Emisi Gas Rumah Kaca Scope 2 (listrik)", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "ghg_scope2", name: "Emisi Gas Rumah Kaca Scope 2", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 0 },
   { code: "ghg_scope3", name: "Emisi Gas Rumah Kaca Scope 3", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "carbon_captured", name: "Karbon terserap / dikurangi", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 0 },
-]
-
-export const ENERGY_PARAMS: ProperParam[] = [
-  { code: "energy_total", name: "Total Energi", unit: "MWh/tahun", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "energy_renewable", name: "Energi Terbarukan", unit: "MWh/tahun", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "energy_intensity", name: "Intensitas Energi", unit: "kWh/unit produk", kind: "numeric", category: "lainnya", mock: 0 },
 ]
 
 export const LCA_PARAMS: ProperParam[] = [
-  { code: "lca_gwp", name: "Global Warming Potential (GWP)", unit: "kg CO₂e/unit", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "lca_water", name: "Dampak Air (Water Depletion)", unit: "L/unit", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "lca_eutro", name: "Eutrofikasi", unit: "kg PO₄e/unit", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "lca_recycled", name: "Kandungan Material Daur Ulang", unit: "%", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "gwp", name: "Global Warming Potential", unit: "kg CO₂e", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "odp", name: "Ozone Depletion Potential", unit: "kg CFC-11e", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "ap", name: "Acidification Potential", unit: "kg SO₂e", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "ep", name: "Eutrophication Potential", unit: "kg PO₄e", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "pocp", name: "Photochemical Ozone Creation", unit: "kg NMVOCe", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "adpe", name: "Abiotic Depletion (elements)", unit: "kg Sbe", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "adpf", name: "Abiotic Depletion (fossil)", unit: "MJ", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "wud", name: "Water Use Depletion", unit: "m³", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "ht", name: "Human Toxicity", unit: "kg 1,4-DBe", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "fet", name: "Freshwater Ecotoxicity", unit: "kg 1,4-DBe", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "pm", name: "Particulate Matter", unit: "kg PM2.5e", kind: "numeric", category: "lainnya", mock: 0 },
 ]
 
-export const OTHER_PARAMS: ProperParam[] = [...CARBON_PARAMS, ...ENERGY_PARAMS, ...LCA_PARAMS]
+export const ENERGY_PARAMS: ProperParam[] = [
+  { code: "energy_total",     name: "Total Energi",          unit: "MWh/tahun",      kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "energy_renewable", name: "Energi Terbarukan",     unit: "MWh/tahun",      kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "energy_intensity", name: "Intensitas Energi",     unit: "kWh/unit produk", kind: "numeric", category: "lainnya", mock: 0 },
+]
+
+export const OTHER_PARAMS: ProperParam[] = [...CARBON_PARAMS, ...LCA_PARAMS, ...ENERGY_PARAMS]
+
+// Backward-compat exports — digunakan oleh halaman yang belum menggunakan getEmissionParams().
+// Default = Batubara (paling umum). Halaman yang butuh dinamis gunakan getEmissionParams(fuelType).
+export const EMISSIONS_PARAMS: ProperParam[] = getEmissionParams("batubara")
 
 export function getIndustry(id: string | null): IndustryProfile | null {
   if (!id) return null
   return INDUSTRIES.find((i) => i.id === id) ?? null
 }
 
-// Status kepatuhan vs baku mutu
 export type ComplianceStatus = "ok" | "warn" | "fail"
 
 export function evaluateParam(p: ProperParam, value: number | boolean): ComplianceStatus {
-  if (p.kind === "checklist") {
-    return value ? "ok" : "fail"
-  }
+  if (p.kind === "checklist") return value ? "ok" : "fail"
   const v = value as number
   if (p.kind === "range") {
     if (v < p.min || v > p.max) return "fail"
-    // mendekati batas (5% dari rentang) -> warn
     const span = p.max - p.min
     if (v <= p.min + span * 0.05 || v >= p.max - span * 0.05) return "warn"
     return "ok"
   }
-  // numeric
+  if (p.min !== undefined && p.max === undefined) {
+    if (v < p.min) return "fail"
+    if (v < p.min * 1.1) return "warn"
+    return "ok"
+  }
   if (p.max === undefined) return "ok"
   if (v > p.max) return "fail"
   if (v > p.max * 0.9) return "warn"
@@ -195,15 +236,20 @@ export function evaluateParam(p: ProperParam, value: number | boolean): Complian
 
 export type ProperRank = "Emas" | "Hijau" | "Biru" | "Merah" | "Hitam"
 
-// Prediksi peringkat dari jumlah pelanggaran per kategori
 export function predictRank(
   emisiFails: number,
   airFails: number,
   b3Fails: number,
+  lcaFilledCount: number = 0,
 ): ProperRank {
   const total = emisiFails + airFails + b3Fails
   if (total >= 4) return "Hitam"
   if (total >= 1) return "Merah"
-  // tanpa fail, asumsi minimal Biru (butuh audit lapangan untuk Hijau/Emas)
+  // Taat sempurna (0 fail di semua kategori) → cek LCA untuk beyond compliance
+  // Emas: semua 11 indikator LCA diisi (ISO 14040/14044 terpenuhi penuh)
+  if (lcaFilledCount >= 11) return "Emas"
+  // Hijau: minimal 3 dari 11 indikator LCA diisi (beyond compliance partial)
+  if (lcaFilledCount >= 3) return "Hijau"
+  // Taat tapi belum beyond compliance
   return "Biru"
 }

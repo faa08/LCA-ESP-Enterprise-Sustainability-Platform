@@ -59,17 +59,17 @@ function DashboardMockup() {
 
       <div className="grid grid-cols-3 gap-px bg-neutral-100">
         {[
-          { label: "Emissions", value: "1,284", unit: "tCO₂e", delta: "-8.4%" },
-          { label: "Energy", value: "92.3", unit: "GWh", delta: "-3.1%" },
-          { label: "Compliance", value: "98", unit: "%", delta: "+2%" },
+          { label: "Analisis LCA", value: "11/11", unit: "ISO 14040", delta: "Cradle-to-Grave" },
+          { label: "PROPER Rank", value: "HIJAU", unit: "KLHK", delta: "Proyeksi EMAS" },
+          { label: "Karbon Kredit", value: "350", unit: "tCO₂e", delta: "SRN-PPI Ready" },
         ].map((m) => (
-          <div key={m.label} className="bg-white px-4 py-4">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">{m.label}</div>
+          <div key={m.label} className="bg-white px-3.5 py-4">
+            <div className="text-[10px] font-medium uppercase tracking-wide text-neutral-400">{m.label}</div>
             <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-xl font-semibold text-ink">{m.value}</span>
-              <span className="text-[11px] text-neutral-400">{m.unit}</span>
+              <span className="text-lg font-semibold text-ink">{m.value}</span>
+              <span className="text-[10px] text-neutral-400">{m.unit}</span>
             </div>
-            <div className="mt-1 text-[11px] font-semibold text-brand-600">{m.delta}</div>
+            <div className="mt-1 text-[10px] font-semibold text-brand-600">{m.delta}</div>
           </div>
         ))}
       </div>
@@ -77,18 +77,18 @@ function DashboardMockup() {
       <div className="grid grid-cols-5 gap-px bg-neutral-100">
         <div className="col-span-3 bg-white p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-ink">Carbon trend</span>
+            <span className="text-xs font-semibold text-ink">Carbon trend & LCA Hotspot</span>
             <span className="text-[11px] text-neutral-400">12 months</span>
           </div>
           <Sparkline />
         </div>
         <div className="col-span-2 bg-white p-4">
-          <div className="text-xs font-semibold text-ink">Frameworks</div>
+          <div className="text-xs font-semibold text-ink">Standar & Registri</div>
           <div className="mt-3 space-y-2">
-            {["ISO 14001", "GRI", "TCFD"].map((f) => (
+            {["LCA ISO 14040/44", "PROPER KLHK", "SRN-PPI Karbon", "IDXCarbon"].map((f) => (
               <div key={f} className="flex items-center gap-2">
                 <CircleCheck className="h-3.5 w-3.5 text-brand-500" />
-                <span className="text-[11px] text-neutral-500">{f}</span>
+                <span className="text-[10px] text-neutral-600">{f}</span>
               </div>
             ))}
           </div>
@@ -97,7 +97,7 @@ function DashboardMockup() {
 
       <div className="border-t border-neutral-100 bg-white px-4 py-3">
         <div className="flex items-center gap-2 text-[11px] text-neutral-400">
-          <Radio className="h-3.5 w-3.5 text-brand-500" /> Live · synced 2s ago
+          <Radio className="h-3.5 w-3.5 text-brand-500" /> Realtime CEMS IoT & ERP Ingestion
         </div>
       </div>
     </div>
@@ -115,18 +115,8 @@ export default function Hero({ dict }: { dict: Record<string, string> }) {
       <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 py-20 md:py-28 lg:grid-cols-2 lg:gap-8">
         {/* Left */}
         <div>
-          <Reveal>
-            <span className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-500 opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-500" />
-              </span>
-              {t(dict, "landing.hero.badge")}
-            </span>
-          </Reveal>
-
           <Reveal delay={0.05}>
-            <h1 className="mt-6 text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-5xl lg:text-6xl">
+            <h1 className="text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-5xl lg:text-6xl">
               {t(dict, "landing.hero.headlinePre")}
               <span className="bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
                 {t(dict, "landing.hero.headlineHi")}
@@ -164,30 +154,13 @@ export default function Hero({ dict }: { dict: Record<string, string> }) {
 
           <Reveal delay={0.2}>
             <div className="mt-8 flex flex-wrap items-center gap-2">
-              {["ISO 14001", "GRI", "TCFD", "CDP", "SBTi", "PROPER"].map((f) => (
+              {["ISO 14040/14044 (LCA)", "PROPER KLHK", "SRN-PPI Karbon", "IDXCarbon", "Perpres 98/2021", "PermenLHK"].map((f) => (
                 <span
                   key={f}
-                  className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-500"
+                  className="rounded-full border border-brand-200 bg-emerald-50/60 px-3 py-1 text-xs font-semibold text-brand-700"
                 >
                   {f}
                 </span>
-              ))}
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.25}>
-            <div className="mt-10 grid max-w-md grid-cols-3 gap-4">
-              {[
-                { v: 85, suffix: "%", l: t(dict, "landing.hero.kpi1Label") },
-                { v: 120, suffix: "+", l: t(dict, "landing.hero.kpi2Label") },
-                { v: 14, suffix: "", l: t(dict, "landing.hero.kpi3Label") },
-              ].map((k) => (
-                <div key={k.l} className="rounded-xl border border-neutral-200 bg-white/70 p-4 backdrop-blur">
-                  <div className="text-2xl font-bold text-brand-600">
-                    <AnimatedCounter value={k.v} suffix={k.suffix} />
-                  </div>
-                  <div className="mt-1 text-[11px] leading-tight text-neutral-500">{k.l}</div>
-                </div>
               ))}
             </div>
           </Reveal>

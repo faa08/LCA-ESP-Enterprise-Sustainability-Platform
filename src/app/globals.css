@@ -128,3 +128,30 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 16px 40px -20px rgba(15, 139, 95, 0.35);
 }
+
+/* ===========================================================
+   Print rules for Printable Official PROPER & LCA Report
+   =========================================================== */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #printable-report-modal,
+  #printable-report-modal * {
+    visibility: visible !important;
+  }
+  #printable-report-modal {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .print-hide {
+    display: none !important;
+  }
+}

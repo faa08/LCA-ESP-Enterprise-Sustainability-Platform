@@ -1,113 +1,48 @@
-# SIP — Sustainability Intelligence Platform
+# ensPR — Enterprise Sustainability Platform
 
-Enterprise-grade sustainability management platform for manufacturing and industrial companies. Measure, analyze, and improve environmental performance across the entire product lifecycle.
+Platform LCA (Life Cycle Assessment) & Kepatuhan Lingkungan terintegrasi dengan Penilaian PROPER KLHK dan Monetisasi Karbon Kredit untuk industri manufaktur dan BUMN.
 
-## Features
+---
 
-- **Executive Dashboard** — Real-time sustainability KPIs, carbon emissions, energy & water consumption, waste tracking
-- **Life Cycle Assessment** — Raw material, manufacturing, distribution, use, and end-of-life impact analysis
-- **Carbon Accounting** — Scope 1, 2, 3 emissions tracking with reduction target monitoring
-- **Energy Monitoring** — Electricity, fuel, steam consumption and equipment efficiency
-- **Water Monitoring** — Water usage, quality trends, balance analysis, and leak detection
-- **Waste Management** — Waste generation, recycling rates, category breakdown, and manifest tracking
-- **Environmental Monitoring** — Air emissions, water quality, environmental incident management
-- **Compliance Management** — Standards compliance (ISO 14001, GRI, PROPER, CDP, TCFD, SBTi), CAPA tracking, permit status, audit findings
-- **ESG Reporting** — ESG score tracking, report generation, certifications management
-- **AI Insights** — AI-powered recommendations based on real-time sustainability data
-- **Document Control** — Document management for permits, SOPs, audit documents, certificates, policies
-- **Settings** — Company profile, facility management, user roles, permissions, integrations
+## 🎯 Modul Utama (5 Core Modules)
 
-## Tech Stack
+1. **📊 Executive Overview** (`/dashboard`) — Ringkasan eksekutif kesehatan lingkungan & KPI real-time.
+2. **⚙️ LCA & Dampak Produk** (`/dashboard/lca`) — Kalkulasi jejak per ton produk (ISO 14040) + What-If Decision Simulator.
+3. **🛡️ PROPER Compliance** (`/dashboard/compliance`) — Snapshot Baku Mutu KLHK, Prediksi Rank (Emas/Hijau/Biru), Laporan PDF 1-Klik, & Early Warning.
+4. **🪙 Karbon & Offset** (`/dashboard/carbon-accounting` & `/dashboard/carbon-credit`) — Akuntansi emisi Scope 1-3 & Monetisasi Karbon Kredit SRN-PPI.
+5. **📥 Data Hub (One-Stop)** (`/dashboard/data-hub`) — Satu pintu masukan data: Form Manual, Impor Excel, Live IoT CEMS, & AI OCR PDF Scanner.
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | [Next.js](https://nextjs.org) (App Router) |
-| Language | [TypeScript](https://www.typescriptlang.org) |
-| Styling | [Tailwind CSS](https://tailwindcss.com) |
-| UI Components | shadcn/ui, Radix UI |
-| Icons | [Lucide](https://lucide.dev) |
-| Charts | [Recharts](https://recharts.org) |
-| Animation | [Framer Motion](https://framer.com/motion) |
-| Database | PostgreSQL / [Supabase](https://supabase.com) |
-| i18n | Custom locale system (ID/EN) |
+---
 
-## Getting Started
+## 📚 Dokumentasi Lengkap (`docs/`)
 
-### Prerequisites
+Seluruh dokumen arsitektur dan panduan teknis telah dikonsolidasi di folder **[`docs/`](file:///c:/Users/FACHRY/Documents/project%20sekolah/1ab/docs/README.md)**:
 
-- Node.js 18+ 
-- npm or yarn
-- Supabase project (for database features)
+- 📄 **[Evaluasi Arsitektur & Action Plan](file:///c:/Users/FACHRY/Documents/project%20sekolah/1ab/docs/evaluasi.md)**
+- 📄 **[Arsitektur Modul Fitur](file:///c:/Users/FACHRY/Documents/project%20sekolah/1ab/docs/arsitektur_fitur.md)**
+- 📄 **[Checklist Persiapan PROPER & Baku Mutu](file:///c:/Users/FACHRY/Documents/project%20sekolah/1ab/docs/proper_persiapan.md)**
+- 📄 **[Panduan Data Operasional Pabrik](file:///c:/Users/FACHRY/Documents/project%20sekolah/1ab/docs/Data_Yang_Dibutuhkan.md)**
+- 📄 **[Dokumentasi Database Compliance](file:///c:/Users/FACHRY/Documents/project%20sekolah/1ab/docs/Fitur_Compliance_Management.md)**
+- 📄 **[Panduan Industri PLTU / Energi](file:///c:/Users/FACHRY/Documents/project%20sekolah/1ab/docs/PLTU_Overview.md)**
 
-### Installation
+---
+
+## 🛠️ Tech Stack
+
+- **Framework:** Next.js 16 (App Router) + React 19
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **Database:** PostgreSQL / Supabase
+- **Icons & UI:** Lucide React, Framer Motion, Recharts
+- **i18n:** Custom locale system (ID/EN)
+
+---
+
+## 🚀 Development Setup
 
 ```bash
 npm install
-# or
-yarn install
-```
-
-### Environment Variables
-
-Copy the example env file and fill in your values:
-
-```bash
-cp .env.local.example .env.local
-```
-
-Required variables:
-
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon/public key |
-
-### Run Development Server
-
-```bash
 npm run dev
-# or
-yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Project Structure
-
-```
-src/
-├── app/               # Next.js App Router pages
-│   ├── (dashboard)/   # Dashboard module pages (carbon, energy, water, waste, etc.)
-│   └── actions/       # Server actions
-├── components/
-│   ├── auth/          # Authentication components (role picker, guards)
-│   ├── carbon/        # Carbon accounting forms
-│   ├── dashboard/     # Executive overview components
-│   ├── energy/        # Energy input forms
-│   ├── environmental/ # Environmental input forms
-│   ├── layout/        # Sidebar, header, dashboard layout
-│   ├── ui/            # Reusable UI components (badge, card, stat-card)
-│   ├── waste/         # Waste input forms
-│   └── water/         # Water input forms
-├── lib/               # Utilities (i18n, role, supabase clients, helpers)
-├── locales/           # Translation dictionaries (id.ts, en.ts)
-├── types/             # TypeScript type definitions
-└── supabase/          # Database migrations
-```
-
-## Target Users
-
-- Sustainability Manager
-- HSE Manager
-- Environmental Engineer
-- Plant Manager
-- Compliance Officer
-- ESG Reporting Team
-
-## Target Industries
-
-Manufacturing, Automotive, Food & Beverage, Chemical, Textile, Electronics, Mining, Construction, Packaging, Consumer Goods
-
-## License
-
-This project is intended for enterprise sustainability management and educational purposes.
+Aplikasi dapat diakses di `http://localhost:3000`.

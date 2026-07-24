@@ -98,7 +98,6 @@ function ParamRow({
 }) {
   if (param.kind === "checklist") {
     const checked = value === "true"
-    const status: ComplianceStatus | "na" = value === "" ? "na" : checked ? "ok" : "fail"
     return (
       <div className="flex items-center justify-between gap-4 border-b border-neutral-100 py-3 last:border-0">
         <div className="min-w-0">
@@ -106,7 +105,6 @@ function ParamRow({
           <p className="text-xs text-neutral-400">{t(dict, "input.param.limit")}: —</p>
         </div>
         <div className="flex items-center gap-3">
-          <StatusBadge dict={dict} status={status} />
           <div className="flex overflow-hidden rounded-lg border border-neutral-200 text-xs font-medium">
             <button
               type="button"
@@ -128,19 +126,15 @@ function ParamRow({
     )
   }
 
-  const numeric = value === "" ? null : Number(value)
-  const status: ComplianceStatus | "na" =
-    numeric === null ? "na" : evaluateParam(param, numeric)
   return (
     <div className="flex items-center justify-between gap-4 border-b border-neutral-100 py-3 last:border-0">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-neutral-800">{param.name}</p>
         <p className="text-xs text-neutral-400">
-          {t(dict, "input.param.limit")}: {limitText(param)} {param.unit}
+          Satuan: {param.unit}
         </p>
       </div>
       <div className="flex items-center gap-3">
-        <StatusBadge dict={dict} status={status} />
         <input
           type="number"
           inputMode="decimal"

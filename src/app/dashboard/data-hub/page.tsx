@@ -63,22 +63,115 @@ function allParams(industryId: string | null): ProperParam[] {
   return [...air, ...EMISSIONS_PARAMS, ...LIMBAH_B3_PARAMS, ...OTHER_PARAMS]
 }
 
-// Parse CSV text: expects columns "code,value" or "parameter,value" (header optional).
+// Parse CSV / HTML XLS text: handles CSV, TSV, semicolon, and styled HTML table XLS formats.
 function parseCsv(text: string): Record<string, string> {
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+  const cleanText = text.replace(/^\uFEFF/, "")
   const out: Record<string, string> = {}
+
+  // Handle HTML table format if user uploads styled .xls file directly
+  if (cleanText.includes("<tr") || cleanText.includes("<td")) {
+    const trMatches = cleanText.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || []
+    for (const tr of trMatches) {
+      const tdMatches = tr.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || []
+      if (tdMatches[0] && tdMatches[1]) {
+        const rawCode = tdMatches[0].replace(/<[^>]+>/g, "").trim().toLowerCase()
+        const rawVal = tdMatches[1].replace(/<[^>]+>/g, "").trim()
+        if (rawCode && rawVal && !rawCode.includes("kode_parameter") && !rawCode.includes("template")) {
+          out[rawCode] = rawVal
+        }
+      }
+    }
+    return out
+  }
+
+  // Normal CSV / TSV / Semicolon parsing
+  const lines = cleanText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
   if (lines.length === 0) return out
   const header = lines[0].toLowerCase()
-  const hasHeader = header.includes("code") || header.includes("parameter") || header.includes("value")
+  const hasHeader = header.includes("code") || header.includes("kode") || header.includes("parameter") || header.includes("value") || header.includes("nilai")
   const start = hasHeader ? 1 : 0
   for (let i = start; i < lines.length; i++) {
     const cols = lines[i].split(/[,;\t]/)
     if (cols.length < 2) continue
     const code = cols[0].trim().toLowerCase()
     const val = cols[1].trim()
-    out[code] = val
+    if (code && val) out[code] = val
   }
   return out
+}
+
+function generateStyledExcel(params: ProperParam[], industryName: string): Blob {
+  const categories: Record<string, ProperParam[]> = {
+    "Pemantauan Air Limbah": params.filter((p) => p.category === "air_limbah"),
+    "Pemantauan Emisi Cerobong Boiler": params.filter((p) => p.category === "emisi"),
+    "Pengelolaan Limbah B3": params.filter((p) => p.category === "limbah_b3"),
+    "Analisis LCA & Dampak Lingkungan (ISO 14040/14044)": params.filter((p) => p.category === "lainnya"),
+  }
+
+  let tableHtml = `
+  <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Template Import ensPR</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+  <style>
+    body, td, th { font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 10pt; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background-color: #0284c7; color: #ffffff; font-weight: bold; text-align: center; border: 1px solid #0369a1; padding: 10px; font-size: 11pt; }
+    td { border: 1px solid #cbd5e1; padding: 6px 10px; }
+    .section-title { background-color: #0369a1; color: #ffffff; font-weight: bold; font-size: 11pt; border: 1px solid #0284c7; padding: 8px; }
+    .code-col { font-family: Consolas, monospace; color: #334155; background-color: #f8fafc; font-weight: bold; }
+    .val-col { font-weight: bold; color: #0f172a; text-align: right; background-color: #f0fdf4; border: 1.5px solid #22c55e; }
+    .header-banner { background-color: #0f766e; color: #ffffff; font-size: 13pt; font-weight: bold; padding: 12px; }
+    .sub-banner { background-color: #f0fdf4; color: #166534; font-size: 9.5pt; padding: 8px; border: 1px solid #bbf7d0; }
+  </style>
+  </head>
+  <body>
+    <table>
+      <tr>
+        <td colspan="5" class="header-banner">TEMPLATE IMPORT DATA OPERASIONAL — ensPR ENTERPRISE PLATFORM (${industryName.toUpperCase()})</td>
+      </tr>
+      <tr>
+        <td colspan="5" class="sub-banner">Petunjuk: Isi nilai angka pada kolom <b>Nilai_Measurement</b> (Kolom B berwarna hijau). Jangan mengubah Kode_Parameter (Kolom A).</td>
+      </tr>
+      <tr><th></th><th></th><th></th><th></th><th></th></tr>
+      <tr>
+        <th>Kode_Parameter (Kolom A)</th>
+        <th>Nilai_Measurement (Kolom B)</th>
+        <th>Nama Parameter</th>
+        <th>Kategori</th>
+        <th>Satuan</th>
+      </tr>
+  `
+
+  for (const [catTitle, catParams] of Object.entries(categories)) {
+    if (catParams.length === 0) continue
+    tableHtml += `
+      <tr>
+        <td colspan="5" class="section-title">${catTitle.toUpperCase()}</td>
+      </tr>
+    `
+    for (const p of catParams) {
+      const unit = "unit" in p ? (p as { unit: string }).unit.replace(/Nm³/g, "Nm3") : "checklist"
+      const sample = p.kind === "checklist" ? "true" : p.kind === "range" ? String(p.min) : p.max !== undefined ? String(Math.round(p.max * 0.7)) : "100"
+      tableHtml += `
+        <tr>
+          <td class="code-col">${p.code}</td>
+          <td class="val-col">${sample}</td>
+          <td>${p.name.replace(/≤/g, "<=")}</td>
+          <td>${p.category}</td>
+          <td>${unit}</td>
+        </tr>
+      `
+    }
+  }
+
+  tableHtml += `
+    </table>
+  </body>
+  </html>
+  `
+
+  return new Blob(["\uFEFF" + tableHtml], { type: "application/vnd.ms-excel;charset=utf-8" })
 }
 
 function IngestPanel() {
@@ -87,12 +180,20 @@ function IngestPanel() {
   const industryId = useIndustryId()
   const industry = INDUSTRIES.find((i) => i.id === industryId) ?? null
 
-  const [tab, setTab] = useState<"manual" | "excel" | "iot" | "erp">("manual")
+  const [tab, setTab] = useState<"manual" | "excel" | "iot" | "erp">("excel")
   const [excelText, setExcelText] = useState("")
   const [excelMsg, setExcelMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null)
   const [iotCfg, setIotCfg] = useState<Record<string, string>>(() => loadConfig("iot"))
   const [erpCfg, setErpCfg] = useState<Record<string, string>>(() => loadConfig("erp"))
   const [cfgSaved, setCfgSaved] = useState(false)
+  const [manualForm, setManualForm] = useState<Record<string, string>>({})
+  const [manualSaved, setManualSaved] = useState(false)
+
+  useEffect(() => {
+    if (industryId) {
+      setManualForm(getMeasurements(industryId))
+    }
+  }, [industryId])
 
   const params = allParams(industryId)
 
@@ -118,6 +219,7 @@ function IngestPanel() {
       return
     }
     saveMeasurements(industryId, store)
+    setManualForm(store)
     recordImport(industryId, {
       source: "excel",
       file: t(dict, "datahub.ingest.excel"),
@@ -130,6 +232,22 @@ function IngestPanel() {
       tone: "ok",
       text: t(dict, "datahub.ingest.imported").replace("{n}", String(matched)) + (unmatched ? ` (${unmatched} ${t(dict, "datahub.ingest.unmatched")})` : ""),
     })
+  }
+
+  const saveManual = () => {
+    if (!industryId) return
+    saveMeasurements(industryId, manualForm)
+    const filledCount = Object.values(manualForm).filter(Boolean).length
+    recordImport(industryId, {
+      source: "manual",
+      file: "Form Data Hub",
+      module: industry ? industry.name : t(dict, "datahub.page_title"),
+      by: "Operator",
+      status: "success",
+      count: filledCount,
+    })
+    setManualSaved(true)
+    setTimeout(() => setManualSaved(false), 2500)
   }
 
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,19 +274,19 @@ function IngestPanel() {
     setTimeout(() => setCfgSaved(false), 2000)
   }
 
-  const tabBtn = (key: "manual" | "excel" | "iot" | "erp", icon: typeof Cpu, labelKey: string) => (
+  const tabBtn = (key: "manual" | "excel" | "iot" | "erp", icon: typeof Cpu, label: string) => (
     <button
       onClick={() => setTab(key)}
       className={cn(
-        "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-        tab === key ? "bg-[color:var(--brand)] text-white" : "text-neutral-600 hover:bg-neutral-100",
+        "flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors",
+        tab === key ? "bg-[color:var(--brand)] text-white shadow-sm" : "text-neutral-600 hover:bg-neutral-100",
       )}
     >
       {(() => {
         const Icon = icon
         return <Icon className="h-4 w-4" />
       })()}
-      {t(dict, labelKey)}
+      {label}
     </button>
   )
 
@@ -179,13 +297,13 @@ function IngestPanel() {
         <p className="mt-1 text-sm text-neutral-500">{t(dict, "datahub.ingest.desc")}</p>
       </CardHeader>
       <div className="flex flex-wrap gap-2 px-5">
-        {tabBtn("manual", PencilLine, "datahub.ingest.manual")}
-        {tabBtn("excel", FileSpreadsheet, "datahub.ingest.excel")}
-        {tabBtn("iot", Radio, "datahub.ingest.iot")}
-        {tabBtn("erp", Server, "datahub.ingest.erp")}
+        {tabBtn("manual", PencilLine, "Form Input Data")}
+        {tabBtn("excel", FileSpreadsheet, "Impor Excel / CSV")}
+        {tabBtn("iot", Radio, "Hubungkan IoT CEMS")}
+        {tabBtn("erp", Server, "Hubungkan API ERP")}
       </div>
 
-      <div className="px-5 pb-5 pt-1">
+      <div className="px-5 pb-5 pt-3">
         {!industry && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             {t(dict, "datahub.ingest.need_industry")}
@@ -193,29 +311,77 @@ function IngestPanel() {
         )}
 
         {industry && tab === "manual" && (
-          <div className="flex flex-col gap-3">
-            <p className="text-sm text-neutral-600">{t(dict, "datahub.ingest.manual_desc")}</p>
-            <Link href="/dashboard/input">
-              <Button>
-                <PencilLine className="h-4 w-4" /> {t(dict, "datahub.ingest.open_manual")}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border border-neutral-100 bg-neutral-50/80 p-3">
+              <p className="text-xs text-neutral-600">Form pengisian data operasional netral (*blind data entry*). Nilai akan dievaluasi oleh sistem setelah disimpan.</p>
+              <Button onClick={saveManual} className="bg-emerald-600 text-white hover:bg-emerald-700">
+                <CheckCircle2 className="h-4 w-4" /> {manualSaved ? "Tersimpan di Data Hub!" : "Simpan ke Data Hub"}
               </Button>
-            </Link>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {params.map((p) => {
+                const unit = "unit" in p ? (p as { unit: string }).unit : ""
+                return (
+                  <div key={p.code} className="rounded-lg border border-neutral-200 bg-white p-3 shadow-xs">
+                    <p className="truncate text-xs font-semibold text-neutral-800">{p.name}</p>
+                    <p className="mt-0.5 text-[11px] text-neutral-400">Satuan: {unit || "—"}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        value={manualForm[p.code] ?? ""}
+                        onChange={(e) => setManualForm((f) => ({ ...f, [p.code]: e.target.value }))}
+                        placeholder="—"
+                        className="w-full rounded-md border border-neutral-200 px-2.5 py-1.5 text-right text-xs font-semibold text-neutral-900 focus:border-emerald-500 focus:outline-none"
+                      />
+                      <span className="w-12 shrink-0 text-right text-[11px] font-medium text-neutral-400">{unit}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
         {industry && tab === "excel" && (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-100 bg-emerald-50/60 p-3.5">
+              <div>
+                <p className="text-sm font-semibold text-emerald-900">Template Impor Resmi ensPR (.XLS)</p>
+                <p className="text-xs text-emerald-700">Unduh file template berformat warna resmi berisikan seluruh parameter pabrik Anda.</p>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const params = allParams(industryId)
+                  const blob = generateStyledExcel(params, industry.name)
+                  const url = URL.createObjectURL(blob)
+                  const link = document.createElement("a")
+                  link.href = url
+                  link.setAttribute("download", `Template_Import_ensPR_${industry.id.toUpperCase()}.xls`)
+                  document.body.appendChild(link)
+                  link.click()
+                  document.body.removeChild(link)
+                  URL.revokeObjectURL(url)
+                }}
+                className="bg-emerald-600 text-white hover:bg-emerald-700"
+              >
+                <FileSpreadsheet className="h-4 w-4" /> Download Template Excel Berwarna (.XLS)
+              </Button>
+            </div>
+
             <p className="text-sm text-neutral-600">{t(dict, "datahub.ingest.excel_desc")}</p>
             <input
               type="file"
-              accept=".csv,.txt"
+              accept=".csv,.txt,.xls"
               onChange={onFile}
               className="block w-full text-sm text-neutral-600 file:mr-3 file:rounded-lg file:border-0 file:bg-[color:var(--brand)] file:px-4 file:py-2 file:text-white hover:file:opacity-90"
             />
             <textarea
               value={excelText}
               onChange={(e) => setExcelText(e.target.value)}
-              placeholder="code,value&#10;ph,7.5&#10;bod,45&#10;tsp,120"
+              placeholder="code,value&#10;ph,7.5&#10;bod,45&#10;tsp,120&#10;gwp,150"
               className="h-28 w-full rounded-lg border border-neutral-200 p-3 font-mono text-xs text-neutral-700 focus:border-emerald-500 focus:outline-none"
             />
             <div className="flex items-center gap-2">

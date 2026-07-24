@@ -27,10 +27,14 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, L
 
 const dicts: Record<Locale, Record<string, string>> = { id, en }
 
+import { useViewMode } from "@/lib/use-view-mode"
+import { Briefcase, Wrench } from "lucide-react"
+
 export function ExecutiveOverview({ locale }: { locale: Locale }) {
   const dict = dicts[locale]
   const industryId = useIndustryId()
   const measurements = getMeasurements(industryId)
+  const [viewMode] = useViewMode()
 
   const get = (code: string) => {
     const p = OTHER_PARAMS.find((x) => x.code === code)
@@ -56,16 +60,35 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
   const fmt = (n: number) =>
     n === 0 ? "0" : n.toLocaleString("en-US", { maximumFractionDigits: 2 })
 
-  // Time-series derived from user-entered monthly totals (single cumulative point, no demo series)
+  const enteredCount = OTHER_PARAMS.filter((p) => paramValue(p, measurements) !== null).length
   const hasSeries = hasCarbon || hasEnergy
   const emissionsSeries = hasSeries
     ? [{ period: "YTD", scope1, scope2, scope3, energy: energyTotal, water: 0 }]
     : []
 
-  const enteredCount = OTHER_PARAMS.filter((p) => paramValue(p, measurements) !== null).length
-
   return (
     <div className="space-y-6">
+      {/* Mode Indicator Banner */}
+      <div className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-3.5 shadow-2xs">
+        <div className="flex items-center gap-2.5">
+          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${viewMode === "executive" ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"}`}>
+            {viewMode === "executive" ? <Briefcase className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
+          </div>
+          <div>
+            <p className="text-xs font-bold text-neutral-900">
+              Tampilan Aktif: {viewMode === "executive" ? "👔 Executive Director View (Ringkasan Direksi)" : "👷 EHS Engineer View (Detail Teknis & Sensor)"}
+            </p>
+            <p className="text-[11px] text-neutral-500">
+              {viewMode === "executive"
+                ? "Fokus pada Skor Kepatuhan PROPER, Monetisasi Karbon Kredit, ROI Lingkungan, dan Risiko High-Level."
+                : "Fokus pada Baku Mutu Parameter, Log Telemetri CEMS, Ingest Data Hub, dan Tindakan Korektif (CAPA)."}
+            </p>
+          </div>
+        </div>
+        <Badge variant={viewMode === "executive" ? "success" : "brand"}>
+          {viewMode.toUpperCase()} MODE
+        </Badge>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title={t(dict, "dashboard.kpi.carbon")}

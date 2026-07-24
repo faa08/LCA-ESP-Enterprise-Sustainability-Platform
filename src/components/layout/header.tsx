@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { Bell, Search, ChevronRight, ChevronDown, User, Settings as SettingsIcon, LogOut } from "lucide-react"
+import { Bell, Search, ChevronRight, ChevronDown, User, Settings as SettingsIcon, LogOut, Printer, Briefcase, Wrench } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
 import { id } from "@/locales/id"
 import { en } from "@/locales/en"
@@ -11,6 +11,8 @@ import { t } from "@/lib/i18n"
 import { clearRole } from "@/app/actions/role"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { PrintableProperReportModal } from "@/components/dashboard/printable-proper-report"
+import { useViewMode } from "@/lib/use-view-mode"
 
 const dicts: Record<Locale, Record<string, string>> = { id, en }
 
@@ -51,6 +53,8 @@ export function Header({ locale }: { locale: Locale }) {
   const [search, setSearch] = useState("")
   const [notifOpen, setNotifOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
+  const [isReportOpen, setIsReportOpen] = useState(false)
+  const [viewMode, setViewMode] = useViewMode()
   const notifRef = useRef<HTMLDivElement>(null)
   const userRef = useRef<HTMLDivElement>(null)
 
@@ -91,16 +95,36 @@ export function Header({ locale }: { locale: Locale }) {
         </nav>
       </div>
 
-      <div className="flex flex-1 items-center justify-end gap-2">
-        <div className="hidden items-center gap-2 rounded-lg border border-token bg-surface-2 px-3 py-1.5 text-sm text-muted md:flex">
-          <Search className="h-4 w-4" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t(dict, "datahub.search.placeholder")}
-            className="w-44 bg-transparent text-primary placeholder:text-muted focus:outline-none"
-          />
+      <div className="flex flex-1 items-center justify-end gap-2.5">
+        {/* Role View Mode Switcher */}
+        <div className="hidden items-center rounded-lg border border-neutral-200 bg-neutral-100 p-0.5 sm:flex">
+          <button
+            onClick={() => setViewMode("executive")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-all",
+              viewMode === "executive" ? "bg-white text-emerald-800 shadow-xs" : "text-neutral-500 hover:text-neutral-800"
+            )}
+          >
+            <Briefcase className="h-3.5 w-3.5" /> Exec View
+          </button>
+          <button
+            onClick={() => setViewMode("engineer")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-all",
+              viewMode === "engineer" ? "bg-white text-emerald-800 shadow-xs" : "text-neutral-500 hover:text-neutral-800"
+            )}
+          >
+            <Wrench className="h-3.5 w-3.5" /> EHS View
+          </button>
         </div>
+
+        {/* Print Official PROPER & LCA Report Button */}
+        <button
+          onClick={() => setIsReportOpen(true)}
+          className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 transition-colors hover:bg-emerald-100"
+        >
+          <Printer className="h-3.5 w-3.5 text-emerald-600" /> Cetak Laporan PDF
+        </button>
 
         <div className="flex items-center gap-0.5 rounded-lg border border-token bg-surface p-0.5">
           <button
@@ -200,6 +224,7 @@ export function Header({ locale }: { locale: Locale }) {
           )}
         </div>
       </div>
+      <PrintableProperReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
     </header>
   )
 }

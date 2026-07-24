@@ -7,7 +7,7 @@ import { Building2, Factory, Users, Key, Link2, Shield, ChevronRight, Check } fr
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
-import { INDUSTRIES } from "@/lib/proper"
+import { INDUSTRIES, EMISSION_PROFILES } from "@/lib/proper"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
@@ -54,12 +54,16 @@ export default function Settings() {
   const locale = getLocaleClient()
   const dict = dicts[locale]
   const [industryId, setIndustryId] = useState<string>("")
+  const [fuelType, setFuelType] = useState<string>("batubara")
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem("enspr_industry")
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored) setIndustryId(stored)
+    const storedFuel = localStorage.getItem("enspr_fuel_type")
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (storedFuel) setFuelType(storedFuel)
   }, [])
 
   const handleSave = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -69,6 +73,16 @@ export default function Settings() {
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
+
+  const handleFuelSave = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value
+    setFuelType(val)
+    if (typeof window !== "undefined") localStorage.setItem("enspr_fuel_type", val)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const activeFuelProfile = EMISSION_PROFILES[fuelType] ?? EMISSION_PROFILES.batubara
 
   const selected = INDUSTRIES.find((i) => i.id === industryId)
 
@@ -127,6 +141,47 @@ export default function Settings() {
             </span>
           </div>
         )}
+      </Card>
+
+      {/* Bahan Bakar Boiler */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Jenis Bahan Bakar Boiler / Cerobong</CardTitle>
+          <p className="mt-1 text-sm text-neutral-500">
+            Pilihan ini menentukan batas baku mutu emisi (SO₂, NOx, TSP) sesuai Permen LH 7/2007.
+          </p>
+        </CardHeader>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="text-sm font-medium text-neutral-700">Jenis Bahan Bakar</label>
+          <select
+            value={fuelType}
+            onChange={handleFuelSave}
+            className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 focus:border-emerald-500 focus:outline-none"
+          >
+            {Object.entries(EMISSION_PROFILES).map(([key, val]) => (
+              <option key={key} value={key}>{val.label}</option>
+            ))}
+          </select>
+          {saved && (
+            <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
+              <Check className="h-3.5 w-3.5" /> Tersimpan
+            </span>
+          )}
+        </div>
+        {/* Preview batas emisi aktif */}
+        <div className="mt-4 rounded-lg border border-neutral-100 bg-neutral-50 p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+            Batas Emisi Aktif — {activeFuelProfile.label}
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {Object.entries(activeFuelProfile.limits).map(([code, val]) => (
+              <div key={code} className="rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-center">
+                <p className="text-xs font-semibold text-neutral-500 uppercase">{code === "opacity" ? "Opasitas" : code.toUpperCase()}</p>
+                <p className="text-sm font-bold text-neutral-900">{val}<span className="ml-0.5 text-xs font-normal text-neutral-400">{code === "opacity" ? "%" : " mg/Nm³"}</span></p>
+              </div>
+            ))}
+          </div>
+        </div>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2">

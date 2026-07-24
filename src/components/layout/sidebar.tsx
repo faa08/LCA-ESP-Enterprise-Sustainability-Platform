@@ -52,40 +52,12 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "SUSTAINABILITY",
+    label: "CORE MODULES",
     items: [
       { labelKey: "sidebar.lca", href: "/dashboard/lca", icon: Cpu },
-      { labelKey: "sidebar.carbon", href: "/dashboard/carbon-accounting", icon: BarChart3 },
-      { labelKey: "sidebar.carbon_credit", href: "/dashboard/carbon-credit", icon: BadgeDollarSign },
-      { labelKey: "sidebar.environmental", href: "/dashboard/environmental-monitoring", icon: Leaf },
-    ],
-  },
-  {
-    label: "OPERATIONS",
-    items: [
-      { labelKey: "sidebar.energy", href: "/dashboard/energy-monitoring", icon: Zap },
-      { labelKey: "sidebar.water", href: "/dashboard/water-monitoring", icon: Droplets },
-      { labelKey: "sidebar.waste", href: "/dashboard/waste-management", icon: Recycle },
-    ],
-  },
-  {
-    label: "DATA MANAGEMENT",
-    items: [
-      { labelKey: "sidebar.data_hub", href: "/dashboard/data-hub", icon: Database },
-    { labelKey: "sidebar.manual_input", href: "/dashboard/input", icon: PencilLine },
-    ],
-  },
-  {
-    label: "COMPLIANCE",
-    items: [
       { labelKey: "sidebar.compliance", href: "/dashboard/compliance", icon: ShieldCheck },
-      { labelKey: "sidebar.documents", href: "/dashboard/documents", icon: FolderOpen },
-    ],
-  },
-  {
-    label: "INTELLIGENCE",
-    items: [
-      { labelKey: "sidebar.ai", href: "/dashboard/ai-insights", icon: Lightbulb },
+      { labelKey: "sidebar.carbon", href: "/dashboard/carbon-accounting", icon: BarChart3 },
+      { labelKey: "sidebar.data_hub", href: "/dashboard/data-hub", icon: Database },
     ],
   },
   {
