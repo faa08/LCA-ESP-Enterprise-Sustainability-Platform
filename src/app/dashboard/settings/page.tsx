@@ -6,18 +6,45 @@ import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  Building2, Users, Key, Link2, Shield, ChevronRight, Check,
+  Building2, Users, Key, Link2, Shield, Check,
   Settings2, Database, Cpu, Lock, Info, ArrowRight, Sparkles, CheckCircle2,
+  AlertTriangle, Trash2, Loader2, RotateCcw,
 } from "lucide-react"
+import { useSiteId } from "@/lib/use-site-id"
+import { resetAllData } from "@/lib/supabase/data-service"
 
 export default function Settings() {
+  const siteId = useSiteId()
   const [apiKeyGroq, setApiKeyGroq] = useState("gsk_************************************************")
   const [apiKeyGemini, setApiKeyGemini] = useState("AIza***********************************")
   const [saved, setSaved] = useState(false)
 
+  // Reset state
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [resetConfirm, setResetConfirm] = useState("")
+  const [resetting, setResetting] = useState(false)
+  const [resetDone, setResetDone] = useState(false)
+  const [resetError, setResetError] = useState<string | null>(null)
+
   const handleSave = () => {
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
+  }
+
+  const handleReset = async () => {
+    if (!siteId) return
+    setResetting(true)
+    setResetError(null)
+    const { error } = await resetAllData(siteId)
+    setResetting(false)
+    if (error) {
+      setResetError(error)
+    } else {
+      setResetDone(true)
+      setShowResetModal(false)
+      setResetConfirm("")
+      setTimeout(() => setResetDone(false), 4000)
+    }
   }
 
   const systemSections = [
@@ -74,7 +101,7 @@ export default function Settings() {
       <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5">
         <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
         <div className="flex-1 text-xs text-blue-800">
-          <p className="font-bold text-blue-900">Pembaruan Arsitektur 13 Modul GreenLCA</p>
+          <p className="font-bold text-blue-900">Pembaruan Arsitektur 15 Modul Enterprise</p>
           <p className="mt-1 leading-relaxed">
             Pengaturan profil entitas pabrik dan metodologi LCA telah dipindahkan ke grup <b>FONDASI LCA</b> agar sesuai standar ISO 14040/14044:
           </p>
@@ -172,6 +199,101 @@ export default function Settings() {
           <p className="mt-0.5 text-xs text-neutral-400">Format PDF / Berkas Lab</p>
         </Card>
       </div>
+
+      {/* ── Danger Zone ── */}
+      <div className="rounded-xl border-2 border-red-200 bg-red-50/40 p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 text-red-600">
+            <AlertTriangle className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-red-800">Zona Berbahaya</p>
+            <p className="text-xs text-red-500">Tindakan di bawah ini bersifat permanen dan tidak dapat dibatalkan.</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border border-red-200 bg-white px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-neutral-900">Reset Semua Data Operasional</p>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              Menghapus seluruh data di Data Hub (energi, air, limbah, transportasi, dll.), Biodiversity, Circular Economy, Goal &amp; Scope, dan semua log Audit Trail untuk site ini.
+            </p>
+          </div>
+          <Button
+            className="ml-4 shrink-0 bg-red-600 text-white hover:bg-red-700 active:scale-[0.98]"
+            onClick={() => { setShowResetModal(true); setResetConfirm(""); setResetError(null) }}
+          >
+            <Trash2 className="mr-1.5 h-4 w-4" />
+            Reset Data
+          </Button>
+        </div>
+
+        {resetDone && (
+          <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs text-emerald-800">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            Semua data berhasil direset. Silakan isi ulang Data Hub dari awal.
+          </div>
+        )}
+      </div>
+
+      {/* ── Confirmation Modal ── */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-red-200 overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-red-600 px-6 py-4 flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6 text-white" />
+              <p className="text-lg font-bold text-white">Konfirmasi Reset Data</p>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-neutral-700 leading-relaxed">
+                Tindakan ini akan <b className="text-red-700">menghapus permanen</b> semua data operasional di semua tabel Data Hub untuk site aktif. Data yang dihapus mencakup:
+              </p>
+              <ul className="text-xs text-neutral-600 space-y-1 list-disc ml-4">
+                <li>Produksi, Material, Energi, Air</li>
+                <li>Laboratorium, Stack Emisi, Limbah B3, Transportasi</li>
+                <li>Biodiversity Records, Circular Economy Flows</li>
+                <li>Goal &amp; Scope, Audit Trail Logs</li>
+              </ul>
+              <div>
+                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Ketik <span className="font-mono font-bold text-red-600">RESET</span> untuk mengkonfirmasi
+                </label>
+                <input
+                  type="text"
+                  value={resetConfirm}
+                  onChange={(e) => setResetConfirm(e.target.value)}
+                  placeholder="Ketik RESET di sini..."
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm font-mono focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-300"
+                  autoFocus
+                />
+              </div>
+              {resetError && (
+                <p className="text-xs text-red-600 bg-red-50 rounded px-3 py-2 border border-red-200">{resetError}</p>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex gap-3 justify-end px-6 pb-5">
+              <Button variant="secondary" onClick={() => setShowResetModal(false)} disabled={resetting}>
+                Batal
+              </Button>
+              <Button
+                className="bg-red-600 text-white hover:bg-red-700 active:scale-[0.98]"
+                disabled={resetConfirm !== "RESET" || resetting}
+                onClick={handleReset}
+              >
+                {resetting
+                  ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Mereset...</>
+                  : <><RotateCcw className="mr-1.5 h-4 w-4" />Ya, Reset Semua Data</>
+                }
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

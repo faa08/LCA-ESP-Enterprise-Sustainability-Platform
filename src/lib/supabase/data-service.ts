@@ -507,3 +507,49 @@ export async function saveGoalScope(
   }
   return { error: null }
 }
+
+// ─── Reset All Data ───
+// Menghapus semua entri Data Hub, Biodiversity, Circular Economy,
+// Goal & Scope, dan Audit Trail untuk site tertentu.
+export async function resetAllData(siteId: string): Promise<{ error: string | null }> {
+  const supabase = createClient()
+
+  const tables = [
+    "data_hub_production",
+    "data_hub_materials",
+    "data_hub_energy_logs",
+    "data_hub_water_logs",
+    "data_hub_lab_logs",
+    "data_hub_stack_logs",
+    "data_hub_b3_logs",
+    "data_hub_transport_logs",
+    "data_hub_suppliers",
+    "data_hub_documents",
+    "audit_trail_logs",
+    "biodiversity_records",
+    "circular_flows",
+    "lca_goals_scopes",
+  ]
+
+  for (const table of tables) {
+    const { error } = await supabase.from(table).delete().eq("site_id", siteId)
+    if (error) {
+      // Ignore "no rows" errors (PGRST116), warn others
+      if (!error.message.includes("PGRST116")) {
+        console.warn(`[resetAllData] table ${table}:`, error.message)
+      }
+    }
+  }
+
+  // Bersihkan localStorage
+  if (typeof window !== "undefined") {
+    const keys = [
+      "enspr_goal_scope",
+      "enspr_company_profile",
+      "enspr_product_assessment",
+    ]
+    keys.forEach((k) => localStorage.removeItem(k))
+  }
+
+  return { error: null }
+}
