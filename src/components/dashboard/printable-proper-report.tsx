@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { Printer, X, Download, ShieldCheck, CheckCircle2, AlertTriangle, FileText, Coins, Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,8 +19,10 @@ export function PrintableProperReportModal({ isOpen, onClose }: { isOpen: boolea
   const industryId = useIndustryId()
   const industry = INDUSTRIES.find((i) => i.id === industryId) ?? INDUSTRIES[0]
   const measurements = getMeasurements(industryId)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
-  if (!isOpen) return null
+  if (!isOpen || !mounted) return null
 
   const airParams = industry.params.filter((p) => p.category === "air_limbah")
   const emParams = getEmissionParams("batubara")
@@ -45,9 +48,10 @@ export function PrintableProperReportModal({ isOpen, onClose }: { isOpen: boolea
     window.print()
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto print:bg-white print:p-0">
-      <div id="printable-report-modal" className="relative w-full max-w-4xl rounded-2xl bg-white p-8 shadow-2xl my-8">
+  return createPortal(
+    <div id="printable-portal-root">
+      <div className="printable-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+        <div id="printable-report-modal" className="relative w-full max-w-4xl rounded-2xl bg-white p-8 shadow-2xl my-8">
         {/* Header Control (Hidden during print) */}
         <div className="mb-6 flex items-center justify-between border-b border-neutral-200 pb-4 print-hide">
           <div>
@@ -220,5 +224,6 @@ export function PrintableProperReportModal({ isOpen, onClose }: { isOpen: boolea
         </div>
       </div>
     </div>
-  )
+  </div>
+  , document.body)
 }

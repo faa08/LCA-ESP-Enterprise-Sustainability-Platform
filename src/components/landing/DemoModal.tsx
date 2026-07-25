@@ -1,6 +1,7 @@
 "use client";
 
 import { useDemo } from "./LandingInteractions";
+import { X } from "lucide-react";
 
 export default function DemoModal() {
   const { isOpen, closeModal } = useDemo();
@@ -17,7 +18,7 @@ export default function DemoModal() {
           className="absolute right-4 top-4 text-neutral-400 transition hover:text-neutral-700"
           aria-label="Close"
         >
-          ✕
+          <X className="h-5 w-5" />
         </button>
         <h3 className="text-xl font-semibold text-neutral-900">Request a Demo</h3>
         <p className="mt-2 text-sm text-neutral-600">

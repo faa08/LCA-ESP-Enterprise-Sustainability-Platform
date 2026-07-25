@@ -21,7 +21,20 @@ export function DashboardLayout({ children, role, locale }: DashboardLayoutProps
       <Sidebar role={role} locale={locale} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header locale={locale} />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 space-y-6 p-6">
+          {role === "viewer" && (
+            <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3.5 shadow-2xs">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-200">
+                <span className="font-bold text-xs text-neutral-700">READ</span>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-neutral-900">Akses Read-Only Auditor / Viewer Eksternal</p>
+                <p className="text-[11px] text-neutral-500">Anda masuk sebagai Auditor Eksternal / Viewer. Fitur input data operasional dan konfigurasi dinonaktifkan. Akses terbatas untuk pemantauan data, verifikasi jejak audit (Modul 12), dan ekspor laporan PDF (Modul 13).</p>
+              </div>
+            </div>
+          )}
+          {children}
+        </main>
       </div>
     </div>
   )

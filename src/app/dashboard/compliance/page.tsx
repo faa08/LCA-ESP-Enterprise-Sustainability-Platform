@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 
@@ -533,6 +533,67 @@ export default function Compliance() {
               {countFails(airResults) + countFails(emResults) + countFails(b3Results)} high-risk items need immediate action
             </p>
           </div>
+        </div>
+      </Card>
+
+      {/* ── Modul 9: Regulatory Compliance Mapping ── */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+                <ClipboardCheck className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle>Modul 9 — Regulatory Compliance Mapping</CardTitle>
+                <p className="mt-0.5 text-xs text-neutral-500">Pemetaan otomatis hasil data ke format regulasi Indonesia</p>
+              </div>
+            </div>
+            <span className="rounded-md bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">POJK 51 · PROPER · GRI</span>
+          </div>
+        </CardHeader>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="rounded-xl border border-neutral-200 p-4">
+            <div className="flex items-center gap-2 mb-3"><div className="h-3 w-3 rounded-full bg-red-500" /><span className="text-sm font-bold">POJK 51/2017</span><span className="ml-auto text-[10px] text-neutral-400">OJK</span></div>
+            <p className="text-[11px] text-neutral-500 mb-3">Laporan Keberlanjutan Emiten & Lembaga Jasa Keuangan</p>
+            <div className="space-y-2">
+              {[{ item: "Profil Keberlanjutan Perusahaan", mapped: true }, { item: "Tata Kelola Keberlanjutan", mapped: entered > 0 }, { item: "Kinerja Lingkungan Hidup", mapped: entered > 0 }, { item: "Kinerja Sosial", mapped: false }, { item: "Verifikasi & Asurans", mapped: false }].map((row, i) => (
+                <div key={i} className={`flex items-center justify-between rounded-lg border px-3 py-2 ${row.mapped ? "border-emerald-100 bg-emerald-50" : "border-neutral-100"}`}>
+                  <p className={`text-xs font-medium ${row.mapped ? "text-emerald-800" : "text-neutral-600"}`}>{row.item}</p>
+                  {row.mapped ? <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" /> : <span className="h-4 w-4 rounded-full border-2 border-neutral-200 shrink-0 inline-block" />}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl border border-neutral-200 p-4">
+            <div className="flex items-center gap-2 mb-3"><div className="h-3 w-3 rounded-full bg-emerald-500" /><span className="text-sm font-bold">PROPER KLHK</span><span className="ml-auto text-[10px] text-neutral-400">KLHK</span></div>
+            <p className="text-[11px] text-neutral-500 mb-3">Peringkat Kinerja Lingkungan Perusahaan Indonesia</p>
+            <div className="space-y-2">
+              {[{ item: "Baku Mutu Air Limbah", mapped: airResults.some(r => r.status !== "empty") }, { item: "Baku Mutu Emisi Udara", mapped: emResults.some(r => r.status !== "empty") }, { item: "Pengelolaan Limbah B3", mapped: b3Results.some(r => r.status !== "empty") }, { item: "LCA Beyond Compliance", mapped: lcaFilledCount >= 3 }, { item: "Program 3R / Circular Economy", mapped: false }].map((row, i) => (
+                <div key={i} className={`flex items-center justify-between rounded-lg border px-3 py-2 ${row.mapped ? "border-emerald-100 bg-emerald-50" : "border-neutral-100"}`}>
+                  <p className={`text-xs font-medium ${row.mapped ? "text-emerald-800" : "text-neutral-600"}`}>{row.item}</p>
+                  {row.mapped ? <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" /> : <span className="h-4 w-4 rounded-full border-2 border-neutral-200 shrink-0 inline-block" />}
+                </div>
+              ))}
+            </div>
+            <div className={`mt-3 rounded-lg border px-3 py-1.5 text-center text-xs font-bold ${rank === "Emas" || rank === "Hijau" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}>Proyeksi Peringkat: {rank}</div>
+          </div>
+          <div className="rounded-xl border border-neutral-200 p-4">
+            <div className="flex items-center gap-2 mb-3"><div className="h-3 w-3 rounded-full bg-blue-500" /><span className="text-sm font-bold">GRI Standards 2021</span><span className="ml-auto text-[10px] text-neutral-400">Global</span></div>
+            <p className="text-[11px] text-neutral-500 mb-3">Kerangka Pelaporan Keberlanjutan Global</p>
+            <div className="space-y-2">
+              {[{ item: "GRI 2: General Disclosures", mapped: true }, { item: "GRI 305: Emisi GHG", mapped: entered > 0 }, { item: "GRI 302: Energi", mapped: entered > 0 }, { item: "GRI 303: Air & Limbah Cair", mapped: false }, { item: "GRI 306: Limbah", mapped: b3Results.some(r => r.status !== "empty") }, { item: "GRI 13: Sektor", mapped: false }].map((row, i) => (
+                <div key={i} className={`flex items-center justify-between rounded-lg border px-3 py-2 ${row.mapped ? "border-blue-100 bg-blue-50" : "border-neutral-100"}`}>
+                  <p className={`text-xs font-medium ${row.mapped ? "text-blue-800" : "text-neutral-600"}`}>{row.item}</p>
+                  {row.mapped ? <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0" /> : <span className="h-4 w-4 rounded-full border-2 border-neutral-200 shrink-0 inline-block" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 rounded-xl bg-purple-50 border border-purple-200 px-4 py-3">
+          <p className="text-sm font-semibold text-purple-900">Pemetaan Otomatis Aktif</p>
+          <p className="text-xs text-purple-700 mt-0.5">Setiap data baru yang diinput di modul lain akan otomatis memperbarui status pemetaan di atas. Gunakan Modul 13 Reporting untuk menggenerate laporan resmi.</p>
         </div>
       </Card>
     </div>

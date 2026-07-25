@@ -49,84 +49,34 @@ export interface IndustryProfile {
   params: ProperParam[]
 }
 
-// --- Penyamakan Kulit: ANGKA RIIL ---
-const penyamakanKulit: IndustryProfile = {
-  id: "penyamakan_kulit",
-  name: "Industri Penyamakan Kulit",
-  isMock: false,
-  params: [
-    { code: "ph", name: "pH (potential Hydrogen)", unit: "-", kind: "range", category: "air_limbah", min: 6, max: 9, mock: 7.5 },
-    { code: "bod", name: "Biological Oxygen Demand (BOD)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 30, mock: 22 },
-    { code: "cod", name: "Chemical Oxygen Demand (COD)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 200, mock: 150 },
-    { code: "nh3n", name: "Amoniak sebagai Nitrogen (NH3-N)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 2, mock: 1.2 },
-    { code: "tkn", name: "Total Kjedal Nitrogen (TKN)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 30, mock: 18 },
-    { code: "cr", name: "Krom (Cr) Total", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 0.6, mock: 0.3 },
-    { code: "oil_fat", name: "Minyak dan Lemak", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 5, mock: 3 },
-    { code: "sulfide", name: "Sulfida", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 0.8, mock: 0.4 },
-    { code: "tss", name: "Total Suspended Solid (TSS)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 60, mock: 40 },
-  ],
-}
-
-// --- Minyak Goreng (proses basah): RIIL, Permen LH 5/2014 Lampiran Minyak Goreng ---
-const makananMinuman: IndustryProfile = {
-  id: "makanan_minuman",
-  name: "Industri Minyak Goreng (proses basah)",
-  isMock: false,
-  params: [
-    { code: "ph", name: "pH", unit: "-", kind: "range", category: "air_limbah", min: 6, max: 9, mock: 7.0 },
-    { code: "bod", name: "BOD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 75, mock: 50 },
-    { code: "cod", name: "COD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 150, mock: 110 },
-    { code: "tss", name: "TSS", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 60, mock: 40 },
-    { code: "oil_fat", name: "Minyak dan Lemak", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 5, mock: 3 },
-    { code: "mbas", name: "MBAS (Surfaktan)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 3, mock: 1.5 },
-    { code: "phosphat", name: "Fosfat (PO4)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 2, mock: 1.0 },
-  ],
-}
-
-// --- Tekstil / Pencelupan: RIIL, Permen LH 5/2014 Lampiran XLII (diubah P.16/MENLHK/2019) ---
-const tekstil: IndustryProfile = {
-  id: "tekstil",
-  name: "Industri Tekstil / Pencelupan",
-  isMock: false,
-  params: [
-    { code: "ph", name: "pH", unit: "-", kind: "range", category: "air_limbah", min: 6, max: 9, mock: 8.0 },
-    { code: "bod", name: "BOD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 60, mock: 45 },
-    { code: "cod", name: "COD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 150, mock: 110 },
-    { code: "tss", name: "TSS", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 50, mock: 35 },
-    { code: "phenol", name: "Fenol Total", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 0.5, mock: 0.2 },
-    { code: "cr", name: "Krom Total (Cr)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 1.0, mock: 0.4 },
-    { code: "nh3n", name: "Amonia Total (NH3-N)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 8.0, mock: 5.0 },
-    { code: "sulfide", name: "Sulfida (S)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 0.3, mock: 0.15 },
-    { code: "oil_fat", name: "Minyak dan Lemak", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 3.0, mock: 1.5 },
-  ],
-}
-
-// --- Kelapa Sawit (CPO): Permen LH 5/2014 Lampiran III ---
-const kelapaSawit: IndustryProfile = {
-  id: "kelapa_sawit",
-  name: "Industri Kelapa Sawit (CPO)",
+// --- Industri Manufaktur ---
+const manufaktur: IndustryProfile = {
+  id: "manufaktur",
+  name: "Industri Manufaktur",
   isMock: false,
   params: [
     { code: "ph", name: "pH", unit: "-", kind: "range", category: "air_limbah", min: 6, max: 9, mock: 7.2 },
-    { code: "bod", name: "BOD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 100, mock: 70 },
-    { code: "cod", name: "COD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 350, mock: 250 },
-    { code: "tss", name: "TSS", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 250, mock: 150 },
-    { code: "oil_fat", name: "Minyak dan Lemak", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 50, mock: 30 },
-    { code: "nitrogen", name: "Nitrogen Total", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 50, mock: 30 },
+    { code: "bod", name: "Biological Oxygen Demand (BOD)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 50, mock: 32 },
+    { code: "cod", name: "Chemical Oxygen Demand (COD)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 100, mock: 75 },
+    { code: "tss", name: "Total Suspended Solid (TSS)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 50, mock: 35 },
+    { code: "oil_fat", name: "Minyak dan Lemak", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 10, mock: 4 },
+    { code: "nh3n", name: "Amoniak Total (NH3-N)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 5, mock: 2.1 },
+    { code: "phenol", name: "Fenol Total", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 0.5, mock: 0.1 },
   ],
 }
 
-// --- Pulp & Paper: Permen LH 5/2014 Lampiran I ---
-const pulpPaper: IndustryProfile = {
-  id: "pulp_paper",
-  name: "Industri Pulp & Kertas",
+// --- Industri Pertambangan ---
+const pertambangan: IndustryProfile = {
+  id: "pertambangan",
+  name: "Industri Pertambangan",
   isMock: false,
   params: [
-    { code: "ph", name: "pH", unit: "-", kind: "range", category: "air_limbah", min: 6, max: 9, mock: 7.5 },
-    { code: "bod", name: "BOD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 150, mock: 100 },
-    { code: "cod", name: "COD", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 400, mock: 300 },
-    { code: "tss", name: "TSS", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 100, mock: 80 },
-    { code: "ao", name: "Senyawa Organik Terhalogenasi (AOX)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 2, mock: 1.5 },
+    { code: "ph", name: "pH Air Asam Tambang", unit: "-", kind: "range", category: "air_limbah", min: 6, max: 9, mock: 6.8 },
+    { code: "tss", name: "Total Suspended Solid (TSS)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 400, mock: 180 },
+    { code: "fe", name: "Besi Terlarut (Fe)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 7.0, mock: 3.2 },
+    { code: "mn", name: "Mangan Terlarut (Mn)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 4.0, mock: 1.8 },
+    { code: "oil_fat", name: "Minyak dan Lemak", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 15, mock: 6 },
+    { code: "cod", name: "Chemical Oxygen Demand (COD)", unit: "mg/L", kind: "numeric", category: "air_limbah", max: 200, mock: 110 },
   ],
 }
 
@@ -165,40 +115,37 @@ const limbahB3: ProperParam[] = [
 ]
 
 export const INDUSTRIES: IndustryProfile[] = [
-  penyamakanKulit,
-  makananMinuman,
-  tekstil,
-  kelapaSawit,
-  pulpPaper,
+  manufaktur,
+  pertambangan,
 ]
 
 export const LIMBAH_B3_PARAMS: ProperParam[] = limbahB3
 
 // --- Modul pendukung (11 LCA Categories) ---
 export const CARBON_PARAMS: ProperParam[] = [
-  { code: "ghg_scope1", name: "Emisi Gas Rumah Kaca Scope 1", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "ghg_scope2", name: "Emisi Gas Rumah Kaca Scope 2", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "ghg_scope3", name: "Emisi Gas Rumah Kaca Scope 3", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "ghg_scope1", name: "Emisi Gas Rumah Kaca Scope 1", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 1250 },
+  { code: "ghg_scope2", name: "Emisi Gas Rumah Kaca Scope 2", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 850 },
+  { code: "ghg_scope3", name: "Emisi Gas Rumah Kaca Scope 3", unit: "tCO₂e/tahun", kind: "numeric", category: "lainnya", mock: 420 },
 ]
 
 export const LCA_PARAMS: ProperParam[] = [
-  { code: "gwp", name: "Global Warming Potential", unit: "kg CO₂e", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "odp", name: "Ozone Depletion Potential", unit: "kg CFC-11e", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "ap", name: "Acidification Potential", unit: "kg SO₂e", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "ep", name: "Eutrophication Potential", unit: "kg PO₄e", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "pocp", name: "Photochemical Ozone Creation", unit: "kg NMVOCe", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "adpe", name: "Abiotic Depletion (elements)", unit: "kg Sbe", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "adpf", name: "Abiotic Depletion (fossil)", unit: "MJ", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "wud", name: "Water Use Depletion", unit: "m³", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "ht", name: "Human Toxicity", unit: "kg 1,4-DBe", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "fet", name: "Freshwater Ecotoxicity", unit: "kg 1,4-DBe", kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "pm", name: "Particulate Matter", unit: "kg PM2.5e", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "gwp", name: "Global Warming Potential", unit: "kg CO₂e", kind: "numeric", category: "lainnya", mock: 1420.5 },
+  { code: "odp", name: "Ozone Depletion Potential", unit: "kg CFC-11e", kind: "numeric", category: "lainnya", mock: 0.000012 },
+  { code: "ap", name: "Acidification Potential", unit: "kg SO₂e", kind: "numeric", category: "lainnya", mock: 3.42 },
+  { code: "ep", name: "Eutrophication Potential", unit: "kg PO₄e", kind: "numeric", category: "lainnya", mock: 0.85 },
+  { code: "pocp", name: "Photochemical Ozone Creation", unit: "kg NMVOCe", kind: "numeric", category: "lainnya", mock: 0.45 },
+  { code: "adpe", name: "Abiotic Depletion (elements)", unit: "kg Sbe", kind: "numeric", category: "lainnya", mock: 0.018 },
+  { code: "adpf", name: "Abiotic Depletion (fossil)", unit: "MJ", kind: "numeric", category: "lainnya", mock: 18500 },
+  { code: "wud", name: "Water Use Depletion", unit: "m³", kind: "numeric", category: "lainnya", mock: 12.8 },
+  { code: "ht", name: "Human Toxicity", unit: "kg 1,4-DBe", kind: "numeric", category: "lainnya", mock: 0.25 },
+  { code: "fet", name: "Freshwater Ecotoxicity", unit: "kg 1,4-DBe", kind: "numeric", category: "lainnya", mock: 0.14 },
+  { code: "pm", name: "Particulate Matter", unit: "kg PM2.5e", kind: "numeric", category: "lainnya", mock: 0.085 },
 ]
 
 export const ENERGY_PARAMS: ProperParam[] = [
-  { code: "energy_total",     name: "Total Energi",          unit: "MWh/tahun",      kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "energy_renewable", name: "Energi Terbarukan",     unit: "MWh/tahun",      kind: "numeric", category: "lainnya", mock: 0 },
-  { code: "energy_intensity", name: "Intensitas Energi",     unit: "kWh/unit produk", kind: "numeric", category: "lainnya", mock: 0 },
+  { code: "energy_total",     name: "Total Energi",          unit: "MWh/tahun",      kind: "numeric", category: "lainnya", mock: 12500 },
+  { code: "energy_renewable", name: "Energi Terbarukan",     unit: "MWh/tahun",      kind: "numeric", category: "lainnya", mock: 3200 },
+  { code: "energy_intensity", name: "Intensitas Energi",     unit: "kWh/unit produk", kind: "numeric", category: "lainnya", mock: 45.2 },
 ]
 
 export const OTHER_PARAMS: ProperParam[] = [...CARBON_PARAMS, ...LCA_PARAMS, ...ENERGY_PARAMS]

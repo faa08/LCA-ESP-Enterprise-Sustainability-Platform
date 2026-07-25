@@ -98,7 +98,7 @@ export default function AIInsights() {
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-neutral-100 p-4">
             <p className="text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "ai.proper_summary")}</p>
-            <p className="mt-2 text-2xl font-bold text-neutral-900">{fails.length} <span className="text-sm font-normal text-red-600">/ {warns.length} ⚠</span></p>
+            <p className="mt-2 text-2xl font-bold text-neutral-900">{fails.length} <span className="text-sm font-normal text-red-600">/ {warns.length} peringatan</span></p>
             <p className="text-xs text-neutral-500">{t(dict, "proper.fails")} / {t(dict, "proper.warn")}</p>
           </div>
           <div className={`rounded-xl border p-4 ${rankColor[rank]}`}>

@@ -154,7 +154,7 @@ export default function Hero({ dict }: { dict: Record<string, string> }) {
 
           <Reveal delay={0.2}>
             <div className="mt-8 flex flex-wrap items-center gap-2">
-              {["ISO 14040/14044 (LCA)", "PROPER KLHK", "SRN-PPI Karbon", "IDXCarbon", "Perpres 98/2021", "PermenLHK"].map((f) => (
+              {["13 Modul Enterprise", "Dual AI Failover (Groq + Gemini)", "ISO 14040/14044 (LCA)", "POJK 51/2017", "PROPER KLHK", "4 Role RBAC", "SRN-PPI Karbon"].map((f) => (
                 <span
                   key={f}
                   className="rounded-full border border-brand-200 bg-emerald-50/60 px-3 py-1 text-xs font-semibold text-brand-700"

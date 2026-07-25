@@ -1,0 +1,222 @@
+﻿"use client"
+
+import { useState } from "react"
+import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Package, Plus, Trash2, CheckCircle2, Weight, Factory } from "lucide-react"
+
+interface BOMItem {
+  id: string
+  material: string
+  supplier: string
+  massKg: string
+  recycledPct: string
+  origin: string
+}
+
+interface Product {
+  id: string
+  name: string
+  category: string
+  massKg: string
+  unit: string
+  bom: BOMItem[]
+}
+
+function genId() { return Math.random().toString(36).slice(2, 9) }
+const emptyBOM = (): BOMItem => ({ id: genId(), material: "", supplier: "", massKg: "", recycledPct: "0", origin: "" })
+const emptyProduct = (): Product => ({ id: genId(), name: "", category: "", massKg: "", unit: "unit", bom: [emptyBOM()] })
+
+export default function ProductAssessmentPage() {
+  const [products, setProducts] = useState<Product[]>([emptyProduct()])
+  const [activeId, setActiveId] = useState<string>(products[0].id)
+  const [saved, setSaved] = useState(false)
+
+  const active = products.find(p => p.id === activeId) ?? products[0]
+
+  const updateProduct = (id: string, field: keyof Omit<Product, "bom" | "id">, value: string) =>
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p))
+
+  const addBOM = (pid: string) =>
+    setProducts(prev => prev.map(p => p.id === pid ? { ...p, bom: [...p.bom, emptyBOM()] } : p))
+
+  const removeBOM = (pid: string, bid: string) =>
+    setProducts(prev => prev.map(p => p.id === pid ? { ...p, bom: p.bom.filter(b => b.id !== bid) } : p))
+
+  const updateBOM = (pid: string, bid: string, field: keyof Omit<BOMItem, "id">, value: string) =>
+    setProducts(prev => prev.map(p => p.id === pid ? {
+      ...p, bom: p.bom.map(b => b.id === bid ? { ...b, [field]: value } : b)
+    } : p))
+
+  const addProduct = () => {
+    const np = emptyProduct()
+    setProducts(prev => [...prev, np])
+    setActiveId(np.id)
+  }
+
+  const removeProduct = (id: string) => {
+    setProducts(prev => {
+      const next = prev.filter(p => p.id !== id)
+      if (activeId === id && next.length > 0) setActiveId(next[0].id)
+      return next
+    })
+  }
+
+  const totalMass = active.bom.reduce((s, b) => s + (parseFloat(b.massKg) || 0), 0)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Badge variant="neutral" className="text-[10px]">Modul 2</Badge>
+            <Badge variant="neutral" className="text-[10px] font-bold">ISO 14040 — Life Cycle Inventory</Badge>
+          </div>
+          <h1 className="text-xl font-bold text-neutral-900">Product Assessment</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            Data produk & Bill of Material (BOM) sebagai dasar perhitungan Life Cycle Inventory (LCI).
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={addProduct}><Plus className="mr-1.5 h-4 w-4" />Produk Baru</Button>
+          <Button onClick={() => setSaved(true)}>
+            {saved ? <><CheckCircle2 className="mr-2 h-4 w-4" />Tersimpan</> : "Simpan Inventori"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Product Tabs */}
+      <div className="flex flex-wrap gap-2">
+        {products.map(p => (
+          <button key={p.id} onClick={() => setActiveId(p.id)}
+            className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${activeId === p.id ? "border-emerald-400 bg-emerald-50 text-emerald-800" : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"}`}>
+            <Package className="h-3.5 w-3.5" />
+            {p.name || "Produk Baru"}
+            {products.length > 1 && (
+              <span onClick={e => { e.stopPropagation(); removeProduct(p.id) }} className="ml-1 text-neutral-300 hover:text-red-500">×</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Product Detail */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600"><Package className="h-4 w-4" /></div>
+            <CardTitle>Data Produk</CardTitle>
+          </div>
+        </CardHeader>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="lg:col-span-2">
+            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Nama Produk <span className="text-red-500">*</span></label>
+            <input type="text" value={active.name} onChange={e => updateProduct(active.id, "name", e.target.value)}
+              placeholder="Semen OPC Type I, Pupuk Urea, dll." className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Kategori Produk</label>
+            <input type="text" value={active.category} onChange={e => updateProduct(active.id, "category", e.target.value)}
+              placeholder="Bahan konstruksi, Pupuk, dll." className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Massa Produk Jadi</label>
+            <div className="flex gap-2">
+              <input type="number" value={active.massKg} onChange={e => updateProduct(active.id, "massKg", e.target.value)}
+                placeholder="1000" className="flex-1 rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+              <select value={active.unit} onChange={e => updateProduct(active.id, "unit", e.target.value)}
+                className="rounded-lg border border-neutral-200 px-2 py-2 text-sm bg-white focus:border-emerald-400 focus:outline-none">
+                <option value="unit">unit</option>
+                <option value="kg">kg</option>
+                <option value="ton">ton</option>
+                <option value="liter">liter</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* BOM Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><Factory className="h-4 w-4" /></div>
+              <div>
+                <CardTitle>Bill of Material (BOM)</CardTitle>
+                <p className="text-xs text-neutral-500 mt-0.5">Daftar bahan baku & komponen penyusun produk — dasar Life Cycle Inventory (LCI)</p>
+              </div>
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => addBOM(active.id)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />Tambah Material
+            </Button>
+          </div>
+        </CardHeader>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-200">
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Material / Komponen</th>
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Supplier</th>
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Massa (kg)</th>
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">% Daur Ulang</th>
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Asal</th>
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">% Massa</th>
+                <th className="px-3 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {active.bom.map(b => {
+                const massPct = totalMass > 0 ? ((parseFloat(b.massKg) || 0) / totalMass * 100).toFixed(1) : "—"
+                return (
+                  <tr key={b.id} className="border-b border-neutral-100">
+                    <td className="px-3 py-2">
+                      <input type="text" value={b.material} onChange={e => updateBOM(active.id, b.id, "material", e.target.value)}
+                        placeholder="Batu kapur, Besi, Plastik PET..."
+                        className="w-full rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input type="text" value={b.supplier} onChange={e => updateBOM(active.id, b.id, "supplier", e.target.value)}
+                        placeholder="PT Supplier"
+                        className="w-full rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input type="number" value={b.massKg} onChange={e => updateBOM(active.id, b.id, "massKg", e.target.value)}
+                        placeholder="0"
+                        className="w-24 rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input type="number" min={0} max={100} value={b.recycledPct} onChange={e => updateBOM(active.id, b.id, "recycledPct", e.target.value)}
+                        className="w-20 rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input type="text" value={b.origin} onChange={e => updateBOM(active.id, b.id, "origin", e.target.value)}
+                        placeholder="Lokal / Impor"
+                        className="w-24 rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none" />
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs text-neutral-500">{massPct}%</td>
+                    <td className="px-3 py-2">
+                      {active.bom.length > 1 && (
+                        <button onClick={() => removeBOM(active.id, b.id)} className="text-neutral-300 hover:text-red-500 transition-colors">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-neutral-200 bg-neutral-50">
+                <td className="px-3 py-2 text-xs font-bold text-neutral-700" colSpan={2}>Total BOM</td>
+                <td className="px-3 py-2 font-bold text-neutral-900 font-mono text-sm">{totalMass.toLocaleString("id-ID")} kg</td>
+                <td colSpan={4} />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <p className="mt-3 text-xs italic text-neutral-400">Data BOM ini akan digunakan sebagai input Life Cycle Inventory (LCI) di Modul 6 — LCIA.</p>
+      </Card>
+    </div>
+  )
+}

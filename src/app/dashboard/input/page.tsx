@@ -15,6 +15,7 @@ import {
   XCircle,
   CircleDashed,
   Save,
+  Sparkles,
   RotateCcw,
   ArrowLeft,
 } from "lucide-react"
@@ -35,6 +36,7 @@ import {
 } from "@/lib/proper"
 import { useIndustryId } from "@/lib/use-industry-id"
 import { recordImport } from "@/lib/measurements"
+import { getRoleClient, isReadOnly } from "@/lib/role"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -219,13 +221,17 @@ export default function InputPage() {
     setSaved(true)
   }, [industryId])
 
+  const role = getRoleClient()
+  const readOnly = isReadOnly(role)
+
   const handleChange = (code: string, v: string) => {
+    if (readOnly) return
     setValues((prev) => ({ ...prev, [code]: v }))
     setSaved(false)
   }
 
   const handleSave = () => {
-    if (!industryId) return
+    if (!industryId || readOnly) return
     localStorage.setItem(STORAGE_PREFIX + industryId, JSON.stringify(values))
     const count = Object.values(values).filter((v) => v !== "").length
     recordImport(industryId, {
@@ -243,6 +249,20 @@ export default function InputPage() {
     setValues({})
     setSaved(true)
     if (industryId) localStorage.removeItem(STORAGE_PREFIX + industryId)
+  }
+
+  const handlePreset = () => {
+    const all = [...airParams, ...EMISSIONS_PARAMS, ...LIMBAH_B3_PARAMS, ...CARBON_PARAMS, ...ENERGY_PARAMS, ...LCA_PARAMS]
+    const preset: ValueMap = {}
+    for (const p of all) {
+      if (p.kind === "checklist") {
+        preset[p.code] = "true"
+      } else {
+        preset[p.code] = String(p.mock)
+      }
+    }
+    setValues(preset)
+    setSaved(false)
   }
 
   const airParams = industry ? industry.params.filter((p) => p.category === "air_limbah") : []
@@ -282,7 +302,10 @@ export default function InputPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-primary">{t(dict, "input.page_title")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-secondary">{t(dict, "input.page_desc")}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" onClick={handlePreset}>
+            <Sparkles className="h-4 w-4" /> Isi Preset Data Uji
+          </Button>
           <Button variant="secondary" onClick={handleReset}>
             <RotateCcw className="h-4 w-4" /> {t(dict, "input.reset")}
           </Button>
@@ -330,31 +353,28 @@ export default function InputPage() {
             onChange={handleChange}
           />
         </div>
-        <Section
-          dict={dict}
-          icon={Leaf}
-          title={t(dict, "input.section.carbon")}
-          params={CARBON_PARAMS}
-          values={values}
-          onChange={handleChange}
-        />
-        <Section
-          dict={dict}
-          icon={Zap}
-          title={t(dict, "input.section.energy")}
-          params={ENERGY_PARAMS}
-          values={values}
-          onChange={handleChange}
-        />
-        <div className="lg:col-span-2">
-          <Section
-            dict={dict}
-            icon={Cpu}
-            title={t(dict, "input.section.lca")}
-            params={LCA_PARAMS}
-            values={values}
-            onChange={handleChange}
-          />
+      </div>
+
+      {/* Auto-calculated KPI notice */}
+      <div className="rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
+            <Zap className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-emerald-900">Scope 1, 2, 3 · LCA · Energi — Dihitung Otomatis</p>
+            <p className="mt-1 text-xs text-emerald-700">
+              Parameter berikut tidak perlu diinput manual karena dihitung otomatis oleh ensPR dari data operasional di Data Hub:
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {["Scope 1","Scope 2","Scope 3","GWP","Acidification","Eutrophication","Human Toxicity","Ecotoxicity","Water Use","Particulate Matter","Total Energi","Energi Terbarukan","Intensitas Energi"].map((k) => (
+                <span key={k} className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">{k}</span>
+              ))}
+            </div>
+            <Link href="/dashboard/data-hub" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline">
+              Buka Data Hub untuk input data operasional →
+            </Link>
+          </div>
         </div>
       </div>
     </div>

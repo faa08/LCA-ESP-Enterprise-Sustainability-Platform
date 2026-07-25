@@ -1,220 +1,176 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import Link from "next/link"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Building2, Factory, Users, Key, Link2, Shield, ChevronRight, Check } from "lucide-react"
-import { t, type Locale, getLocaleClient } from "@/lib/i18n"
-import { id as idDict } from "@/locales/id"
-import { en as enDict } from "@/locales/en"
-import { INDUSTRIES, EMISSION_PROFILES } from "@/lib/proper"
-
-const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
-
-const settingsSections = [
-  {
-    icon: Building2,
-    nameKey: "settings.company_profile",
-    descKey: "settings.company_desc",
-    color: "text-blue-600 bg-blue-50",
-  },
-  {
-    icon: Factory,
-    nameKey: "settings.facility",
-    descKey: "settings.facility_desc",
-    color: "text-emerald-600 bg-emerald-50",
-  },
-  {
-    icon: Users,
-    nameKey: "settings.users",
-    descKey: "settings.users_desc",
-    color: "text-amber-600 bg-amber-50",
-  },
-  {
-    icon: Shield,
-    nameKey: "settings.permissions",
-    descKey: "settings.permissions_desc",
-    color: "text-purple-600 bg-purple-50",
-  },
-  {
-    icon: Link2,
-    nameKey: "settings.integrations",
-    descKey: "settings.integrations_desc",
-    color: "text-cyan-600 bg-cyan-50",
-  },
-  {
-    icon: Key,
-    nameKey: "settings.api_keys",
-    descKey: "settings.api_keys_desc",
-    color: "text-orange-600 bg-orange-50",
-  },
-]
+import { Button } from "@/components/ui/button"
+import {
+  Building2, Users, Key, Link2, Shield, ChevronRight, Check,
+  Settings2, Database, Cpu, Lock, Info, ArrowRight, Sparkles, CheckCircle2,
+} from "lucide-react"
 
 export default function Settings() {
-  const locale = getLocaleClient()
-  const dict = dicts[locale]
-  const [industryId, setIndustryId] = useState<string>("")
-  const [fuelType, setFuelType] = useState<string>("batubara")
+  const [apiKeyGroq, setApiKeyGroq] = useState("gsk_************************************************")
+  const [apiKeyGemini, setApiKeyGemini] = useState("AIza***********************************")
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => {
-    const stored = localStorage.getItem("enspr_industry")
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored) setIndustryId(stored)
-    const storedFuel = localStorage.getItem("enspr_fuel_type")
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (storedFuel) setFuelType(storedFuel)
-  }, [])
-
-  const handleSave = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value
-    setIndustryId(val)
-    if (typeof window !== "undefined") localStorage.setItem("enspr_industry", val)
+  const handleSave = () => {
     setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setTimeout(() => setSaved(false), 2500)
   }
 
-  const handleFuelSave = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value
-    setFuelType(val)
-    if (typeof window !== "undefined") localStorage.setItem("enspr_fuel_type", val)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  const activeFuelProfile = EMISSION_PROFILES[fuelType] ?? EMISSION_PROFILES.batubara
-
-  const selected = INDUSTRIES.find((i) => i.id === industryId)
+  const systemSections = [
+    {
+      icon: Users,
+      name: "Tata Kelola Pengguna & Peran (RBAC)",
+      desc: "Kelola 4 peran pengguna: Admin Korporat, Sustainability Manager, Operator Site, dan Auditor Eksternal.",
+      color: "text-purple-600 bg-purple-50",
+      status: "4 Role Aktif",
+    },
+    {
+      icon: Key,
+      name: "Manajemen AI & Failover API Keys",
+      desc: "Konfigurasi Groq Cloud (Primary) & Google Gemini (Fallback) untuk rekomendasi dekarbonisasi otomatis.",
+      color: "text-blue-600 bg-blue-50",
+      status: "Groq + Gemini Aktif",
+    },
+    {
+      icon: Link2,
+      name: "Integrasi Sistem & Database",
+      desc: "Konektor API ke sistem ERP (SAP), SCADA pabrik, CEMS cerobong, dan Festronik KLHK.",
+      color: "text-emerald-600 bg-emerald-50",
+      status: "Supabase & API Ready",
+    },
+    {
+      icon: Shield,
+      name: "Keamanan & Pelindungan Data (UU PDP)",
+      desc: "Enkripsi data at-rest & in-transit, jejak audit otomatis, serta kedaulatan data private cloud.",
+      color: "text-amber-600 bg-amber-50",
+      status: "Enkripsi AES-256",
+    },
+  ]
 
   return (
     <div className="space-y-6">
-      <Card>
-        <div className="flex items-start gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-emerald-50 text-2xl font-bold text-emerald-600">
-            ensPR
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Badge variant="neutral" className="text-[10px]">Data & System</Badge>
+            <Badge variant="neutral" className="text-[10px] font-bold">Enterprise IT Settings</Badge>
           </div>
-          <div className="flex-1">
-            <p className="text-lg font-semibold text-neutral-900">{t(dict, "settings.profile_name")}</p>
-            <p className="text-sm text-neutral-500">{t(dict, "settings.company")}</p>
-            <div className="mt-2 flex items-center gap-3 text-xs text-neutral-400">
-              <span>{t(dict, "settings.created").replace("{n}", "Jan 2026")}</span>
-              <span>{t(dict, "settings.plan").replace("{n}", "Enterprise")}</span>
-              <Badge variant="success">{t(dict, "common.active")}</Badge>
+          <h1 className="text-xl font-bold text-neutral-900">Pengaturan Sistem & IT Enterprise</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            Pusat tata kelola infrastruktur IT: Peran Pengguna (RBAC), AI Engine Failover, API Keys, dan Keamanan Data.
+          </p>
+        </div>
+        <Button onClick={handleSave}>
+          {saved ? <><CheckCircle2 className="mr-2 h-4 w-4" />Tersimpan</> : "Simpan Konfigurasi"}
+        </Button>
+      </div>
+
+      {/* Migration Notice Banner */}
+      <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5">
+        <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+        <div className="flex-1 text-xs text-blue-800">
+          <p className="font-bold text-blue-900">Pembaruan Arsitektur 13 Modul GreenLCA</p>
+          <p className="mt-1 leading-relaxed">
+            Pengaturan profil entitas pabrik dan metodologi LCA telah dipindahkan ke grup <b>FONDASI LCA</b> agar sesuai standar ISO 14040/14044:
+          </p>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            <Link href="/dashboard/company-profile" className="inline-flex items-center gap-1 rounded-lg border border-blue-300 bg-white px-2.5 py-1 font-semibold text-blue-700 hover:bg-blue-100 transition-colors">
+              M1 · Company Profile (Hierarki Perusahaan) <ArrowRight className="h-3 w-3" />
+            </Link>
+            <Link href="/dashboard/goal-scope" className="inline-flex items-center gap-1 rounded-lg border border-blue-300 bg-white px-2.5 py-1 font-semibold text-blue-700 hover:bg-blue-100 transition-colors">
+              M0 · Goal & Scope (Metodologi LCA) <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Failover Engine Config */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle>Dual AI Engine Configuration (Failover Active)</CardTitle>
+              <p className="text-xs text-neutral-500 mt-0.5">Strategi kolaborasi Groq Llama 3.3 70B (Utama) & Google Gemini 1.5 (Cadangan)</p>
             </div>
           </div>
-          <button className="rounded-lg border border-neutral-200 px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-50">
-            {t(dict, "settings.edit_profile")}
-          </button>
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t(dict, "settings.plant_profile")}</CardTitle>
-          <p className="mt-1 text-sm text-neutral-500">{t(dict, "settings.plant_profile_desc")}</p>
         </CardHeader>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="text-sm font-medium text-neutral-700">{t(dict, "settings.select_industry")}</label>
-          <select
-            value={industryId}
-            onChange={handleSave}
-            className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 focus:border-emerald-500 focus:outline-none"
-          >
-            <option value="">—</option>
-            {INDUSTRIES.map((i) => (
-              <option key={i.id} value={i.id}>{i.name}</option>
-            ))}
-          </select>
-          {saved && (
-            <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
-              <Check className="h-3.5 w-3.5" /> {t(dict, "settings.industry_saved")}
-            </span>
-          )}
-        </div>
-        {selected && (
-          <div className="mt-3">
-            <Badge variant={selected.isMock ? "neutral" : "success"}>
-              {selected.isMock ? t(dict, "settings.industry_mock") : t(dict, "settings.industry_real")}
-            </Badge>
-            <span className="ml-2 text-xs text-neutral-500">
-              {selected.params.filter((p) => p.category === "air_limbah").length} parameter air limbah
-            </span>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-xs font-semibold text-neutral-700 mb-1.5 flex items-center justify-between">
+              <span>Groq API Key (Primary Provider)</span>
+              <span className="text-[10px] text-emerald-700 font-bold">Llama 3.3 70B</span>
+            </label>
+            <input
+              type="password"
+              value={apiKeyGroq}
+              onChange={(e) => setApiKeyGroq(e.target.value)}
+              className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm font-mono focus:border-emerald-500 focus:outline-none"
+            />
+            <p className="mt-1 text-[11px] text-neutral-400">Digunakan untuk analisis respon super cepat (&lt;1 detik)</p>
           </div>
-        )}
-      </Card>
 
-      {/* Bahan Bakar Boiler */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Jenis Bahan Bakar Boiler / Cerobong</CardTitle>
-          <p className="mt-1 text-sm text-neutral-500">
-            Pilihan ini menentukan batas baku mutu emisi (SO₂, NOx, TSP) sesuai Permen LH 7/2007.
-          </p>
-        </CardHeader>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="text-sm font-medium text-neutral-700">Jenis Bahan Bakar</label>
-          <select
-            value={fuelType}
-            onChange={handleFuelSave}
-            className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 focus:border-emerald-500 focus:outline-none"
-          >
-            {Object.entries(EMISSION_PROFILES).map(([key, val]) => (
-              <option key={key} value={key}>{val.label}</option>
-            ))}
-          </select>
-          {saved && (
-            <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
-              <Check className="h-3.5 w-3.5" /> Tersimpan
-            </span>
-          )}
-        </div>
-        {/* Preview batas emisi aktif */}
-        <div className="mt-4 rounded-lg border border-neutral-100 bg-neutral-50 p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-            Batas Emisi Aktif — {activeFuelProfile.label}
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {Object.entries(activeFuelProfile.limits).map(([code, val]) => (
-              <div key={code} className="rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-center">
-                <p className="text-xs font-semibold text-neutral-500 uppercase">{code === "opacity" ? "Opasitas" : code.toUpperCase()}</p>
-                <p className="text-sm font-bold text-neutral-900">{val}<span className="ml-0.5 text-xs font-normal text-neutral-400">{code === "opacity" ? "%" : " mg/Nm³"}</span></p>
-              </div>
-            ))}
+          <div>
+            <label className="block text-xs font-semibold text-neutral-700 mb-1.5 flex items-center justify-between">
+              <span>Google Gemini API Key (Fallback Provider)</span>
+              <span className="text-[10px] text-blue-700 font-bold">Gemini 1.5 Flash</span>
+            </label>
+            <input
+              type="password"
+              value={apiKeyGemini}
+              onChange={(e) => setApiKeyGemini(e.target.value)}
+              className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm font-mono focus:border-emerald-500 focus:outline-none"
+            />
+            <p className="mt-1 text-[11px] text-neutral-400">Otomatis aktif jika Groq mencapai batas kuota / rate limit</p>
           </div>
         </div>
       </Card>
 
+      {/* System Sections Grid */}
       <div className="grid gap-4 sm:grid-cols-2">
-        {settingsSections.map((section, i) => (
-          <Card key={i} className="group cursor-pointer hover:border-emerald-200">
+        {systemSections.map((section, i) => (
+          <Card key={i} className="group cursor-pointer hover:border-emerald-200 transition-colors">
             <div className="flex items-start gap-4">
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${section.color}`}>
                 <section.icon className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-neutral-900">{t(dict, section.nameKey)}</p>
-                  <ChevronRight className="h-4 w-4 text-neutral-300 group-hover:text-neutral-500" />
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-neutral-900">{section.name}</p>
+                  <span className="shrink-0 rounded bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-600">{section.status}</span>
                 </div>
-                <p className="mt-0.5 text-xs text-neutral-500">{t(dict, section.descKey)}</p>
+                <p className="mt-1 text-xs text-neutral-500 leading-relaxed">{section.desc}</p>
               </div>
             </div>
           </Card>
         ))}
       </div>
 
+      {/* System Status Metrics */}
       <div className="grid gap-4 sm:grid-cols-3">
-        {[
-          { labelKey: "settings.total_users", value: "24", changeKey: "common.vs_last_year_change", changeVal: "+2" },
-          { labelKey: "settings.active_facilities", value: "12", changeKey: null, changeVal: "3 regions" },
-          { labelKey: "settings.storage_used", value: "2.4 GB", changeKey: null, changeVal: t(dict, "settings.of") + " 10 GB" },
-        ].map((stat, i) => (
-          <Card key={i}>
-            <p className="text-xs text-neutral-500">{t(dict, stat.labelKey)}</p>
-            <p className="mt-1 text-2xl font-bold text-neutral-900">{stat.value}</p>
-            <p className="mt-0.5 text-xs text-neutral-400">{stat.changeVal}</p>
-          </Card>
-        ))}
+        <Card>
+          <p className="text-xs text-neutral-500">Total Pengguna Terdaftar</p>
+          <p className="mt-1 text-2xl font-bold text-neutral-900">24 <span className="text-xs font-normal text-neutral-400">user</span></p>
+          <p className="mt-0.5 text-xs text-emerald-600">4 Peran (RBAC Active)</p>
+        </Card>
+        <Card>
+          <p className="text-xs text-neutral-500">Status Keamanan (UU PDP)</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-700">Patuh</p>
+          <p className="mt-0.5 text-xs text-neutral-400">Enkripsi AES-256 Data at-Rest</p>
+        </Card>
+        <Card>
+          <p className="text-xs text-neutral-500">Kapasitas Dokumen Audit</p>
+          <p className="mt-1 text-2xl font-bold text-neutral-900">2.4 GB <span className="text-xs font-normal text-neutral-400">/ 10 GB</span></p>
+          <p className="mt-0.5 text-xs text-neutral-400">Format PDF / Berkas Lab</p>
+        </Card>
       </div>
     </div>
   )

@@ -9,7 +9,7 @@ import { clearRole } from "@/app/actions/role"
 import { t, type Locale } from "@/lib/i18n"
 import { id } from "@/locales/id"
 import { en } from "@/locales/en"
-import type { Role } from "@/lib/role"
+import { type Role, ROLE_LABELS } from "@/lib/role"
 import {
   LayoutDashboard,
   Cpu,
@@ -28,6 +28,14 @@ import {
   PanelLeft,
   Database,
   PencilLine,
+  Target,
+  Building2,
+  Package,
+  Truck,
+  RefreshCcw,
+  Globe2,
+  ClipboardList,
+  FileOutput,
   type LucideIcon,
 } from "lucide-react"
 
@@ -37,10 +45,12 @@ type NavItem = {
   labelKey: string
   href: string
   icon: LucideIcon
+  allowedRoles?: Role[]
 }
 
 type NavGroup = {
   label: string
+  allowedRoles?: Role[]
   items: NavItem[]
 }
 
@@ -52,18 +62,39 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "CORE MODULES",
+    label: "FONDASI LCA",
     items: [
-      { labelKey: "sidebar.lca", href: "/dashboard/lca", icon: Cpu },
-      { labelKey: "sidebar.compliance", href: "/dashboard/compliance", icon: ShieldCheck },
-      { labelKey: "sidebar.carbon", href: "/dashboard/carbon-accounting", icon: BarChart3 },
-      { labelKey: "sidebar.data_hub", href: "/dashboard/data-hub", icon: Database },
+      { labelKey: "sidebar.goal_scope", href: "/dashboard/goal-scope", icon: Target },
+      { labelKey: "sidebar.company_profile", href: "/dashboard/company-profile", icon: Building2 },
+      { labelKey: "sidebar.product_assessment", href: "/dashboard/product-assessment", icon: Package },
     ],
   },
   {
-    label: "SYSTEM",
+    label: "INVENTORI & DAMPAK",
     items: [
-      { labelKey: "sidebar.settings", href: "/dashboard/settings", icon: Settings },
+      { labelKey: "sidebar.energy", href: "/dashboard/energy-monitoring", icon: Zap },
+      { labelKey: "sidebar.waste", href: "/dashboard/waste-management", icon: Recycle },
+      { labelKey: "sidebar.transportation", href: "/dashboard/transportation", icon: Truck },
+      { labelKey: "sidebar.lca", href: "/dashboard/lca", icon: Cpu },
+      { labelKey: "sidebar.carbon", href: "/dashboard/carbon-accounting", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "PELAPORAN & KEPATUHAN",
+    items: [
+      { labelKey: "sidebar.circular_economy", href: "/dashboard/circular-economy", icon: RefreshCcw },
+      { labelKey: "sidebar.compliance", href: "/dashboard/compliance", icon: ShieldCheck },
+      { labelKey: "sidebar.esg", href: "/dashboard/esg-reporting", icon: Lightbulb },
+      { labelKey: "sidebar.sdgs", href: "/dashboard/sdgs", icon: Globe2 },
+      { labelKey: "sidebar.audit_trail", href: "/dashboard/audit-trail", icon: ClipboardList },
+      { labelKey: "sidebar.reporting", href: "/dashboard/reporting", icon: FileOutput },
+    ],
+  },
+  {
+    label: "DATA & SYSTEM",
+    items: [
+      { labelKey: "sidebar.data_hub", href: "/dashboard/data-hub", icon: Database, allowedRoles: ["admin", "manager", "operator"] },
+      { labelKey: "sidebar.settings", href: "/dashboard/settings", icon: Settings, allowedRoles: ["admin", "manager"] },
     ],
   },
 ]
@@ -71,17 +102,19 @@ const navGroups: NavGroup[] = [
 const roleLabels: Record<Role, string> = {
   admin: "role.admin",
   manager: "role.manager",
+  operator: "role.operator",
   viewer: "role.viewer",
 }
 
 const roleBadge: Record<Role, string> = {
-  admin: "bg-emerald-100 text-emerald-700",
+  admin: "bg-purple-100 text-purple-700",
   manager: "bg-blue-100 text-blue-700",
+  operator: "bg-emerald-100 text-emerald-700",
   viewer: "bg-slate-100 text-slate-600",
 }
 
 function isActive(href: string, pathname: string): boolean {
-  if (href === "/") return pathname === "/"
+  if (href === "/dashboard") return pathname === "/dashboard"
   return pathname.startsWith(href)
 }
 
@@ -103,7 +136,18 @@ export function Sidebar({
   const isCollapsed = collapsed && !hovered
 
   const visibleGroups = navGroups
-    .map((g) => (g.label === "DATA MANAGEMENT" && role !== "admin" && role !== "manager" ? { ...g, items: [] } : g))
+    .map((g) => {
+      if (g.allowedRoles && role && !g.allowedRoles.includes(role)) {
+        return { ...g, items: [] }
+      }
+      const filteredItems = g.items.filter((item) => {
+        if (item.allowedRoles && role && !item.allowedRoles.includes(role)) {
+          return false
+        }
+        return true
+      })
+      return { ...g, items: filteredItems }
+    })
     .filter((g) => g.items.length > 0)
 
   const handleSwitch = useCallback(async () => {
@@ -208,7 +252,7 @@ export function Sidebar({
                   </div>
                   {role ? (
                     <span className={cn("inline-block rounded px-1.5 py-0.5 text-[10px] font-medium", roleBadge[role])}>
-                      {t(dict, roleLabels[role])}
+                      {ROLE_LABELS[role]?.title || t(dict, roleLabels[role])}
                     </span>
                   ) : null}
                 </div>
@@ -226,8 +270,8 @@ export function Sidebar({
 
         {isCollapsed && (
           <div className="flex justify-center px-4 py-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-sm font-semibold text-muted">
-              {role === "manager" ? "IT" : "AT"}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xs font-bold text-muted">
+              {role === "admin" ? "AD" : role === "manager" ? "MN" : role === "operator" ? "OP" : "VW"}
             </div>
           </div>
         )}

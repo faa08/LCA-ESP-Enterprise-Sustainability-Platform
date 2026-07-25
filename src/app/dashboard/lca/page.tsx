@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Cpu, Beaker, Package, BarChart3, Zap, TrendingDown } from "lucide-react"
+import { Cpu, Beaker, Package, BarChart3, Zap, TrendingDown, ArrowRight } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts"
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
@@ -67,6 +68,20 @@ export default function LCAPage() {
 
   return (
     <div className="space-y-6">
+      {/* Prasyarat: Goal & Scope */}
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold text-blue-900">Modul 6 — LCIA Multi-Impact</p>
+          <p className="text-xs text-blue-700 mt-0.5">
+            Prasyarat: Modul 0 (Goal & Scope) harus dikunci sebelum hasil LCIA dapat diklaim sebagai studi LCA yang sah per ISO 14040/14044.
+          </p>
+        </div>
+        <Link href="/dashboard/goal-scope"
+          className="flex shrink-0 items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 transition-colors">
+          Isi Goal & Scope <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title={t(dict, "lca.gwp")} value={fmt(gwp, " kg CO₂e/unit")} description={t(dict, "lca.average")} icon={BarChart3} />
         <StatCard title={t(dict, "lca.water_footprint")} value={fmt(water, " m³/unit")} description={t(dict, "lca.average")} icon={Beaker} />
@@ -169,7 +184,7 @@ export default function LCAPage() {
                 </div>
               </div>
               <p className="text-[11px] text-emerald-800">
-                💡 **Analisis AI**: Pengalihan {100 - simCoalPct}% biomassa memberikan *payback period* ~1.4 tahun dengan efisiensi biaya bahan bakar &amp; insentif pajak karbon.
+                <b>Analisis AI</b>: Pengalihan {100 - simCoalPct}% biomassa memberikan *payback period* ~1.4 tahun dengan efisiensi biaya bahan bakar &amp; insentif pajak karbon.
               </p>
             </div>
 
@@ -280,7 +295,7 @@ export default function LCAPage() {
                     <td className="px-3 py-2.5 text-neutral-700">{filled ? raw : "—"}</td>
                     <td className="px-3 py-2.5">
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${filled ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-400"}`}>
-                        {filled ? "✓ Terisi" : "Belum diisi"}
+                        {filled ? "Terisi" : "Belum diisi"}
                       </span>
                     </td>
                   </tr>
