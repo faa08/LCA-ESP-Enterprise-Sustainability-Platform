@@ -83,6 +83,7 @@ const navGroups: NavGroup[] = [
     label: "PELAPORAN & KEPATUHAN",
     items: [
       { labelKey: "sidebar.circular_economy", href: "/dashboard/circular-economy", icon: RefreshCcw },
+      { labelKey: "sidebar.biodiversity", href: "/dashboard/biodiversity", icon: Leaf },
       { labelKey: "sidebar.compliance", href: "/dashboard/compliance", icon: ShieldCheck },
       { labelKey: "sidebar.esg", href: "/dashboard/esg-reporting", icon: Lightbulb },
       { labelKey: "sidebar.sdgs", href: "/dashboard/sdgs", icon: Globe2 },

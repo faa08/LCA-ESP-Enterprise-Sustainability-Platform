@@ -1,6 +1,7 @@
-﻿-- ====================================================================
--- GREENLCA ENTERPRISE DATABASE SCHEMA (SUPABASE / POSTGRESQL)
+-- ====================================================================
+-- GREENLCA ENTERPRISE DATABASE SCHEMA (SUPABASE / POSTGRESQL) - 15 MODULES
 -- Standard Compliance: ISO 14040/14044, GHG Protocol, POJK 51/2017, PROPER KLHK
+-- PerMen LHK No. 1/2021 (Efisiensi Air Poin 4c & Keanekaragaman Hayati Poin 4f)
 -- UU No. 27/2022 (Pelindungan Data Pribadi & Audit Lineage)
 -- ====================================================================
 
@@ -12,7 +13,7 @@ CREATE TYPE system_boundary AS ENUM ('cradle_to_gate', 'cradle_to_grave', 'gate_
 CREATE TYPE allocation_method AS ENUM ('mass', 'economic', 'energy', 'none');
 CREATE TYPE proper_rank AS ENUM ('EMAS', 'HIJAU', 'BIRU', 'MERAH', 'HITAM');
 
--- ─── 2. HIERARKI MULTI-ENTITAS & TATA KELOLA (MODUL 1) ───
+-- ─── 2. HIERARKI MULTI-ENTITAS & TATA KELOLA (MODUL 1 - COMPANY PROFILE) ───
 CREATE TABLE IF NOT EXISTS companies (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
@@ -89,6 +90,7 @@ CREATE TABLE IF NOT EXISTS bill_of_materials (
 );
 
 -- ─── 6. DATA HUB - OPERATIONAL INGESTION (SINGLE SOURCE OF TRUTH) ───
+-- MODUL 3: ENERGY & WATER ASSESSMENT (PerMen LHK 1/2021 Poin 4c - Efisiensi Air)
 CREATE TABLE IF NOT EXISTS energy_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
@@ -101,6 +103,24 @@ CREATE TABLE IF NOT EXISTS energy_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS water_efficiency_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
+    log_date DATE NOT NULL,
+    water_source VARCHAR(100) NOT NULL, -- pdam, surface_water, ground_water
+    intake_volume_m3 DECIMAL(14, 4) NOT NULL,
+    recycled_volume_m3 DECIMAL(14, 4) DEFAULT 0,
+    production_output_qty DECIMAL(14, 4) NOT NULL,
+    production_unit VARCHAR(50) DEFAULT 'Ton',
+    water_intensity_m3_per_unit DECIMAL(12, 6) NOT NULL, -- Intake / Output
+    baseline_intensity DECIMAL(12, 6),
+    efficiency_ratio_pct DECIMAL(7, 2), -- (Baseline - Intensity) / Baseline * 100
+    recycle_ratio_pct DECIMAL(7, 2),    -- (Recycled / Intake) * 100
+    created_by UUID REFERENCES user_profiles(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- MODUL 4: WASTE ASSESSMENT
 CREATE TABLE IF NOT EXISTS waste_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
@@ -116,6 +136,7 @@ CREATE TABLE IF NOT EXISTS waste_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- MODUL 5: TRANSPORTATION
 CREATE TABLE IF NOT EXISTS transport_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
@@ -156,7 +177,7 @@ CREATE TABLE IF NOT EXISTS stack_emission_logs (
 CREATE TABLE IF NOT EXISTS document_vault (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
-    document_type VARCHAR(100) NOT NULL, -- lab_report, manifest_b3, iplc_permit, amdal
+    document_type VARCHAR(100) NOT NULL, -- lab_report, manifest_b3, iplc_permit, amdal, biodiversity_permit
     file_name VARCHAR(255) NOT NULL,
     file_path TEXT NOT NULL,
     file_size_bytes BIGINT,
@@ -164,7 +185,8 @@ CREATE TABLE IF NOT EXISTS document_vault (
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- ─── 7. LCIA & CARBON & COMPLIANCE METRICS (MODUL 6, 7, 8, 9, 10, 11) ───
+-- ─── 7. LCIA & CARBON & CIRCULAR & BIODIVERSITY METRICS (MODUL 6 - 9) ───
+-- MODUL 6: LCIA MULTI-IMPACT CATEGORY
 CREATE TABLE IF NOT EXISTS lcia_results (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
@@ -177,6 +199,7 @@ CREATE TABLE IF NOT EXISTS lcia_results (
     calculated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- MODUL 7: CARBON CALCULATION
 CREATE TABLE IF NOT EXISTS carbon_footprints (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
@@ -188,6 +211,35 @@ CREATE TABLE IF NOT EXISTS carbon_footprints (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- MODUL 8: CIRCULAR ECONOMY
+CREATE TABLE IF NOT EXISTS circularity_indices (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
+    reporting_year INT NOT NULL,
+    recycled_content_pct DECIMAL(5, 2) NOT NULL,
+    reuse_rate_pct DECIMAL(5, 2) NOT NULL,
+    material_circularity_index DECIMAL(4, 3) NOT NULL, -- 0.000 to 1.000
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- MODUL 9: KEANEKARAGAMAN HAYATI / BIODIVERSITY (PerMen LHK 1/2021 Poin 4f)
+CREATE TABLE IF NOT EXISTS biodiversity_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
+    reporting_year INT NOT NULL,
+    conservation_area_ha DECIMAL(10, 2) NOT NULL,
+    buffer_zone_area_ha DECIMAL(10, 2),
+    protected_flora_count INT NOT NULL DEFAULT 0,
+    protected_fauna_count INT NOT NULL DEFAULT 0,
+    habitat_rehabilitation_status VARCHAR(100) NOT NULL DEFAULT 'In Progress', -- Planned, In Progress, Completed
+    biodiversity_index_score DECIMAL(5, 2), -- Indeks keanekaragaman Shannon-Wiener / PROPER
+    partner_institution VARCHAR(255), -- Contoh: BKSDA, LIPI / BRIN
+    created_by UUID REFERENCES user_profiles(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ─── 8. COMPLIANCE, ESG, SDGS, AUDIT TRAIL, REPORTING (MODUL 10 - 14) ───
+-- MODUL 10: REGULATORY COMPLIANCE MAPPING
 CREATE TABLE IF NOT EXISTS compliance_records (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     site_id UUID REFERENCES sites(id) ON DELETE CASCADE,
@@ -198,12 +250,12 @@ CREATE TABLE IF NOT EXISTS compliance_records (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- ─── 8. IMMUTABLE AUDIT TRAIL (MODUL 12) ───
+-- MODUL 13: IMMUTABLE DATA VERIFICATION & AUDIT TRAIL
 CREATE TABLE IF NOT EXISTS audit_trail_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES user_profiles(id),
     site_id UUID REFERENCES sites(id),
-    module_code VARCHAR(50) NOT NULL, -- M0, M1, M2, DataHub, etc.
+    module_code VARCHAR(50) NOT NULL, -- M0, M1, M2 ... M14
     action_type VARCHAR(50) NOT NULL, -- CREATE, UPDATE, LOCK, DELETE
     payload_snapshot JSONB NOT NULL,
     ip_address VARCHAR(45),
@@ -215,6 +267,9 @@ ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subholdings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE energy_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE water_efficiency_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE waste_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE biodiversity_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_trail_logs ENABLE ROW LEVEL SECURITY;
 
 -- Kebijakan RLS Dasar: User hanya bisa membaca/menulis data entitas perusahaannya

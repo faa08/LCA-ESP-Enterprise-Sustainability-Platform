@@ -98,26 +98,27 @@ const enterpriseGroups = [
   {
     group: "INVENTORI & DAMPAK LINGKUNGAN",
     badge: "M3 – M7",
-    desc: "Kalkulasi energi, limbah, logistik transport, 11 dampak LCIA, dan emisi Scope 1, 2, 3.",
+    desc: "Kalkulasi efisiensi energi & air (PerMen LHK 1/2021 4c), limbah, logistik transport, 11 dampak LCIA, dan Scope 1, 2, 3.",
     items: [
-      { code: "M3", name: "Energy Assessment", desc: "Bauran energi & faktor emisi grid nasional (ESDM)." },
+      { code: "M3", name: "Energy & Water Assessment", desc: "Efisiensi air & bauran energi faktor emisi grid nasional (ESDM)." },
       { code: "M4", name: "Waste Assessment", desc: "Limbah B3 & non-B3 sesuai Permen LHK 6/2021." },
-      { code: "M5", name: "Transportation & Logistik", desc: "EmisiScope 3 Category 4 & 9 (Truck, Ship, Rail)." },
+      { code: "M5", name: "Transportation & Logistik", desc: "Emisi Scope 3 Category 4 & 9 (Truck, Ship, Rail)." },
       { code: "M6", name: "LCIA Multi-Impact", desc: "11 Kategori Dampak ISO 14044 (GWP, AP, EP, ODP, WUD)." },
       { code: "M7", name: "Carbon Accounting", desc: "Scope 1, 2, 3 GHG Protocol & Perpres 98/2021." },
     ],
   },
   {
-    group: "PELAPORAN & KEPATUHAN ENTERPRISE",
-    badge: "M8 – M13",
-    desc: "Indeks sirkularitas, pemetaan POJK 51, PROPER KLHK, SDGs, audit trail, & generator PDF.",
+    group: "PELAPORAN, KEHATI & KEPATUHAN ENTERPRISE",
+    badge: "M8 – M14",
+    desc: "Sirkularitas material, keanekaragaman hayati (PROPER 4f), pemetaan POJK 51, SDGs, audit trail, & laporan PDF.",
     items: [
       { code: "M8", name: "Circular Economy", desc: "Material Circularity Indicator (MCI) per produk." },
-      { code: "M9", name: "Regulatory Compliance", desc: "Pemetaan otomatis ke POJK 51/2017 & PROPER KLHK." },
-      { code: "M10", name: "ESG & Net Zero Roadmap", desc: "Skor E/S/G & target dekarbonisasi Net Zero 2050." },
-      { code: "M11", name: "SDGs Dashboard", desc: "Pemetaan kontribusi ke 12 indikator TPB Nasional." },
-      { code: "M12", name: "Audit Trail & Verification", desc: "Jejak verifikasi data immutable untuk auditor independen." },
-      { code: "M13", name: "Reporting & Export PDF", desc: "Generator laporan resmi otomatis format OJK & GRI." },
+      { code: "M9", name: "Keanekaragaman Hayati", desc: "Pemantauan konservasi flora/fauna & rehabilitasi habitat (PerMen LHK 1/2021 4f)." },
+      { code: "M10", name: "Regulatory Compliance", desc: "Pemetaan otomatis ke POJK 51/2017 & PROPER KLHK." },
+      { code: "M11", name: "ESG & Net Zero Roadmap", desc: "Skor E/S/G & target dekarbonisasi Net Zero 2050." },
+      { code: "M12", name: "SDGs Dashboard", desc: "Pemetaan kontribusi ke 12 indikator TPB Nasional." },
+      { code: "M13", name: "Audit Trail & Verification", desc: "Jejak verifikasi data immutable untuk auditor independen." },
+      { code: "M14", name: "Reporting & Export PDF", desc: "Generator laporan resmi otomatis format OJK & GRI." },
     ],
   },
 ]
@@ -127,9 +128,9 @@ export default function FeatureModules({ dict }: { dict: Record<string, string> 
     <section id="modules" className="bg-white py-24 border-t border-neutral-100">
       <div className="mx-auto max-w-7xl px-6">
         <SectionHeading
-          eyebrow="ARSITEKTUR 13 MODUL ENTERPRISE"
+          eyebrow="ARSITEKTUR 15 MODUL ENTERPRISE"
           title="Ekosistem Lengkap Pengukuran Karbon & LCA Standar Internasional"
-          description="Terbagi menjadi 5 kelompok navigasi cerdas yang menghubungkan ingesti data operasional, kalkulasi metodologi ISO, hingga ekspor laporan resmi OJK & PROPER."
+          description="Terbagi menjadi kelompok navigasi cerdas yang menghubungkan ingesti data operasional, kalkulasi metodologi ISO, keanekaragaman hayati, hingga ekspor laporan resmi OJK & PROPER."
         />
 
         <div className="mt-14 space-y-10">
