@@ -1,11 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { RefreshCcw, CheckCircle2, Info, TrendingUp } from "lucide-react"
+import { RefreshCcw, CheckCircle2, Info, TrendingUp, Loader2, Trash2, Plus } from "lucide-react"
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from "recharts"
+import { useIndustryId } from "@/lib/use-industry-id"
+import { useSiteId } from "@/lib/use-site-id"
+import {
+  getCircularFlows, upsertCircularFlow, deleteCircularFlow,
+  type CircularFlowRecord,
+} from "@/lib/supabase/data-service"
 
 interface MaterialFlow {
   id: string
@@ -17,14 +23,13 @@ interface MaterialFlow {
   landfillPct: string
 }
 
-function genId() { return Math.random().toString(36).slice(2, 9) }
-
-const DEFAULT_FLOWS: MaterialFlow[] = [
-  { id: genId(), name: "Plastik Kemasan", totalKgYear: "50000", recycledPct: "60", reusedPct: "5", recoveredPct: "5", landfillPct: "30" },
-  { id: genId(), name: "Logam / Besi", totalKgYear: "20000", recycledPct: "90", reusedPct: "5", recoveredPct: "0", landfillPct: "5" },
-  { id: genId(), name: "Kertas / Kardus", totalKgYear: "15000", recycledPct: "70", reusedPct: "0", recoveredPct: "10", landfillPct: "20" },
-  { id: genId(), name: "Limbah Organik", totalKgYear: "30000", recycledPct: "0", reusedPct: "0", recoveredPct: "40", landfillPct: "60" },
-]
+function genId(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0
+    const v = c === "x" ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
+}
 
 function calcCI(f: MaterialFlow): number {
   const r = parseFloat(f.recycledPct) || 0
@@ -34,14 +39,69 @@ function calcCI(f: MaterialFlow): number {
 }
 
 export default function CircularEconomyPage() {
-  const [flows, setFlows] = useState<MaterialFlow[]>(DEFAULT_FLOWS)
+  const industryId = useIndustryId()
+  const siteId = useSiteId()
+
+  const [flows, setFlows] = useState<MaterialFlow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  const update = (id: string, field: keyof Omit<MaterialFlow, "id">, value: string) =>
-    setFlows(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f))
+  const refresh = useCallback(async () => {
+    if (!siteId) return
+    setLoading(true)
+    const records = await getCircularFlows(siteId, industryId)
+    setFlows(
+      records.map((r) => ({
+        id: r.id,
+        name: r.name,
+        totalKgYear: String(r.totalKgYear),
+        recycledPct: String(r.recycledPct),
+        reusedPct: String(r.reusedPct),
+        recoveredPct: String(r.recoveredPct),
+        landfillPct: String(r.landfillPct),
+      }))
+    )
+    setLoading(false)
+  }, [siteId, industryId])
 
-  const add = () => setFlows(prev => [...prev, { id: genId(), name: "", totalKgYear: "", recycledPct: "0", reusedPct: "0", recoveredPct: "0", landfillPct: "100" }])
-  const remove = (id: string) => setFlows(prev => prev.filter(f => f.id !== id))
+  useEffect(() => { refresh() }, [refresh])
+
+  const update = (id: string, field: keyof Omit<MaterialFlow, "id">, value: string) => {
+    setFlows((prev) => prev.map((f) => (f.id === id ? { ...f, [field]: value } : f)))
+    setSaved(false)
+  }
+
+  const add = () => {
+    setFlows((prev) => [
+      ...prev,
+      { id: genId(), name: "Material Baru", totalKgYear: "0", recycledPct: "0", reusedPct: "0", recoveredPct: "0", landfillPct: "100" },
+    ])
+    setSaved(false)
+  }
+
+  const remove = async (id: string) => {
+    await deleteCircularFlow(id)
+    setFlows((prev) => prev.filter((f) => f.id !== id))
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    for (const f of flows) {
+      await upsertCircularFlow(siteId, industryId, {
+        id: f.id,
+        name: f.name,
+        totalKgYear: parseFloat(f.totalKgYear) || 0,
+        recycledPct: parseFloat(f.recycledPct) || 0,
+        reusedPct: parseFloat(f.reusedPct) || 0,
+        recoveredPct: parseFloat(f.recoveredPct) || 0,
+        landfillPct: parseFloat(f.landfillPct) || 0,
+      })
+    }
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
 
   const weightedCI = (() => {
     const totalMass = flows.reduce((s, f) => s + (parseFloat(f.totalKgYear) || 0), 0)
@@ -49,7 +109,7 @@ export default function CircularEconomyPage() {
     return flows.reduce((s, f) => s + calcCI(f) * (parseFloat(f.totalKgYear) || 0), 0) / totalMass
   })()
 
-  const radarData = flows.map(f => ({
+  const radarData = flows.map((f) => ({
     name: f.name || "Material",
     "Indeks Sirkularitas": Math.round(calcCI(f)),
   }))
@@ -71,8 +131,9 @@ export default function CircularEconomyPage() {
             Mengukur seberapa sirkular material yang digunakan — dari daur ulang, penggunaan kembali, hingga pemulihan energi.
           </p>
         </div>
-        <Button onClick={() => setSaved(true)}>
-          {saved ? <><CheckCircle2 className="mr-2 h-4 w-4" />Tersimpan</> : "Simpan Data"}
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : saved ? <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" /> : null}
+          {saving ? "Menyimpan..." : saved ? "Tersimpan!" : "Simpan Data"}
         </Button>
       </div>
 
@@ -98,6 +159,19 @@ export default function CircularEconomyPage() {
           </CardHeader>
         </Card>
       </div>
+
+      {loading ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-neutral-200 py-14 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-neutral-300 mb-3" />
+          <p className="text-sm text-neutral-400">Memuat data...</p>
+        </div>
+      ) : flows.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-neutral-200 py-14 text-center">
+          <RefreshCcw className="h-10 w-10 text-neutral-200 mb-3" />
+          <p className="text-sm font-medium text-neutral-500">Belum ada data aliran material</p>
+          <p className="text-xs text-neutral-400 mt-1">Tambahkan material pertama melalui tombol <b>+ Tambah Material</b> di bawah.</p>
+        </div>
+      ) : null}
 
       <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
@@ -136,7 +210,7 @@ export default function CircularEconomyPage() {
             </div>
           </CardHeader>
           <div className="space-y-3 max-h-80 overflow-y-auto">
-            {flows.map(f => (
+            {flows.map((f) => (
               <div key={f.id} className="rounded-lg border border-neutral-100 p-3">
                 <div className="flex items-center justify-between mb-2">
                   <input type="text" value={f.name} onChange={e => update(f.id, "name", e.target.value)}
@@ -146,7 +220,7 @@ export default function CircularEconomyPage() {
                     <span className={`text-sm font-bold ${calcCI(f) >= 75 ? "text-emerald-700" : calcCI(f) >= 40 ? "text-amber-600" : "text-red-600"}`}>
                       CI: {calcCI(f).toFixed(0)}
                     </span>
-                    <button onClick={() => remove(f.id)} className="text-neutral-300 hover:text-red-500"><RefreshCcw className="h-4 w-4" /></button>
+                    <button onClick={() => remove(f.id)} className="text-neutral-300 hover:text-red-500 p-1"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">

@@ -1,171 +1,183 @@
 "use client"
 
-import { useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, Recycle, DollarSign, AlertTriangle } from "lucide-react"
+import { Trash2, Recycle, AlertTriangle, ShieldCheck, Loader2, Info } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, PieChart, Pie, Cell } from "recharts"
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
 import { ProperStrip } from "@/components/layout/proper-strip"
 import { useIndustryId } from "@/lib/use-industry-id"
-import { getMeasurements, paramValue } from "@/lib/measurements"
-import { LIMBAH_B3_PARAMS } from "@/lib/proper"
+import { useSiteId } from "@/lib/use-site-id"
+import { getHubEntries, type B3Entry } from "@/lib/supabase/data-service"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
+
+const COLORS = ["#059669", "#d97706", "#0284c7", "#a855f7", "#ef4444", "#64748b"]
+
+function fmt(n: number): string {
+  return n.toLocaleString("id-ID", { maximumFractionDigits: 2 })
+}
 
 export default function WasteManagement() {
   const locale = getLocaleClient()
   const dict = dicts[locale]
   const industryId = useIndustryId()
+  const siteId = useSiteId()
 
-  const { measurements, b3Results, compliant, total, rate, noData } = useMemo(() => {
-    const measurements = getMeasurements(industryId)
-    const b3Results = LIMBAH_B3_PARAMS.map((p) => ({ p, v: paramValue(p, measurements) }))
-    const entered = b3Results.filter((r) => r.v !== null)
-    const compliant = entered.filter((r) => r.v === true).length
-    const total = entered.length
-    const rate = total > 0 ? Math.round((compliant / total) * 100) : 0
-    const noData = entered.length === 0
-    return { measurements, b3Results, compliant, total, rate, noData }
-  }, [industryId])
+  const [entries, setEntries] = useState<B3Entry[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const refresh = useCallback(async () => {
+    if (!siteId) return
+    setLoading(true)
+    const data = await getHubEntries<B3Entry>("b3", siteId, industryId)
+    setEntries(data)
+    setLoading(false)
+  }, [siteId, industryId])
+
+  useEffect(() => { refresh() }, [refresh])
+
+  const totalQtyKg = entries.reduce((sum, e) => sum + (e.qty || 0), 0)
+  const totalQtyTon = totalQtyKg / 1000
+  const over90Days = entries.filter((e) => (e.storageDuration || 0) > 90).length
+  const noData = entries.length === 0
+
+  // Composition data for PieChart
+  const compMap: Record<string, number> = {}
+  entries.forEach((e) => {
+    const key = e.wasteType || "Lainnya"
+    compMap[key] = (compMap[key] || 0) + (e.qty || 0)
+  })
+  const compData = Object.entries(compMap).map(([name, value]) => ({ name, value }))
+
+  // Monthly trend data
+  const monthMap: Record<string, number> = {}
+  entries.forEach((e) => {
+    const m = e.date ? e.date.substring(0, 7) : "Lainnya"
+    monthMap[m] = (monthMap[m] || 0) + (e.qty || 0)
+  })
+  const trendData = Object.entries(monthMap).map(([month, qty]) => ({ month, total: qty }))
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-lg font-semibold text-neutral-900">{t(dict, "waste.page_title")}</h1>
-        <p className="text-sm text-neutral-500">{t(dict, "waste.page_desc")}</p>
+        <p className="text-sm text-neutral-500">Pemantauan limbah B3 & non-B3 terintegrasi langsung dengan Data Hub.</p>
       </div>
 
       <ProperStrip category="limbah_b3" titleKey="proper.limbah_b3" />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title={t(dict, "waste.total_generated")} value={noData ? "—" : String(total)} description={t(dict, "common.ytd")} icon={Trash2} />
-        <StatCard title={t(dict, "waste.recycling_rate")} value={noData ? "—" : `${rate}%`} description={t(dict, "waste.target").replace("{n}", "100%")} icon={Recycle} />
-        <StatCard title={t(dict, "waste.waste_cost")} value="—" description={t(dict, "common.ytd")} icon={DollarSign} />
-        <StatCard title={t(dict, "waste.hazardous")} value={noData ? "—" : String(compliant)} description={t(dict, "common.ytd")} icon={AlertTriangle} />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t(dict, "waste.chart_trend")}</CardTitle>
-          </CardHeader>
-          {noData ? (
-            <div className="flex h-72 items-center justify-center text-sm text-neutral-400">
-              {t(dict, "datahub.empty")}
-            </div>
-          ) : (
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[]}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#a3a3a3" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="#a3a3a3" />
-                  <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
-                  <Legend wrapperStyle={{ fontSize: "11px" }} />
-                  <Bar dataKey="total" fill="#6b7280" radius={[4, 4, 0, 0]} name={t(dict, "waste.total_waste")} />
-                  <Bar dataKey="recycled" fill="#059669" radius={[4, 4, 0, 0]} name={t(dict, "waste.recycled_label")} />
-                  <Bar dataKey="hazardous" fill="#ef4444" radius={[4, 4, 0, 0]} name={t(dict, "waste.hazardous_b3")} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t(dict, "waste.chart_composition")}</CardTitle>
-          </CardHeader>
-          {noData ? (
-            <div className="flex h-64 items-center justify-center text-sm text-neutral-400">
-              {t(dict, "datahub.empty")}
-            </div>
-          ) : (
-            <div className="flex h-64 items-center justify-center">
-              <PieChart width={260} height={240}>
-                <Pie data={b3Results.filter((r) => r.v !== null).map((r, i) => ({ name: r.p.name, value: r.v === true ? 1 : 0, color: i % 2 === 0 ? "#059669" : "#ef4444" }))} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ name, value }) => `${name} ${value}`}>
-                  {b3Results.filter((r) => r.v !== null).map((entry, i) => (
-                    <Cell key={i} fill={i % 2 === 0 ? "#059669" : "#ef4444"} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t(dict, "waste.table_title")}</CardTitle>
-          </CardHeader>
-          {noData ? (
-            <div className="flex h-48 items-center justify-center text-sm text-neutral-400">
-              {t(dict, "datahub.empty")}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-neutral-200">
-                    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.category")}</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">{t(dict, "common.status")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {b3Results.map((r, i) => (
-                    <tr key={i} className="border-b border-neutral-100">
-                      <td className="px-3 py-2.5 font-medium text-neutral-900">{r.p.name}</td>
-                      <td className="px-3 py-2.5 text-neutral-600">{r.v === null ? "—" : r.v === true ? t(dict, "common.compliant") : t(dict, "common.needs_attention")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t(dict, "waste.programs")}</CardTitle>
-          </CardHeader>
-          {noData ? (
-            <div className="flex h-48 items-center justify-center text-sm text-neutral-400">
-              {t(dict, "datahub.empty")}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {b3Results.map((r, i) => {
-                const ok = r.v === true
-                return (
-                  <div key={i} className="space-y-2 rounded-lg border border-neutral-100 p-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-neutral-900">{r.p.name}</p>
-                      <Badge variant={ok ? "success" : "warning"}>{t(dict, ok ? "common.on_track" : "common.at_risk")}</Badge>
-                    </div>
-                    <div className="h-2 rounded-full bg-neutral-100">
-                      <div className={`h-2 rounded-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`} style={{ width: `${ok ? 100 : 0}%` }} />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          <div className="mt-4 border-t border-neutral-100 pt-4">
-            <CardHeader>
-              <CardTitle>{t(dict, "waste.manifest")}</CardTitle>
-            </CardHeader>
-            <div className="flex h-32 items-center justify-center text-sm text-neutral-400">
-              {t(dict, "datahub.empty")}
-            </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-12 text-sm text-neutral-400 gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" /> Memuat data limbah B3...
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard title="Total Limbah Terdaftar" value={noData ? "—" : `${fmt(totalQtyKg)} kg`} description={noData ? "Belum ada entri" : `${entries.length} catatan TPS B3`} icon={Trash2} />
+            <StatCard title="Total Tonase" value={noData ? "—" : `${fmt(totalQtyTon)} Ton`} description="Terdaftar di Festronik" icon={Recycle} />
+            <StatCard title="Peringatan Masa Simpan" value={noData ? "0" : String(over90Days)} description="Melebihi 90 hari izin TPS" icon={AlertTriangle} />
+            <StatCard title="Kepatuhan TPS B3" value={noData ? "—" : over90Days === 0 ? "100%" : "Perlu Tindakan"} description="Permen LHK No. 6/2021" icon={ShieldCheck} />
           </div>
-        </Card>
-      </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tren Kuantitas Limbah B3 per Bulan (kg)</CardTitle>
+              </CardHeader>
+              {noData ? (
+                <div className="flex h-72 items-center justify-center text-sm text-neutral-400">
+                  Belum ada data limbah B3 di Data Hub
+                </div>
+              ) : (
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#a3a3a3" />
+                      <YAxis tick={{ fontSize: 11 }} stroke="#a3a3a3" />
+                      <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
+                      <Bar dataKey="total" fill="#059669" radius={[4, 4, 0, 0]} name="Total Limbah (kg)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Komposisi Limbah B3 berdasarkan Jenis</CardTitle>
+              </CardHeader>
+              {noData ? (
+                <div className="flex h-72 items-center justify-center text-sm text-neutral-400">
+                  Belum ada data limbah B3 di Data Hub
+                </div>
+              ) : (
+                <div className="flex h-72 items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={compData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" nameKey="name" label={({ name, percent }: { name?: string; percent?: number }) => `${name || ""} (${((percent || 0) * 100).toFixed(0)}%)`}>
+                        {compData.map((_, i) => (
+                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: any) => [`${fmt(Number(value) || 0)} kg`, "Jumlah"]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Daftar Inventaris Limbah B3 (Data Hub)</CardTitle>
+            </CardHeader>
+            {noData ? (
+              <div className="flex h-48 items-center justify-center text-sm text-neutral-400">
+                Belum ada data limbah B3 di Data Hub
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-neutral-200">
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Tanggal</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Jenis Limbah B3</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Kode</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Kuantitas</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Masa Simpan</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">No. Manifest (Festronik)</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">Pemusnah</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entries.map((e) => (
+                      <tr key={e.id} className="border-b border-neutral-100">
+                        <td className="px-3 py-2.5 font-medium text-neutral-900">{e.date}</td>
+                        <td className="px-3 py-2.5 text-neutral-800">{e.wasteType}</td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-neutral-600">{e.wasteCode || "—"}</td>
+                        <td className="px-3 py-2.5 font-bold text-neutral-900">{fmt(e.qty)} kg</td>
+                        <td className="px-3 py-2.5">
+                          <Badge variant={e.storageDuration > 90 ? "danger" : "success"}>
+                            {e.storageDuration} Hari
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-emerald-700">{e.manifestNo || "—"}</td>
+                        <td className="px-3 py-2.5 text-neutral-600">{e.disposalCompany || e.recycler || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </>
+      )}
     </div>
   )
 }

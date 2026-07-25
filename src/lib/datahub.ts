@@ -1,5 +1,6 @@
 // src/lib/datahub.ts
-// ensPR Data Hub — Schema types & localStorage storage utilities for 10 operational categories.
+// ensPR Data Hub — Schema types & Supabase storage utilities for 10 operational categories.
+// Semua localStorage telah diganti dengan Supabase sebagai single source of truth.
 // Data entered here feeds the calc-engine to derive Scope 1/2/3, LCA, Energy KPIs automatically.
 
 /* ─────────────── Entry Types ─────────────── */
@@ -131,35 +132,43 @@ export type AnyEntry =
   | ProductionEntry | MaterialEntry | EnergyEntry | WaterEntry
   | LabEntry | StackEntry | B3Entry | TransportEntry | SupplierEntry | DocumentEntry
 
-const HUB_PREFIX = "enspr_hub_"
-
-function storageKey(category: HubCategory, industryId: string): string {
-  return `${HUB_PREFIX}${industryId}_${category}`
-}
-
-export function getEntries<T extends AnyEntry>(category: HubCategory, industryId: string): T[] {
-  if (typeof window === "undefined") return []
-  const raw = localStorage.getItem(storageKey(category, industryId))
-  if (!raw) return []
-  try { return JSON.parse(raw) as T[] } catch { return [] }
-}
-
-export function saveEntry<T extends AnyEntry>(category: HubCategory, industryId: string, entry: T): void {
-  const entries = getEntries<T>(category, industryId)
-  const idx = entries.findIndex((e) => e.id === entry.id)
-  if (idx >= 0) { entries[idx] = entry } else { entries.unshift(entry) }
-  localStorage.setItem(storageKey(category, industryId), JSON.stringify(entries))
-}
-
-export function deleteEntry(category: HubCategory, industryId: string, id: string): void {
-  const entries = getEntries(category, industryId)
-  const filtered = entries.filter((e) => e.id !== id)
-  localStorage.setItem(storageKey(category, industryId), JSON.stringify(filtered))
-}
+// Re-export Supabase CRUD functions sebagai API publik untuk semua komponen
+export {
+  getHubEntries as getEntries,
+  saveHubEntry as saveEntry,
+  deleteHubEntry as deleteEntry,
+} from "@/lib/supabase/data-service"
 
 export function newId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+  // Gunakan UUID v4 format untuk kompatibilitas dengan Supabase (UUID primary key)
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0
+    const v = c === "x" ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
 }
+
+/* ─────────────── Audit Trail ─────────────── */
+
+export type AuditAction = "CREATE" | "DELETE"
+export type AuditSource = "measured" | "estimated" | "default"
+
+export interface AuditLogEntry {
+  id: string
+  timestamp: string
+  role: string
+  module: string
+  action: AuditAction
+  field: string
+  newValue: string
+  source: AuditSource
+}
+
+// Re-export audit functions dari Supabase service
+export {
+  writeAuditLogSb as writeAuditLog,
+  getAuditLogSb as getAuditLog,
+} from "@/lib/supabase/data-service"
 
 export interface CategoryMeta {
   key: HubCategory

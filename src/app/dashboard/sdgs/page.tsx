@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,30 +15,67 @@ interface SDGItem {
 }
 
 const ALL_SDGS: SDGItem[] = [
-  { id: 3, title: "Kehidupan Sehat & Sejahtera", color: "#4C9F38", relevantModules: ["Waste", "Air Limbah"], indicators: [{ text: "Penurunan limbah B3 berbahaya ≥ 10% YoY", achieved: false }, { text: "Baku mutu air limbah terpenuhi 100%", achieved: true }] },
-  { id: 6, title: "Air Bersih & Sanitasi", color: "#26BDE2", relevantModules: ["Water Monitoring", "Waste Assessment"], indicators: [{ text: "Efisiensi penggunaan air ≥ 5% per tahun", achieved: false }, { text: "Zero discharge limbah cair tanpa pengolahan", achieved: true }] },
+  { id: 3, title: "Kehidupan Sehat & Sejahtera", color: "#4C9F38", relevantModules: ["Waste", "Air Limbah"], indicators: [{ text: "Penurunan limbah B3 berbahaya ≥ 10% YoY", achieved: false }, { text: "Baku mutu air limbah terpenuhi 100%", achieved: false }] },
+  { id: 6, title: "Air Bersih & Sanitasi", color: "#26BDE2", relevantModules: ["Water Monitoring", "Waste Assessment"], indicators: [{ text: "Efisiensi penggunaan air ≥ 5% per tahun", achieved: false }, { text: "Zero discharge limbah cair tanpa pengolahan", achieved: false }] },
   { id: 7, title: "Energi Bersih & Terjangkau", color: "#FCC30B", relevantModules: ["Energy Assessment", "Carbon Accounting"], indicators: [{ text: "Bauran energi terbarukan ≥ 10%", achieved: false }, { text: "Intensitas energi turun ≥ 3% per tahun", achieved: false }] },
-  { id: 8, title: "Pekerjaan Layak & Pertumbuhan", color: "#A21942", relevantModules: ["ESG Dashboard", "Company Profile"], indicators: [{ text: "Tingkat kecelakaan kerja (LTIFR) < 0.5", achieved: true }, { text: "Pelatihan K3 ≥ 20 jam/karyawan/tahun", achieved: false }] },
-  { id: 9, title: "Industri, Inovasi & Infrastruktur", color: "#FD6925", relevantModules: ["LCA", "Circular Economy"], indicators: [{ text: "Investasi R&D lingkungan ≥ 1% pendapatan", achieved: false }, { text: "Sertifikasi ISO 14001 aktif", achieved: true }] },
-  { id: 11, title: "Kota & Komunitas Berkelanjutan", color: "#FD9D24", relevantModules: ["Transportation", "ESG Dashboard"], indicators: [{ text: "Program CSR lingkungan di komunitas sekitar", achieved: true }, { text: "Emisi kendaraan dinas sesuai standar Euro 4", achieved: false }] },
+  { id: 8, title: "Pekerjaan Layak & Pertumbuhan", color: "#A21942", relevantModules: ["ESG Dashboard", "Company Profile"], indicators: [{ text: "Tingkat kecelakaan kerja (LTIFR) < 0.5", achieved: false }, { text: "Pelatihan K3 ≥ 20 jam/karyawan/tahun", achieved: false }] },
+  { id: 9, title: "Industri, Inovasi & Infrastruktur", color: "#FD6925", relevantModules: ["LCA", "Circular Economy"], indicators: [{ text: "Investasi R&D lingkungan ≥ 1% pendapatan", achieved: false }, { text: "Sertifikasi ISO 14001 aktif", achieved: false }] },
+  { id: 11, title: "Kota & Komunitas Berkelanjutan", color: "#FD9D24", relevantModules: ["Transportation", "ESG Dashboard"], indicators: [{ text: "Program CSR lingkungan di komunitas sekitar", achieved: false }, { text: "Emisi kendaraan dinas sesuai standar Euro 4", achieved: false }] },
   { id: 12, title: "Konsumsi & Produksi Bertanggung Jawab", color: "#BF8B2E", relevantModules: ["Circular Economy", "Waste Assessment", "Product Assessment"], indicators: [{ text: "Limbah produksi ke TPA ≤ 20% total limbah", achieved: false }, { text: "Produk dengan eco-label ≥ 1 sertifikasi", achieved: false }] },
   { id: 13, title: "Penanganan Perubahan Iklim", color: "#3F7E44", relevantModules: ["Carbon Accounting", "LCA", "Goal & Scope"], indicators: [{ text: "Target reduksi emisi GRK ≥ 30% di 2030", achieved: false }, { text: "Laporan iklim sesuai TCFD / ISSB IFRS S2", achieved: false }] },
-  { id: 14, title: "Ekosistem Lautan", color: "#0A97D9", relevantModules: ["Waste Assessment", "Transportation"], indicators: [{ text: "Zero plastic waste ke badan air terbuka", achieved: true }, { text: "Program adopsi/rehabilitasi ekosistem pesisir", achieved: false }] },
+  { id: 14, title: "Ekosistem Lautan", color: "#0A97D9", relevantModules: ["Waste Assessment", "Transportation"], indicators: [{ text: "Zero plastic waste ke badan air terbuka", achieved: false }, { text: "Program adopsi/rehabilitasi ekosistem pesisir", achieved: false }] },
   { id: 15, title: "Ekosistem Daratan", color: "#56C02B", relevantModules: ["LCA", "Circular Economy"], indicators: [{ text: "Zero deforestasi dalam rantai pasok", achieved: false }, { text: "Program revegetasi ≥ 1 Ha/tahun", achieved: false }] },
-  { id: 16, title: "Perdamaian, Keadilan & Institusi", color: "#00689D", relevantModules: ["Audit Trail", "Compliance"], indicators: [{ text: "Zero kasus korupsi / suap lingkungan", achieved: true }, { text: "Mekanisme pengaduan lingkungan tersedia", achieved: true }] },
-  { id: 17, title: "Kemitraan untuk Tujuan", color: "#19486A", relevantModules: ["ESG Reporting", "Audit Trail"], indicators: [{ text: "Laporan keberlanjutan terverifikasi pihak ketiga", achieved: false }, { text: "Kemitraan dengan lembaga lingkungan ≥ 1", achieved: true }] },
+  { id: 16, title: "Perdamaian, Keadilan & Institusi", color: "#00689D", relevantModules: ["Audit Trail", "Compliance"], indicators: [{ text: "Zero kasus korupsi / suap lingkungan", achieved: false }, { text: "Mekanisme pengaduan lingkungan tersedia", achieved: false }] },
+  { id: 17, title: "Kemitraan untuk Tujuan", color: "#19486A", relevantModules: ["ESG Reporting", "Audit Trail"], indicators: [{ text: "Laporan keberlanjutan terverifikasi pihak ketiga", achieved: false }, { text: "Kemitraan dengan lembaga lingkungan ≥ 1", achieved: false }] },
 ]
+
+const STORAGE_KEY = "enspr_sdgs_progress"
 
 export default function SDGsPage() {
   const [sdgs, setSdgs] = useState<SDGItem[]>(ALL_SDGS)
   const [activeSDG, setActiveSDG] = useState<number | null>(null)
   const [saved, setSaved] = useState(false)
 
+  // Load progress from localStorage if saved by user
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as Record<number, boolean[]>
+          setSdgs(prev => prev.map(s => {
+            const savedInds = parsed[s.id]
+            if (!savedInds) return s
+            return {
+              ...s,
+              indicators: s.indicators.map((ind, i) => ({ ...ind, achieved: Boolean(savedInds[i]) }))
+            }
+          }))
+        } catch {
+          // ignore error
+        }
+      }
+    }
+  }, [])
+
   const toggleIndicator = (sdgId: number, idx: number) => {
     setSdgs(prev => prev.map(s => s.id === sdgId ? {
       ...s,
       indicators: s.indicators.map((ind, i) => i === idx ? { ...ind, achieved: !ind.achieved } : ind)
     } : s))
+    setSaved(false)
+  }
+
+  const handleSave = () => {
+    if (typeof window !== "undefined") {
+      const stateToSave: Record<number, boolean[]> = {}
+      sdgs.forEach(s => {
+        stateToSave[s.id] = s.indicators.map(i => i.achieved)
+      })
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave))
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    }
   }
 
   const achieved = sdgs.reduce((s, g) => s + g.indicators.filter(i => i.achieved).length, 0)
@@ -50,7 +87,7 @@ export default function SDGsPage() {
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Badge variant="neutral" className="text-[10px]">Modul 11</Badge>
+            <Badge variant="neutral" className="text-[10px]">Modul 12</Badge>
             <Badge variant="neutral" className="text-[10px] font-bold">UN SDGs · TPB Nasional</Badge>
           </div>
           <h1 className="text-xl font-bold text-neutral-900">SDGs Dashboard</h1>
@@ -58,7 +95,7 @@ export default function SDGsPage() {
             Kontribusi perusahaan terhadap 17 Tujuan Pembangunan Berkelanjutan (SDGs) — dipetakan dari data lintas modul.
           </p>
         </div>
-        <Button onClick={() => setSaved(true)}>
+        <Button onClick={handleSave}>
           {saved ? <><CheckCircle2 className="mr-2 h-4 w-4" />Tersimpan</> : "Simpan Progress"}
         </Button>
       </div>

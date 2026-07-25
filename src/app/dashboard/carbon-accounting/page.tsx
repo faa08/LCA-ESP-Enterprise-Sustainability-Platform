@@ -1,64 +1,95 @@
 "use client"
 
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
-import { Cloud, Flame, Zap, Truck, Coins, ArrowUpRight } from "lucide-react"
+import { Cloud, Flame, Zap, Truck, Coins, ArrowUpRight, Loader2 } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from "recharts"
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
 import { useIndustryId } from "@/lib/use-industry-id"
-import { useMeasurements, paramValue } from "@/lib/measurements"
-import { CARBON_PARAMS, OTHER_PARAMS } from "@/lib/proper"
+import { useSiteId } from "@/lib/use-site-id"
+import { calcEngineAsync, type CalculatedKPIs } from "@/lib/calc-engine"
+import { getHubEntries, type EnergyEntry, type TransportEntry } from "@/lib/supabase/data-service"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
-function val(code: string, m: Record<string, string>) {
-  const p = OTHER_PARAMS.find((p) => p.code === code)
-  return p ? (paramValue(p, m) as number | null) : null
-}
-
-const fmt = (v: number | null, unit = "") => (v === null ? "—" : `${v}${unit}`)
+const fmt = (v: number | null, unit = "", dec = 2) => (v === null || v === 0 ? "—" : `${v.toLocaleString("id-ID", { maximumFractionDigits: dec })}${unit}`)
 
 export default function CarbonAccounting() {
   const locale = getLocaleClient()
   const dict = dicts[locale]
   const industryId = useIndustryId()
-  const m = useMeasurements(industryId)
+  const siteId = useSiteId()
 
-  const scope1 = val("ghg_scope1", m)
-  const scope2 = val("ghg_scope2", m)
-  const scope3 = val("ghg_scope3", m)
-  const captured = val("carbon_captured", m)
-  const total = (scope1 ?? 0) + (scope2 ?? 0) + (scope3 ?? 0) - (captured ?? 0)
+  const [kpis, setKpis] = useState<CalculatedKPIs | null>(null)
+  const [energyEntries, setEnergyEntries] = useState<EnergyEntry[]>([])
+  const [transportEntries, setTransportEntries] = useState<TransportEntry[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const hasData = [scope1, scope2, scope3, captured].some((v) => v !== null)
-  const totalEmissions = hasData ? Math.max(0, (scope1 ?? 0) + (scope2 ?? 0) + (scope3 ?? 0) - (captured ?? 0)) : null
+  const refresh = useCallback(async () => {
+    if (!siteId) return
+    setLoading(true)
+    const kpiData = await calcEngineAsync(siteId, industryId)
+    setKpis(kpiData)
+    const eData = await getHubEntries<EnergyEntry>("energy", siteId, industryId)
+    const tData = await getHubEntries<TransportEntry>("transport", siteId, industryId)
+    setEnergyEntries(eData)
+    setTransportEntries(tData)
+    setLoading(false)
+  }, [siteId, industryId])
 
-  // Baseline 2026 s/d 2030 target path (SBTi 50% Net-Zero target)
-  const reductionTargets = totalEmissions !== null ? [
-    { year: "2023", actual: null, target: null },
-    { year: "2024", actual: null, target: null },
-    { year: "2025", actual: null, target: null },
-    { year: "2026", actual: totalEmissions, target: totalEmissions },
-    { year: "2027", actual: null, target: Math.round(totalEmissions * 0.88) },
-    { year: "2028", actual: null, target: Math.round(totalEmissions * 0.76) },
-    { year: "2029", actual: null, target: Math.round(totalEmissions * 0.64) },
-    { year: "2030", actual: null, target: Math.round(totalEmissions * 0.50) },
-  ] : []
+  useEffect(() => { refresh() }, [refresh])
 
-  // Breakout emisi periode berjalan yang benar-benar di-input
-  const monthlyTrend = hasData ? [
-    { period: "Jan 2026", scope1: scope1 ?? 0, scope2: scope2 ?? 0, scope3: scope3 ?? 0 }
-  ] : []
+  const scope1 = kpis?.scope1_tCO2e ?? 0
+  const scope2 = kpis?.scope2_tCO2e ?? 0
+  const scope3 = kpis?.scope3_tCO2e ?? 0
+  const totalEmissions = kpis?.total_ghg_tCO2e ?? 0
+  const hasData = kpis?.hasData ?? false
+
+  // Dynamic monthly trend computed from hub entries
+  const monthlyMap: Record<string, { scope1: number; scope2: number; scope3: number }> = {}
+
+  energyEntries.forEach((e) => {
+    const month = e.date ? e.date.substring(0, 7) : "Lainnya"
+    if (!monthlyMap[month]) monthlyMap[month] = { scope1: 0, scope2: 0, scope3: 0 }
+    monthlyMap[month].scope1 += ((e.diesel * 2.68) + (e.naturalGas * 2.02) + (e.coal * 1000 * 2.42) + (e.lpg * 2.98)) / 1000
+    monthlyMap[month].scope2 += (e.electricity * 0.87) / 1000
+  })
+
+  transportEntries.forEach((t) => {
+    const month = t.date ? t.date.substring(0, 7) : "Lainnya"
+    if (!monthlyMap[month]) monthlyMap[month] = { scope1: 0, scope2: 0, scope3: 0 }
+    monthlyMap[month].scope3 += (t.distance * t.cargoWeight * 0.000096)
+  })
+
+  const monthlyTrend = Object.entries(monthlyMap).map(([period, v]) => ({
+    period,
+    scope1: Math.round(v.scope1 * 100) / 100,
+    scope2: Math.round(v.scope2 * 100) / 100,
+    scope3: Math.round(v.scope3 * 100) / 100,
+  })).sort((a, b) => a.period.localeCompare(b.period))
+
+  // Net-Zero 2030 target path calculated from live totalEmissions
+  const currentYear = new Date().getFullYear()
+  const reductionTargets = totalEmissions > 0 ? Array.from({ length: 6 }, (_, i) => {
+    const y = currentYear + i
+    const targetFactor = 1 - (i * 0.1) // 10% reduction per year path
+    return {
+      year: String(y),
+      actual: i === 0 ? Math.round(totalEmissions * 100) / 100 : null,
+      target: Math.round(totalEmissions * targetFactor * 100) / 100,
+    }
+  }) : []
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 pb-4">
         <div>
           <h1 className="text-lg font-semibold text-neutral-900">{t(dict, "carbon.page_title")}</h1>
-          <p className="text-sm text-neutral-500">{t(dict, "carbon.page_desc")}</p>
+          <p className="text-sm text-neutral-500">Inventarisasi Emisi GHG Scope 1, 2, &amp; 3 terintegrasi dengan Data Hub.</p>
         </div>
         <Link
           href="/dashboard/carbon-credit"
@@ -69,80 +100,73 @@ export default function CarbonAccounting() {
         </Link>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title={t(dict, "carbon.scope1")} value={fmt(scope1, " tCO₂e")} description={t(dict, "carbon.scope1_desc")} icon={Flame} />
-        <StatCard title={t(dict, "carbon.scope2")} value={fmt(scope2, " tCO₂e")} description={t(dict, "carbon.scope2_desc")} icon={Zap} />
-        <StatCard title={t(dict, "carbon.scope3")} value={fmt(scope3, " tCO₂e")} description={t(dict, "carbon.scope3_desc")} icon={Truck} />
-        <StatCard title={t(dict, "carbon.total_emissions")} value={fmt(totalEmissions, " tCO₂e")} description={t(dict, "carbon.all_scopes")} icon={Cloud} />
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-12 text-sm text-neutral-400 gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" /> Mengkalkulasi Inventaris Emisi Karbon...
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard title={t(dict, "carbon.scope1")} value={fmt(scope1, " tCO₂e")} description={t(dict, "carbon.scope1_desc")} icon={Flame} />
+            <StatCard title={t(dict, "carbon.scope2")} value={fmt(scope2, " tCO₂e")} description={t(dict, "carbon.scope2_desc")} icon={Zap} />
+            <StatCard title={t(dict, "carbon.scope3")} value={fmt(scope3, " tCO₂e")} description={t(dict, "carbon.scope3_desc")} icon={Truck} />
+            <StatCard title={t(dict, "carbon.total_emissions")} value={fmt(totalEmissions, " tCO₂e")} description={t(dict, "carbon.all_scopes")} icon={Cloud} />
+          </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {CARBON_PARAMS.map((p, i) => (
-          <Card key={i}>
-            <CardHeader>
-              <CardTitle>{p.name}</CardTitle>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-400">{(p as { unit: string }).unit}</span>
-            </CardHeader>
-            <div className="space-y-1">
-              <p className="text-2xl font-bold text-neutral-900">{fmt(paramValue(p, m) as number | null, ` ${(p as { unit: string }).unit}`)}</p>
-              <p className="text-xs text-neutral-500">{t(dict, "common.entered_value")}</p>
-            </div>
-          </Card>
-        ))}
-      </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t(dict, "carbon.chart_trend")}</CardTitle>
+              </CardHeader>
+              {monthlyTrend.length > 0 ? (
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlyTrend}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="period" tick={{ fontSize: 11 }} stroke="#a3a3a3" />
+                      <YAxis tick={{ fontSize: 11 }} stroke="#a3a3a3" />
+                      <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
+                      <Legend wrapperStyle={{ fontSize: "11px" }} />
+                      <Bar dataKey="scope1" fill="#0284c7" radius={[4, 4, 0, 0]} name="Scope 1 (Langsung)" />
+                      <Bar dataKey="scope2" fill="#059669" radius={[4, 4, 0, 0]} name="Scope 2 (Listrik)" />
+                      <Bar dataKey="scope3" fill="#d97706" radius={[4, 4, 0, 0]} name="Scope 3 (Rantai Nilai)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex h-72 items-center justify-center text-sm text-neutral-400">
+                  Belum ada data inventaris emisi. Masukkan data Energi/Transportasi di Data Hub.
+                </div>
+              )}
+            </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t(dict, "carbon.chart_trend")}</CardTitle>
-          </CardHeader>
-          {monthlyTrend.length > 0 ? (
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="period" tick={{ fontSize: 11 }} stroke="#a3a3a3" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="#a3a3a3" />
-                  <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
-                  <Legend wrapperStyle={{ fontSize: "11px" }} />
-                  <Bar dataKey="scope1" fill="#0284c7" radius={[4, 4, 0, 0]} name="Scope 1 (Langsung)" />
-                  <Bar dataKey="scope2" fill="#059669" radius={[4, 4, 0, 0]} name="Scope 2 (Listrik)" />
-                  <Bar dataKey="scope3" fill="#d97706" radius={[4, 4, 0, 0]} name="Scope 3 (Rantai Nilai)" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="flex h-72 items-center justify-center text-sm text-neutral-400">
-              Belum ada data inventaris emisi. Masukkan data Scope 1, 2, atau 3 di Data Hub.
-            </div>
-          )}
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t(dict, "carbon.chart_reduction")}</CardTitle>
-          </CardHeader>
-          {reductionTargets.length > 0 ? (
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={reductionTargets}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="year" tick={{ fontSize: 11 }} stroke="#a3a3a3" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="#a3a3a3" />
-                  <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
-                  <Legend wrapperStyle={{ fontSize: "11px" }} />
-                  <Line type="monotone" dataKey="actual" stroke="#059669" strokeWidth={2.5} name="Aktual Terdaftar (tCO₂e)" dot={{ r: 5 }} connectNulls />
-                  <Line type="monotone" dataKey="target" stroke="#d97706" strokeWidth={2} strokeDasharray="6 3" name="Jalur Target Reduksi Net-Zero 2030" dot={{ r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="flex h-72 items-center justify-center text-sm text-neutral-400">
-              Belum ada data baseline emisi. Masukkan data di Data Hub untuk menghitung jalur reduksi.
-            </div>
-          )}
-        </Card>
-      </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t(dict, "carbon.chart_reduction")}</CardTitle>
+              </CardHeader>
+              {reductionTargets.length > 0 ? (
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={reductionTargets}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="year" tick={{ fontSize: 11 }} stroke="#a3a3a3" />
+                      <YAxis tick={{ fontSize: 11 }} stroke="#a3a3a3" />
+                      <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
+                      <Legend wrapperStyle={{ fontSize: "11px" }} />
+                      <Line type="monotone" dataKey="actual" stroke="#059669" strokeWidth={2.5} name="Aktual Terdaftar (tCO₂e)" dot={{ r: 5 }} connectNulls />
+                      <Line type="monotone" dataKey="target" stroke="#d97706" strokeWidth={2} strokeDasharray="6 3" name="Jalur Target Reduksi Net-Zero" dot={{ r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex h-72 items-center justify-center text-sm text-neutral-400">
+                  Belum ada data baseline emisi di Data Hub.
+                </div>
+              )}
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   )
 }

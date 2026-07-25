@@ -1,6 +1,6 @@
-﻿"use client"
+"use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -44,6 +44,27 @@ export default function CompanyProfilePage() {
   ])
   const [expandedIds, setExpandedIds] = useState<string[]>(["corp1"])
   const [saved, setSaved] = useState(false)
+  const STORAGE_KEY = "enspr_company_profile"
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length > 0) setEntities(parsed)
+        } catch {}
+      }
+    }
+  }, [])
+
+  const handleSave = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entities))
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    }
+  }
 
   const toggleExpand = (id: string) =>
     setExpandedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
@@ -142,7 +163,7 @@ export default function CompanyProfilePage() {
           <h1 className="text-xl font-bold text-neutral-900">Company Profile</h1>
           <p className="mt-1 text-sm text-neutral-500">Data dasar perusahaan dengan dukungan struktur multi-entitas untuk grup usaha besar.</p>
         </div>
-        <Button onClick={() => setSaved(true)} disabled={filledEntities === 0}>
+        <Button onClick={handleSave}>
           {saved ? <><CheckCircle2 className="mr-2 h-4 w-4" />Tersimpan</> : "Simpan Profil"}
         </Button>
       </div>

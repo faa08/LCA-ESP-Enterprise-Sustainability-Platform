@@ -40,7 +40,7 @@ export default function Settings() {
       name: "Integrasi Sistem & Database",
       desc: "Konektor API ke sistem ERP (SAP), SCADA pabrik, CEMS cerobong, dan Festronik KLHK.",
       color: "text-emerald-600 bg-emerald-50",
-      status: "Supabase & API Ready",
+      status: "Database & API Terhubung",
     },
     {
       icon: Shield,

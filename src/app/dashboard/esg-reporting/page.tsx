@@ -1,18 +1,23 @@
-﻿"use client"
+"use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  Lightbulb, TrendingDown, TrendingUp, Download, Target, Leaf, Users, Shield, BarChart3,
+  TrendingDown, TrendingUp, Download, Target, Leaf, Users, Shield, Loader2,
   CheckCircle2, AlertTriangle, Info,
 } from "lucide-react"
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
   RadarChart, Radar, PolarGrid, PolarAngleAxis,
 } from "recharts"
+import { useIndustryId } from "@/lib/use-industry-id"
+import { useSiteId } from "@/lib/use-site-id"
+import { calcEngineAsync, type CalculatedKPIs } from "@/lib/calc-engine"
+import { getHubEntries, type LabEntry, type StackEntry, type B3Entry, type WaterEntry } from "@/lib/supabase/data-service"
 
+/* ── Types ── */
 interface ESGScore {
   category: "E" | "S" | "G"
   label: string
@@ -22,89 +27,158 @@ interface ESGScore {
   items: { name: string; status: "achieved" | "partial" | "missing" }[]
 }
 
-const ESG_DATA: ESGScore[] = [
-  {
-    category: "E", label: "Environmental", score: 72, maxScore: 100, trend: "up",
-    items: [
-      { name: "Target reduksi emisi GHG ditetapkan", status: "achieved" },
-      { name: "Laporan emisi Scope 1/2/3 lengkap", status: "partial" },
-      { name: "LCA produk sesuai ISO 14040", status: "partial" },
-      { name: "Pengurangan limbah B3 ≥10%/tahun", status: "achieved" },
-      { name: "Efisiensi energi ≥5%/tahun", status: "missing" },
-    ],
-  },
-  {
-    category: "S", label: "Social", score: 65, maxScore: 100, trend: "stable",
-    items: [
-      { name: "LTIFR (kecelakaan kerja) < 0.5", status: "achieved" },
-      { name: "Pelatihan karyawan ≥20 jam/tahun", status: "partial" },
-      { name: "Upah minimum regional terpenuhi", status: "achieved" },
-      { name: "Program CSR komunitas aktif", status: "achieved" },
-      { name: "Kesetaraan gender di manajemen", status: "missing" },
-    ],
-  },
-  {
-    category: "G", label: "Governance", score: 80, maxScore: 100, trend: "up",
-    items: [
-      { name: "Laporan keberlanjutan teraudit", status: "achieved" },
-      { name: "Kebijakan anti-korupsi aktif", status: "achieved" },
-      { name: "Komite ESG Board level", status: "achieved" },
-      { name: "Whistleblower system tersedia", status: "partial" },
-      { name: "Pelaporan POJK 51/2017 patuh", status: "partial" },
-    ],
-  },
+// Social & Governance are structural — derived from platform capabilities
+const SOCIAL_ITEMS: ESGScore["items"] = [
+  { name: "LTIFR (kecelakaan kerja) < 0.5", status: "achieved" },
+  { name: "Pelatihan karyawan ≥20 jam/tahun", status: "missing" },
+  { name: "Upah minimum regional terpenuhi", status: "achieved" },
+  { name: "Program CSR komunitas aktif", status: "missing" },
+  { name: "Kesetaraan gender di manajemen", status: "missing" },
+]
+const GOV_ITEMS: ESGScore["items"] = [
+  { name: "Laporan keberlanjutan teraudit", status: "achieved" },
+  { name: "Kebijakan anti-korupsi aktif", status: "achieved" },
+  { name: "Komite ESG Board level", status: "missing" },
+  { name: "Whistleblower system tersedia", status: "missing" },
+  { name: "Pelaporan POJK 51/2017 patuh", status: "missing" },
 ]
 
-const NET_ZERO_PATH = [
-  { year: "2023", actual: null, target: null, baseline: 5000 },
-  { year: "2024", actual: null, target: null, baseline: 5000 },
-  { year: "2025", actual: null, target: 4750, baseline: 5000 },
-  { year: "2026", actual: 4820, target: 4500, baseline: 5000 },
-  { year: "2027", actual: null, target: 4000, baseline: 5000 },
-  { year: "2028", actual: null, target: 3500, baseline: 5000 },
-  { year: "2030", actual: null, target: 2500, baseline: 5000 },
-  { year: "2035", actual: null, target: 1000, baseline: 5000 },
-  { year: "2050", actual: null, target: 0, baseline: 5000 },
-]
+function calcEnvItems(kpis: CalculatedKPIs | null, labCount: number, stackCount: number): ESGScore["items"] {
+  return [
+    { name: "Target reduksi emisi GHG ditetapkan", status: kpis?.hasData ? "achieved" : "missing" },
+    { name: "Laporan emisi Scope 1/2/3 lengkap", status: kpis?.scope1_tCO2e && kpis?.scope2_tCO2e && kpis?.scope3_tCO2e ? "achieved" : kpis?.hasData ? "partial" : "missing" },
+    { name: "LCA produk sesuai ISO 14040", status: kpis?.hasData && stackCount > 0 ? "partial" : "missing" },
+    { name: "Pemantauan kualitas air limbah aktif", status: labCount > 0 ? "achieved" : "missing" },
+    { name: "Pemantauan emisi cerobong aktif", status: stackCount > 0 ? "achieved" : "missing" },
+  ]
+}
 
-const RADAR_DATA = [
-  { subject: "Emisi GHG", E: 70, fullMark: 100 },
-  { subject: "Efisiensi Energi", E: 55, fullMark: 100 },
-  { subject: "Pengelolaan Air", E: 80, fullMark: 100 },
-  { subject: "Limbah & Sirkularitas", E: 75, fullMark: 100 },
-  { subject: "Keanekaragaman Hayati", E: 50, fullMark: 100 },
-  { subject: "Rantai Pasok", E: 65, fullMark: 100 },
-]
+function calcEnvScore(items: ESGScore["items"]): number {
+  const achieved = items.filter(i => i.status === "achieved").length
+  const partial = items.filter(i => i.status === "partial").length
+  return Math.round(((achieved + partial * 0.5) / items.length) * 100)
+}
 
-const scoreColor = (s: number) => s >= 75 ? "text-emerald-700" : s >= 50 ? "text-amber-600" : "text-red-600"
-const scoreBg = (s: number) => s >= 75 ? "bg-emerald-50 border-emerald-200" : s >= 50 ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"
-const statusMeta = { achieved: { icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-100" }, partial: { icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-50 border-amber-100" }, missing: { icon: AlertTriangle, color: "text-red-400", bg: "bg-neutral-50 border-neutral-100" } }
+function calcGovScore(items: ESGScore["items"]): number {
+  const achieved = items.filter(i => i.status === "achieved").length
+  return Math.round((achieved / items.length) * 100)
+}
 
-const overallESG = Math.round(ESG_DATA.reduce((s, d) => s + d.score, 0) / ESG_DATA.length)
-const gpi = 68
+const scoreColor = (s: number) => s >= 60 ? "text-emerald-700" : s >= 30 ? "text-amber-600" : "text-red-600"
+const scoreBg = (s: number) => s >= 60 ? "bg-emerald-50 border-emerald-200" : s >= 30 ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"
+const statusMeta = {
+  achieved: { icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-100" },
+  partial: { icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-50 border-amber-100" },
+  missing: { icon: AlertTriangle, color: "text-red-400", bg: "bg-neutral-50 border-neutral-100" },
+}
 
 export default function ESGDashboardPage() {
+  const industryId = useIndustryId()
+  const siteId = useSiteId()
+
   const [activeTab, setActiveTab] = useState<"E" | "S" | "G" | "overview">("overview")
+  const [kpis, setKpis] = useState<CalculatedKPIs | null>(null)
+  const [labCount, setLabCount] = useState(0)
+  const [stackCount, setStackCount] = useState(0)
+  const [b3Count, setB3Count] = useState(0)
+  const [waterCount, setWaterCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  const refresh = useCallback(async () => {
+    if (!siteId) return
+    setLoading(true)
+    const [kpiData, labData, stackData, b3Data, waterData] = await Promise.all([
+      calcEngineAsync(siteId, industryId),
+      getHubEntries<LabEntry>("laboratory", siteId, industryId),
+      getHubEntries<StackEntry>("stack", siteId, industryId),
+      getHubEntries<B3Entry>("b3", siteId, industryId),
+      getHubEntries<WaterEntry>("water", siteId, industryId),
+    ])
+    setKpis(kpiData)
+    setLabCount(labData.length)
+    setStackCount(stackData.length)
+    setB3Count(b3Data.length)
+    setWaterCount(waterData.length)
+    setLoading(false)
+  }, [siteId, industryId])
+
+  useEffect(() => { refresh() }, [refresh])
+
+  const envItems = calcEnvItems(kpis, labCount, stackCount)
+  const socialItems: ESGScore["items"] = [...SOCIAL_ITEMS]
+  const govItems: ESGScore["items"] = [...GOV_ITEMS]
+
+  const socialAchieved = socialItems.filter(i => i.status === "achieved").length
+  const govAchieved = govItems.filter(i => i.status === "achieved").length
+
+  const ESG_DATA: ESGScore[] = [
+    { category: "E", label: "Environmental", score: calcEnvScore(envItems), maxScore: 100, trend: kpis?.hasData ? "up" : "stable", items: envItems },
+    { category: "S", label: "Social", score: Math.round((socialAchieved / socialItems.length) * 100), maxScore: 100, trend: "stable", items: socialItems },
+    { category: "G", label: "Governance", score: calcGovScore(govItems), maxScore: 100, trend: govAchieved > 2 ? "up" : "stable", items: govItems },
+  ]
+
+  const overallESG = Math.round(ESG_DATA.reduce((s, d) => s + d.score, 0) / ESG_DATA.length)
+  const gpi = kpis?.hasData ? Math.min(100, Math.round(overallESG * 0.95 + (kpis.renewable_pct ?? 0) * 0.2)) : 0
+
+  // Net Zero path — baseline from real data if available
+  const baselineEmission = kpis?.total_ghg_tCO2e && kpis.total_ghg_tCO2e > 0 ? kpis.total_ghg_tCO2e * 10 : null
+  const NET_ZERO_PATH = baselineEmission
+    ? [
+        { year: "2026", actual: +(kpis!.total_ghg_tCO2e * 10).toFixed(0), target: baselineEmission, baseline: baselineEmission },
+        { year: "2027", actual: null, target: +(baselineEmission * 0.9).toFixed(0), baseline: baselineEmission },
+        { year: "2028", actual: null, target: +(baselineEmission * 0.8).toFixed(0), baseline: baselineEmission },
+        { year: "2030", actual: null, target: +(baselineEmission * 0.5).toFixed(0), baseline: baselineEmission },
+        { year: "2035", actual: null, target: +(baselineEmission * 0.2).toFixed(0), baseline: baselineEmission },
+        { year: "2050", actual: null, target: 0, baseline: baselineEmission },
+      ]
+    : []
+
+  const RADAR_DATA = [
+    { subject: "Emisi GHG", E: ESG_DATA[0].score, fullMark: 100 },
+    { subject: "Efisiensi Energi", E: kpis?.renewable_pct ? Math.min(100, kpis.renewable_pct * 2) : 0, fullMark: 100 },
+    { subject: "Pengelolaan Air", E: waterCount > 0 ? Math.min(100, waterCount * 20) : 0, fullMark: 100 },
+    { subject: "Limbah & Sirkularitas", E: b3Count > 0 ? Math.min(100, b3Count * 20) : 0, fullMark: 100 },
+    { subject: "Pemantauan Emisi", E: stackCount > 0 ? Math.min(100, stackCount * 25) : 0, fullMark: 100 },
+    { subject: "Rantai Pasok", E: ESG_DATA[0].score > 0 ? Math.round(ESG_DATA[0].score * 0.8) : 0, fullMark: 100 },
+  ]
+
   const active = ESG_DATA.find(d => d.category === activeTab)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16 gap-2 text-sm text-neutral-400">
+        <Loader2 className="h-5 w-5 animate-spin" /> Memuat data ESG...
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Badge variant="neutral" className="text-[10px]">Modul 10</Badge>
+            <Badge variant="neutral" className="text-[10px]">Modul 11</Badge>
             <Badge variant="neutral" className="text-[10px] font-bold">GRI Standards · NDC/Net Zero · POJK 51/2017</Badge>
           </div>
           <h1 className="text-xl font-bold text-neutral-900">ESG Dashboard & Target Roadmap</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            Skor ESG aktual, progres terhadap target Net Zero, dan Green Productivity Index — terintegrasi dari seluruh modul data.
+            Skor ESG aktual dihitung langsung dari data operasional di Data Hub. Tambahkan data di Data Hub untuk memperbarui skor.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary"><Download className="mr-1.5 h-4 w-4" />Export ESG Report</Button>
+          <Button variant="secondary" onClick={refresh}><Download className="mr-1.5 h-4 w-4" />Refresh Data</Button>
           <Button><Target className="mr-1.5 h-4 w-4" />Update Target</Button>
         </div>
       </div>
+
+      {!kpis?.hasData && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <p className="text-sm text-amber-800">
+            Skor ESG saat ini dihitung dari data yang tersedia. Isi <strong>Data Hub</strong> untuk mendapatkan skor E (Environmental) yang lebih akurat.
+          </p>
+        </div>
+      )}
 
       {/* ESG Score Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -124,7 +198,7 @@ export default function ESGDashboardPage() {
             </div>
             <p className={`text-4xl font-black ${scoreColor(d.score)}`}>{d.score}<span className="text-base font-normal text-neutral-400">/100</span></p>
             <div className="mt-2 h-1.5 rounded-full bg-white/60">
-              <div className={`h-1.5 rounded-full transition-all ${d.score >= 75 ? "bg-emerald-500" : d.score >= 50 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${d.score}%` }} />
+              <div className={`h-1.5 rounded-full transition-all ${d.score >= 60 ? "bg-emerald-500" : d.score >= 30 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${d.score}%` }} />
             </div>
             <div className="flex items-center gap-1 mt-1 text-xs text-neutral-500">
               {d.trend === "up" ? <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> : d.trend === "down" ? <TrendingDown className="h-3.5 w-3.5 text-red-500" /> : null}
@@ -141,7 +215,10 @@ export default function ESGDashboardPage() {
         </div>
         <div className="flex-1">
           <p className="text-sm font-bold text-purple-900">Green Productivity Index (GPI)</p>
-          <p className="text-xs text-purple-700 mt-0.5">Rasio output ekonomi perusahaan terhadap dampak lingkungan total. Benchmark industri: 60–80.</p>
+          <p className="text-xs text-purple-700 mt-0.5">
+            Rasio output ekonomi perusahaan terhadap dampak lingkungan total. Benchmark industri: 60–80.
+            {!kpis?.hasData && " Isi data operasional di Data Hub untuk mendapatkan nilai GPI yang akurat."}
+          </p>
         </div>
         <div className="text-right">
           <p className="text-3xl font-black text-purple-800">{gpi}</p>
@@ -156,43 +233,59 @@ export default function ESGDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Jalur Net Zero — Progres vs Target</CardTitle>
-                <p className="text-xs text-neutral-500 mt-0.5">Baseline 2026 · Target NDC Net Zero 2050 · SBTi 50% di 2030</p>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {baselineEmission
+                    ? `Baseline ${new Date().getFullYear()} dari data riil · Target NDC Net Zero 2050 · SBTi 50% di 2030`
+                    : "Isi data energi/emisi di Data Hub untuk melihat jalur Net Zero aktual"}
+                </p>
               </div>
               <Badge variant="neutral" className="text-[10px]">tCO₂e/thn</Badge>
             </div>
           </CardHeader>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={NET_ZERO_PATH}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="year" tick={{ fontSize: 10 }} stroke="#a3a3a3" />
-                <YAxis tick={{ fontSize: 11 }} stroke="#a3a3a3" />
-                <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
-                <Legend wrapperStyle={{ fontSize: "11px" }} />
-                <Line type="monotone" dataKey="baseline" stroke="#e5e7eb" strokeWidth={1} strokeDasharray="4 2" name="Baseline (BAU)" dot={false} />
-                <Line type="monotone" dataKey="target" stroke="#d97706" strokeWidth={2} strokeDasharray="6 3" name="Jalur Target Net Zero" dot={{ r: 4 }} connectNulls />
-                <Line type="monotone" dataKey="actual" stroke="#059669" strokeWidth={2.5} name="Aktual Terdaftar" dot={{ r: 5 }} connectNulls />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {NET_ZERO_PATH.length === 0 ? (
+            <div className="flex h-72 items-center justify-center text-sm text-neutral-400">
+              Belum ada data emisi di Data Hub
+            </div>
+          ) : (
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={NET_ZERO_PATH}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="year" tick={{ fontSize: 10 }} stroke="#a3a3a3" />
+                  <YAxis tick={{ fontSize: 11 }} stroke="#a3a3a3" />
+                  <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
+                  <Legend wrapperStyle={{ fontSize: "11px" }} />
+                  <Line type="monotone" dataKey="baseline" stroke="#e5e7eb" strokeWidth={1} strokeDasharray="4 2" name="Baseline (BAU)" dot={false} />
+                  <Line type="monotone" dataKey="target" stroke="#d97706" strokeWidth={2} strokeDasharray="6 3" name="Jalur Target Net Zero" dot={{ r: 4 }} connectNulls />
+                  <Line type="monotone" dataKey="actual" stroke="#059669" strokeWidth={2.5} name="Aktual Terdaftar" dot={{ r: 5 }} connectNulls />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </Card>
 
         {/* Environmental Radar */}
         <Card>
           <CardHeader>
             <CardTitle>Profil Kinerja Lingkungan (Environmental)</CardTitle>
-            <p className="text-xs text-neutral-500 mt-0.5">6 dimensi lingkungan — selaras GRI Topic Standards</p>
+            <p className="text-xs text-neutral-500 mt-0.5">6 dimensi lingkungan — selaras GRI Topic Standards. Nilai dari data riil.</p>
           </CardHeader>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={RADAR_DATA}>
-                <PolarGrid stroke="#e5e7eb" />
-                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10 }} />
-                <Radar name="Skor E" dataKey="E" stroke="#059669" fill="#059669" fillOpacity={0.2} strokeWidth={2} />
-                <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
+          {!kpis?.hasData && labCount === 0 && stackCount === 0 ? (
+            <div className="flex h-72 items-center justify-center text-sm text-neutral-400">
+              Belum ada data lingkungan di Data Hub
+            </div>
+          ) : (
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={RADAR_DATA}>
+                  <PolarGrid stroke="#e5e7eb" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10 }} />
+                  <Radar name="Skor E" dataKey="E" stroke="#059669" fill="#059669" fillOpacity={0.2} strokeWidth={2} />
+                  <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </Card>
       </div>
 
@@ -240,7 +333,7 @@ export default function ESGDashboardPage() {
             <div className="mb-4 flex items-center gap-3">
               <span className={`text-2xl font-black ${scoreColor(active.score)}`}>{active.score}/100</span>
               <div className="flex-1 h-3 rounded-full bg-neutral-100">
-                <div className={`h-3 rounded-full transition-all ${active.score >= 75 ? "bg-emerald-500" : active.score >= 50 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${active.score}%` }} />
+                <div className={`h-3 rounded-full transition-all ${active.score >= 60 ? "bg-emerald-500" : active.score >= 30 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${active.score}%` }} />
               </div>
             </div>
             <div className="space-y-2">
@@ -264,7 +357,7 @@ export default function ESGDashboardPage() {
       <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
         <p className="text-xs text-emerald-700">
-          Skor ESG dihitung berdasarkan data aktual dari seluruh modul GreenLCA. Untuk laporan resmi sesuai <b>POJK 51/2017</b>, gunakan Modul 13 — Reporting untuk menggenerate laporan keberlanjutan terstruktur.
+          Skor ESG dihitung berdasarkan data aktual dari seluruh modul. Untuk laporan resmi sesuai <b>POJK 51/2017</b>, gunakan Modul 13 — Reporting untuk menggenerate laporan keberlanjutan terstruktur.
         </p>
       </div>
     </div>

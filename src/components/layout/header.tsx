@@ -9,10 +9,13 @@ import { id } from "@/locales/id"
 import { en } from "@/locales/en"
 import { t } from "@/lib/i18n"
 import { clearRole } from "@/app/actions/role"
+import { getRoleClient, ROLE_LABELS } from "@/lib/role"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { PrintableProperReportModal } from "@/components/dashboard/printable-proper-report"
 import { useViewMode } from "@/lib/use-view-mode"
+
+import type { Role } from "@/lib/role"
 
 const dicts: Record<Locale, Record<string, string>> = { id, en }
 
@@ -36,19 +39,27 @@ const groupFor: Record<string, string> = {
   "/dashboard/data-hub": "sidebar.data_management",
 }
 
-const notifications = [
-  { id: 1, title: "Import selesai", desc: "emissions_q2.xlsx diproses", tone: "success" },
-  { id: 2, title: "Validasi gagal", desc: "3 baris pada water_log.csv", tone: "danger" },
-  { id: 3, title: "IoT terhubung", desc: "Meter Plant A online", tone: "info" },
-]
+const notifications: { id: number; title: string; desc: string; tone: string }[] = []
 
-export function Header({ locale }: { locale: Locale }) {
+export function Header({ locale, role: propRole }: { locale: Locale; role?: Role | null }) {
   const pathname = usePathname()
   const router = useRouter()
   const dict = dicts[locale]
   const titleKey = moduleTitles[pathname]
   const title = titleKey ? t(dict, titleKey) : "ensPR"
   const groupKey = groupFor[pathname]
+
+  const [activeRole, setActiveRole] = useState<Role | null>(propRole ?? null)
+
+  useEffect(() => {
+    const clientRole = getRoleClient()
+    if (clientRole) setActiveRole(clientRole)
+    else if (propRole) setActiveRole(propRole)
+  }, [propRole])
+
+  const role = activeRole ?? propRole
+  const roleLabel = role ? (ROLE_LABELS[role]?.title ?? role) : "—"
+  const roleInitials = role ? role.slice(0, 2).toUpperCase() : "??"
 
   const [search, setSearch] = useState("")
   const [notifOpen, setNotifOpen] = useState(false)
@@ -157,31 +168,39 @@ export function Header({ locale }: { locale: Locale }) {
             className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-token bg-surface text-secondary transition-colors hover:border-[color:var(--brand-soft-border)] hover:text-[color:var(--brand)]"
           >
             <Bell className="h-4 w-4" />
-            <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-surface" />
+            {notifications.length > 0 && (
+              <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-surface" />
+            )}
           </button>
           {notifOpen && (
             <div className="absolute right-0 mt-2 w-72 overflow-hidden rounded-xl border border-token bg-surface shadow-lg">
               <div className="border-b border-token px-4 py-3 text-sm font-semibold text-primary">
                 {t(dict, "datahub.notifications.title")}
               </div>
-              <ul className="max-h-72 divide-y divide-[color:var(--border-subtle)] overflow-y-auto">
-                {notifications.map((n) => (
-                  <li key={n.id} className="flex gap-3 px-4 py-3">
-                    <span
-                      className={cn(
-                        "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-                        n.tone === "success" && "bg-emerald-500",
-                        n.tone === "danger" && "bg-red-500",
-                        n.tone === "info" && "bg-sky-500",
-                      )}
-                    />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-primary">{n.title}</p>
-                      <p className="truncate text-xs text-muted">{n.desc}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              {notifications.length === 0 ? (
+                <div className="px-4 py-6 text-center text-xs text-muted">
+                  Tidak ada notifikasi baru
+                </div>
+              ) : (
+                <ul className="max-h-72 divide-y divide-[color:var(--border-subtle)] overflow-y-auto">
+                  {notifications.map((n) => (
+                    <li key={n.id} className="flex gap-3 px-4 py-3">
+                      <span
+                        className={cn(
+                          "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                          n.tone === "success" && "bg-emerald-500",
+                          n.tone === "danger" && "bg-red-500",
+                          n.tone === "info" && "bg-sky-500",
+                        )}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-primary">{n.title}</p>
+                        <p className="truncate text-xs text-muted">{n.desc}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </div>
@@ -192,15 +211,15 @@ export function Header({ locale }: { locale: Locale }) {
             className="flex items-center gap-2 rounded-lg border border-token bg-surface py-1 pl-1 pr-2 transition-colors hover:border-[color:var(--brand-soft-border)]"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--brand-soft)] text-xs font-semibold text-[color:var(--brand)]">
-              AT
+              {roleInitials}
             </span>
             <ChevronDown className="h-3.5 w-3.5 text-muted" />
           </button>
           {userOpen && (
-            <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-token bg-surface py-1 shadow-lg">
+            <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-token bg-surface py-1 shadow-lg">
               <div className="border-b border-token px-3 py-2">
-                <p className="text-sm font-medium text-primary">Petinggi</p>
-                <p className="text-xs text-muted">admin@envi.io</p>
+                <p className="text-sm font-medium text-primary">{roleLabel}</p>
+                <p className="text-xs text-muted">{role ?? "—"}</p>
               </div>
               <Link
                 href="/dashboard/settings"

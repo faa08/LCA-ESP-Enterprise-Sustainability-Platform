@@ -1,9 +1,9 @@
-﻿// src/lib/calc-engine.ts
+// src/lib/calc-engine.ts
 // ensPR Calculation Engine
 // Derives Scope 1/2/3, LCA categories, and Energy KPIs automatically from raw operational data.
 // All emission factors are Indonesia-specific defaults (can be refined per industry).
 
-import { getEntries, type EnergyEntry, type TransportEntry, type StackEntry } from "@/lib/datahub"
+import { getHubEntries, type EnergyEntry, type TransportEntry, type StackEntry, type WaterEntry, type LabEntry } from "@/lib/supabase/data-service"
 
 /* ─────────────── Emission Factors ─────────────── */
 
@@ -76,10 +76,18 @@ export interface CalculatedKPIs {
 
 /* ─────────────── Main Calculation Function ─────────────── */
 
-export function calcEngine(industryId: string): CalculatedKPIs {
-  const energyEntries = getEntries<EnergyEntry>("energy", industryId)
-  const transportEntries = getEntries<TransportEntry>("transport", industryId)
-  const stackEntries = getEntries<StackEntry>("stack", industryId)
+export function calcEngineFromEntries(
+  energyEntries: EnergyEntry[] = [],
+  transportEntries: TransportEntry[] = [],
+  stackEntries: StackEntry[] = [],
+  waterEntries: WaterEntry[] = [],
+  labEntries: LabEntry[] = [],
+): CalculatedKPIs {
+  const safeEnergy = Array.isArray(energyEntries) ? energyEntries : []
+  const safeTransport = Array.isArray(transportEntries) ? transportEntries : []
+  const safeStack = Array.isArray(stackEntries) ? stackEntries : []
+  const safeWater = Array.isArray(waterEntries) ? waterEntries : []
+  const safeLab = Array.isArray(labEntries) ? labEntries : []
 
   const zero: CalculatedKPIs = {
     scope1_tCO2e: 0, scope2_tCO2e: 0, scope3_tCO2e: 0, total_ghg_tCO2e: 0,
@@ -92,7 +100,7 @@ export function calcEngine(industryId: string): CalculatedKPIs {
     energyEntryCount: 0, transportEntryCount: 0, stackEntryCount: 0,
   }
 
-  if (energyEntries.length === 0 && transportEntries.length === 0) return zero
+  if (safeEnergy.length === 0 && safeTransport.length === 0 && safeStack.length === 0) return zero
 
   // ── Scope 1: Direct combustion ──
   let scope1_kg = 0
@@ -100,7 +108,7 @@ export function calcEngine(industryId: string): CalculatedKPIs {
   let renewableMWh = 0
   let totalMWh = 0
 
-  for (const e of energyEntries) {
+  for (const e of safeEnergy) {
     scope1_kg +=
       (e.diesel      || 0) * EF.diesel +
       (e.naturalGas  || 0) * EF.naturalGas +
@@ -123,50 +131,42 @@ export function calcEngine(industryId: string): CalculatedKPIs {
 
   // ── Scope 2: Purchased electricity ──
   let scope2_kg = 0
-  for (const e of energyEntries) {
+  for (const e of safeEnergy) {
     scope2_kg += (e.electricity || 0) * PLN_GRID_FACTOR
   }
 
   // ── Scope 3: Transportation ──
   let scope3_kg = 0
-  for (const t of transportEntries) {
+  for (const t of safeTransport) {
     const ef = TRANSPORT_EF[t.fuelType as keyof typeof TRANSPORT_EF] ?? TRANSPORT_EF.default
-    scope3_kg += (t.distance || 0) * (t.cargoWeight || 0) * ef * 1000 // ton-km * factor
+    scope3_kg += (t.distance || 0) * (t.cargoWeight || 0) * ef * 1000
   }
 
   // ── LCA: Acidification Potential (AP) from stack SO2/NOx ──
   let ap_kg = 0
   let pm_kg = 0
-  for (const s of stackEntries) {
-    // Simplified: AP from stack SO2 (factor 1.0) + NOx (factor 0.7)
-    // Flow rate in Nm3/h assumed 8760h/year if not time-based
+  for (const s of safeStack) {
     const hours = 8760
-    ap_kg +=
-      ((s.so2 || 0) * 1.0 + (s.nox || 0) * 0.7) * (s.flowRate || 0) * hours / 1e9 // mg/Nm3 -> kg
-    pm_kg +=
-      (s.tsp || 0) * (s.flowRate || 0) * hours / 1e9
+    ap_kg += ((s.so2 || 0) * 1.0 + (s.nox || 0) * 0.7) * (s.flowRate || 0) * hours / 1e9
+    pm_kg += (s.tsp || 0) * (s.flowRate || 0) * hours / 1e9
   }
 
   // ── LCA: Water Use Depletion ──
-  const waterEntries = getEntries<{ id: string; groundwater: number; processWater: number; rawWater: number; date: string; wastewater: number; flowRate: number }>("water", industryId)
   let wud = 0
-  for (const w of waterEntries) {
+  for (const w of safeWater) {
     wud += (w.rawWater || 0) + (w.groundwater || 0)
   }
 
   // ── LCA: Eutrophication (simplified estimate from wastewater) ──
-  const labEntries = getEntries<{ id: string; date: string; samplePoint: string; ph: number; cod: number; bod: number; tss: number; nh3: number; oilGrease: number; phenol: number; heavyMetals: Record<string, number> }>("laboratory", industryId)
   let ep_kg = 0
   let ht_kg = 0
-  for (const l of labEntries) {
-    // EP from NH3-N (factor 0.33 kg PO4e/kg N)
-    ep_kg += (l.nh3 || 0) * 0.33 / 1000 // mg/L -> rough factor
-    // HT from phenol (rough estimate)
+  for (const l of safeLab) {
+    ep_kg += (l.nh3 || 0) * 0.33 / 1000
     ht_kg += (l.phenol || 0) * 0.1 / 1000
   }
 
   // ── Abiotic Depletion Fossil (in MJ) ──
-  const adpf_MJ = fossilMWh * 3600 // MWh -> MJ
+  const adpf_MJ = fossilMWh * 3600
 
   // ── Assemble totals ──
   const scope1_t = scope1_kg / 1000
@@ -183,7 +183,7 @@ export function calcEngine(industryId: string): CalculatedKPIs {
     energy_total_MWh:     +totalMWh.toFixed(2),
     energy_renewable_MWh: +renewableMWh.toFixed(2),
     energy_fossil_MWh:    +fossilMWh.toFixed(2),
-    energy_intensity:     0, // requires production data; calculated in UI
+    energy_intensity:     0,
     renewable_pct:        totalMWh > 0 ? +(renewableMWh / totalMWh * 100).toFixed(1) : 0,
 
     gwp_kgCO2e:     +(total_t * 1000).toFixed(1),
@@ -197,9 +197,25 @@ export function calcEngine(industryId: string): CalculatedKPIs {
     adpf_MJ:        +adpf_MJ.toFixed(0),
     pm_kgPM25e:     +pm_kg.toFixed(4),
 
-    hasData: energyEntries.length > 0 || transportEntries.length > 0 || stackEntries.length > 0,
-    energyEntryCount:    energyEntries.length,
-    transportEntryCount: transportEntries.length,
-    stackEntryCount:     stackEntries.length,
+    hasData: safeEnergy.length > 0 || safeTransport.length > 0 || safeStack.length > 0,
+    energyEntryCount:    safeEnergy.length,
+    transportEntryCount: safeTransport.length,
+    stackEntryCount:     safeStack.length,
   }
+}
+
+// Async wrapper that fetches entries from Supabase
+export async function calcEngineAsync(siteId: string, industryId: string): Promise<CalculatedKPIs> {
+  const energyEntries = await getHubEntries<EnergyEntry>("energy", siteId, industryId)
+  const transportEntries = await getHubEntries<TransportEntry>("transport", siteId, industryId)
+  const stackEntries = await getHubEntries<StackEntry>("stack", siteId, industryId)
+  const waterEntries = await getHubEntries<WaterEntry>("water", siteId, industryId)
+  const labEntries = await getHubEntries<LabEntry>("laboratory", siteId, industryId)
+
+  return calcEngineFromEntries(energyEntries, transportEntries, stackEntries, waterEntries, labEntries)
+}
+
+// Backward-compatible export: returns zero if called synchronously without entries
+export function calcEngine(industryId: string): CalculatedKPIs {
+  return calcEngineFromEntries([], [], [], [], [])
 }

@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect } from "react"
 
@@ -77,25 +77,62 @@ function getAiRecommendation(code: string, name: string, status: "fail" | "warn"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
+import { useSiteId } from "@/lib/use-site-id"
+import { getHubEntries, type LabEntry, type StackEntry, type B3Entry } from "@/lib/supabase/data-service"
+
 export default function Compliance() {
   const locale = getLocaleClient()
   const dict = dicts[locale]
   const industryId = useIndustryId()
+  const siteId = useSiteId()
   const [fuelType, setFuelType] = useState<string>("batubara")
+  const [sbMeasurements, setSbMeasurements] = useState<Record<string, string>>({})
 
-  // Load fuelType dari Settings (localStorage)
+  // Load fuelType & fetch live entries from Data Hub
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("enspr_fuel_type")
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (stored) setFuelType(stored)
     }
-  }, [])
+
+    const loadSbData = async () => {
+      if (!siteId) return
+      const labs = await getHubEntries<LabEntry>("laboratory", siteId, industryId)
+      const stacks = await getHubEntries<StackEntry>("stack", siteId, industryId)
+      const b3s = await getHubEntries<B3Entry>("b3", siteId, industryId)
+
+      const merged: Record<string, string> = { ...getMeasurements(industryId) }
+
+      if (labs.length > 0) {
+        const l = labs[0]
+        if (l.ph) merged.ph = String(l.ph)
+        if (l.cod) merged.cod = String(l.cod)
+        if (l.bod) merged.bod = String(l.bod)
+        if (l.tss) merged.tss = String(l.tss)
+      }
+      if (stacks.length > 0) {
+        const s = stacks[0]
+        if (s.tsp) merged.tsp = String(s.tsp)
+        if (s.so2) merged.so2 = String(s.so2)
+        if (s.nox) merged.nox = String(s.nox)
+        if (s.co) merged.co = String(s.co)
+        if (s.opacity) merged.opacity = String(s.opacity)
+      }
+      if (b3s.length > 0) {
+        const b = b3s[0]
+        if (b.storageDuration) merged.b3_storage_days = String(b.storageDuration)
+        if (b.qty) merged.b3_tonnage = String(b.qty)
+      }
+
+      setSbMeasurements(merged)
+    }
+
+    loadSbData()
+  }, [siteId, industryId])
 
   const industry = INDUSTRIES.find((i) => i.id === industryId) ?? null
 
-  // Build evaluation groups from user-entered measurements only (no demo fallback)
-  const measurements = getMeasurements(industryId)
+  const measurements = sbMeasurements
   const airParams = industry ? industry.params.filter((p) => p.category === "air_limbah") : []
   const airResults = airParams.map((p) => ({ p, ...evaluate(p, measurements) }))
   const emResults = getEmissionParams(fuelType).map((p) => ({ p, ...evaluate(p, measurements) }))
@@ -111,8 +148,8 @@ export default function Compliance() {
     return raw !== undefined && raw !== "" && Number(raw) > 0
   }).length
 
-  const rank = predictRank(countFails(emResults), countFails(airResults), countFails(b3Results), lcaFilledCount)
   const entered = airResults.length + emResults.length + b3Results.length - countEmpty(airResults) - countEmpty(emResults) - countEmpty(b3Results)
+  const rank = entered === 0 ? "Biru" : predictRank(countFails(emResults), countFails(airResults), countFails(b3Results), lcaFilledCount)
 
   const renderGroup = (
     title: string,
@@ -432,15 +469,15 @@ export default function Compliance() {
                 </thead>
                 <tbody>
                   {[
-                    { std: "PROPER KLHK", status: "Taat", score: "98%", next: "Okt 2026" },
-                    { std: "ISO 14001:2015", status: "Sertifikasi", score: "100%", next: "Nov 2026" },
-                    { std: "Permen LHK 5/2014", status: "Patuh", score: "95%", next: "Bulanan" },
-                    { std: "Permen LHK 6/2021", status: "Patuh", score: "100%", next: "Semesteran" },
+                    { std: "PROPER KLHK", status: entered > 0 && countFails(airResults) + countFails(emResults) + countFails(b3Results) === 0 ? "Taat" : entered > 0 ? "Evaluasi" : "Belum Ada Data", score: entered > 0 ? `${Math.max(0, 100 - (countFails(airResults) + countFails(emResults) + countFails(b3Results)) * 20)}%` : "—", next: "Okt 2026" },
+                    { std: "Permen LHK 5/2014 (Air)", status: airResults.some(r => r.status !== "empty") ? "Patuh" : "Belum Ada Data", score: airResults.some(r => r.status !== "empty") ? `${Math.round((airResults.filter(r => r.status === "ok").length / airResults.length) * 100)}%` : "—", next: "Bulanan" },
+                    { std: "Permen LHK P.16/2019 (Emisi)", status: emResults.some(r => r.status !== "empty") ? "Patuh" : "Belum Ada Data", score: emResults.some(r => r.status !== "empty") ? `${Math.round((emResults.filter(r => r.status === "ok").length / emResults.length) * 100)}%` : "—", next: "Bulanan" },
+                    { std: "Permen LHK 6/2021 (B3)", status: b3Results.some(r => r.status !== "empty") ? "Patuh" : "Belum Ada Data", score: b3Results.some(r => r.status !== "empty") ? `${Math.round((b3Results.filter(r => r.status === "ok").length / b3Results.length) * 100)}%` : "—", next: "Semesteran" },
                   ].map((row, i) => (
                     <tr key={i} className="border-b border-neutral-100">
                       <td className="px-3 py-2.5 font-semibold text-neutral-900">{row.std}</td>
-                      <td className="px-3 py-2.5"><Badge variant="success">{row.status}</Badge></td>
-                      <td className="px-3 py-2.5 font-bold text-emerald-700">{row.score}</td>
+                      <td className="px-3 py-2.5"><Badge variant={row.status === "Taat" || row.status === "Patuh" ? "success" : "neutral"}>{row.status}</Badge></td>
+                      <td className="px-3 py-2.5 font-bold text-neutral-800">{row.score}</td>
                       <td className="px-3 py-2.5 text-xs text-neutral-500">{row.next}</td>
                     </tr>
                   ))}

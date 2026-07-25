@@ -1,6 +1,6 @@
-﻿"use client"
+"use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -32,6 +32,31 @@ export default function ProductAssessmentPage() {
   const [products, setProducts] = useState<Product[]>([emptyProduct()])
   const [activeId, setActiveId] = useState<string>(products[0].id)
   const [saved, setSaved] = useState(false)
+
+  const STORAGE_KEY = "enspr_product_assessment"
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setProducts(parsed)
+            setActiveId(parsed[0].id)
+          }
+        } catch {}
+      }
+    }
+  }, [])
+
+  const handleSave = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(products))
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    }
+  }
 
   const active = products.find(p => p.id === activeId) ?? products[0]
 
@@ -80,7 +105,7 @@ export default function ProductAssessmentPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={addProduct}><Plus className="mr-1.5 h-4 w-4" />Produk Baru</Button>
-          <Button onClick={() => setSaved(true)}>
+          <Button onClick={handleSave}>
             {saved ? <><CheckCircle2 className="mr-2 h-4 w-4" />Tersimpan</> : "Simpan Inventori"}
           </Button>
         </div>

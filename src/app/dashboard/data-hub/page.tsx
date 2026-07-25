@@ -5,24 +5,34 @@ import { useState, useEffect, useCallback } from "react"
 import {
   Database, CheckCircle2, AlertTriangle, ArrowRight, ChevronDown, ChevronUp,
   Plus, Trash2, Calculator, Settings2, Clock, FileText, Upload, Info,
-  Zap, Droplets, FlaskConical, Factory, Truck, Users, PackageOpen, Layers,
-  BarChart3, X, Save,
+  Zap, BarChart3, X, Save, Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { useIndustryId } from "@/lib/use-industry-id"
+import { useSiteId } from "@/lib/use-site-id"
 import { INDUSTRIES } from "@/lib/proper"
 import {
-  CATEGORY_META, getEntries, saveEntry, deleteEntry, newId,
+  CATEGORY_META, newId,
   type HubCategory, type ProductionEntry, type MaterialEntry, type EnergyEntry,
   type WaterEntry, type LabEntry, type StackEntry, type B3Entry,
   type TransportEntry, type SupplierEntry, type DocumentEntry, type AnyEntry,
 } from "@/lib/datahub"
-import { calcEngine, type CalculatedKPIs } from "@/lib/calc-engine"
-
+import {
+  getHubEntries, saveHubEntry, deleteHubEntry, writeAuditLogSb,
+} from "@/lib/supabase/data-service"
+import { calcEngineAsync, type CalculatedKPIs } from "@/lib/calc-engine"
 import { getRoleClient, isReadOnly } from "@/lib/role"
+
+/* ─── audit helpers ─── */
+function auditSave(category: HubCategory, siteId: string, industryId: string, role: string, summary: string) {
+  writeAuditLogSb(siteId, industryId, { role, module: category, action: "CREATE", field: category, newValue: summary, source: "measured" })
+}
+function auditDelete(category: HubCategory, siteId: string, industryId: string, role: string, summary: string) {
+  writeAuditLogSb(siteId, industryId, { role, module: category, action: "DELETE", field: category, newValue: summary, source: "measured" })
+}
 
 /* ─── helpers ─── */
 const today = () => new Date().toISOString().split("T")[0]
@@ -149,11 +159,20 @@ function KpiPanel({ kpis, onClose }: { kpis: CalculatedKPIs; onClose: () => void
 }
 
 /* ─── Entry Table ─── */
-function EntryTable({ entries, columns, onDelete }: {
+function EntryTable({ entries, columns, onDelete, loading }: {
   entries: AnyEntry[]
   columns: { key: string; label: string; render?: (row: AnyEntry) => React.ReactNode }[]
   onDelete: (id: string) => void
+  loading?: boolean
 }) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8 text-sm text-neutral-400 gap-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Memuat data dari database...
+      </div>
+    )
+  }
   if (entries.length === 0) {
     return <p className="py-6 text-center text-sm text-neutral-400">Belum ada data yang dimasukkan.</p>
   }
@@ -220,23 +239,33 @@ function Section({ meta, children, entryCount }: {
 }
 
 /* ══════════════════════════════════════════════
-   CATEGORY FORMS
+   CATEGORY FORMS — semua async dengan database
 ══════════════════════════════════════════════ */
 
-function ProductionForm({ industryId }: { industryId: string }) {
+function ProductionForm({ siteId, industryId, role }: { siteId: string; industryId: string; role: string }) {
   const meta = CATEGORY_META.find((m) => m.key === "production")!
   const [entries, setEntries] = useState<ProductionEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState<Omit<ProductionEntry, "id">>({
     date: today(), plant: "", line: "", product: "", qty: 0, qtyUnit: "Ton", hours: 0, rejectQty: 0,
   })
   const [showForm, setShowForm] = useState(false)
-  const refresh = useCallback(() => setEntries(getEntries<ProductionEntry>("production", industryId)), [industryId])
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    const data = await getHubEntries<ProductionEntry>("production", siteId, industryId)
+    setEntries(data)
+    setLoading(false)
+  }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "date" || k === "plant" || k === "line" || k === "product" || k === "qtyUnit" ? v : num(v) }))
-  const save = () => {
+  const save = async () => {
     if (!form.plant || !form.product) return
-    saveEntry("production", industryId, { ...form, id: newId() })
-    refresh(); setShowForm(false)
+    setSaving(true)
+    const entry = { ...form, id: newId() }
+    await saveHubEntry("production", siteId, industryId, entry)
+    auditSave("production", siteId, industryId, role, `${form.product} — ${form.qty} ${form.qtyUnit} @ ${form.plant}`)
+    await refresh(); setShowForm(false); setSaving(false)
     setForm({ date: today(), plant: "", line: "", product: "", qty: 0, qtyUnit: "Ton", hours: 0, rejectQty: 0 })
   }
   return (
@@ -249,7 +278,7 @@ function ProductionForm({ industryId }: { industryId: string }) {
       {showForm && (
         <div className="mb-4 grid gap-3 rounded-lg border border-blue-100 bg-blue-50/40 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Tanggal" required><Input type="date" value={form.date} onChange={f("date")} /></Field>
-          <Field label="Plant / Area" required tooltip="Nama area atau unit pabrik"><Input value={form.plant} onChange={f("plant")} placeholder="Pabrik A" /></Field>
+          <Field label="Plant / Area" required><Input value={form.plant} onChange={f("plant")} placeholder="Pabrik A" /></Field>
           <Field label="Lini Produksi"><Input value={form.line} onChange={f("line")} placeholder="Line 1" /></Field>
           <Field label="Produk" required><Input value={form.product} onChange={f("product")} placeholder="Nama produk" /></Field>
           <Field label="Kuantitas Produksi" required><Input type="number" value={form.qty || ""} onChange={f("qty")} min="0" step="0.01" /></Field>
@@ -259,38 +288,49 @@ function ProductionForm({ industryId }: { industryId: string }) {
           <Field label="Jam Operasional" unit="jam/hari"><Input type="number" value={form.hours || ""} onChange={f("hours")} min="0" max="24" step="0.5" /></Field>
           <Field label="Kuantitas Reject" unit={form.qtyUnit}><Input type="number" value={form.rejectQty || ""} onChange={f("rejectQty")} min="0" step="0.01" /></Field>
           <div className="col-span-full flex gap-2">
-            <Button size="sm" onClick={save}><Save className="h-3.5 w-3.5" /> Simpan</Button>
+            <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Simpan</Button>
             <Button size="sm" variant="secondary" onClick={() => setShowForm(false)}><X className="h-3.5 w-3.5" /> Batal</Button>
           </div>
         </div>
       )}
-      <EntryTable
+      <EntryTable loading={loading}
         entries={entries}
         columns={[
-          { key: "date", label: "Tanggal" },
-          { key: "plant", label: "Plant" },
-          { key: "product", label: "Produk" },
+          { key: "date", label: "Tanggal" }, { key: "plant", label: "Plant" }, { key: "product", label: "Produk" },
           { key: "qty", label: "Qty", render: (r) => `${(r as ProductionEntry).qty} ${(r as ProductionEntry).qtyUnit}` },
           { key: "hours", label: "Jam", render: (r) => `${(r as ProductionEntry).hours} h` },
         ]}
-        onDelete={(id) => { deleteEntry("production", industryId, id); refresh() }}
+        onDelete={async (id) => {
+          const e = entries.find(x => x.id === id)
+          await deleteHubEntry("production", id)
+          auditDelete("production", siteId, industryId, role, e ? `${e.product} — ${e.qty} ${e.qtyUnit}` : id)
+          refresh()
+        }}
       />
     </Section>
   )
 }
 
-function EnergyForm({ industryId, onCalcUpdate }: { industryId: string; onCalcUpdate: () => void }) {
+function EnergyForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string; industryId: string; role: string; onCalcUpdate: () => void }) {
   const meta = CATEGORY_META.find((m) => m.key === "energy")!
   const [entries, setEntries] = useState<EnergyEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const blank = { date: today(), electricity: 0, diesel: 0, naturalGas: 0, coal: 0, biomass: 0, steam: 0, lpg: 0 }
   const [form, setForm] = useState<Omit<EnergyEntry, "id">>(blank)
-  const refresh = useCallback(() => setEntries(getEntries<EnergyEntry>("energy", industryId)), [industryId])
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    const data = await getHubEntries<EnergyEntry>("energy", siteId, industryId)
+    setEntries(data); setLoading(false)
+  }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "date" ? v : num(v) }))
-  const save = () => {
-    saveEntry("energy", industryId, { ...form, id: newId() })
-    refresh(); onCalcUpdate(); setShowForm(false); setForm(blank)
+  const save = async () => {
+    setSaving(true)
+    await saveHubEntry("energy", siteId, industryId, { ...form, id: newId() })
+    auditSave("energy", siteId, industryId, role, `Listrik ${form.electricity} kWh · Diesel ${form.diesel} L · Batubara ${form.coal} T · Biomassa ${form.biomass} T`)
+    await refresh(); onCalcUpdate(); setShowForm(false); setForm(blank); setSaving(false)
   }
   return (
     <Section meta={meta} entryCount={entries.length}>
@@ -305,45 +345,57 @@ function EnergyForm({ industryId, onCalcUpdate }: { industryId: string; onCalcUp
       {showForm && (
         <div className="mb-4 grid gap-3 rounded-lg border border-yellow-100 bg-yellow-50/40 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Tanggal" required><Input type="date" value={form.date} onChange={f("date")} /></Field>
-          <Field label="Listrik PLN" unit="kWh" tooltip="Total konsumsi listrik dari jaringan PLN"><Input type="number" value={form.electricity || ""} onChange={f("electricity")} min="0" step="1" /></Field>
-          <Field label="Solar / Diesel" unit="Liter" tooltip="Total konsumsi solar/diesel untuk genset & mesin"><Input type="number" value={form.diesel || ""} onChange={f("diesel")} min="0" step="1" /></Field>
-          <Field label="Gas Alam" unit="Nm³" tooltip="Total konsumsi gas alam (dari jaringan atau LNG)"><Input type="number" value={form.naturalGas || ""} onChange={f("naturalGas")} min="0" step="1" /></Field>
-          <Field label="Batubara" unit="Ton" tooltip="Konsumsi batubara untuk boiler (relevan untuk industri berat & tambang)"><Input type="number" value={form.coal || ""} onChange={f("coal")} min="0" step="0.1" /></Field>
-          <Field label="Biomassa" unit="Ton" tooltip="Konsumsi biomassa (cangkang sawit, serbuk kayu, dll.) — dihitung sebagai energi terbarukan"><Input type="number" value={form.biomass || ""} onChange={f("biomass")} min="0" step="0.1" /></Field>
-          <Field label="Uap (Steam)" unit="Ton" tooltip="Uap yang dibeli dari pihak eksternal atau dari unit utilitas"><Input type="number" value={form.steam || ""} onChange={f("steam")} min="0" step="0.1" /></Field>
+          <Field label="Listrik PLN" unit="kWh"><Input type="number" value={form.electricity || ""} onChange={f("electricity")} min="0" step="1" /></Field>
+          <Field label="Solar / Diesel" unit="Liter"><Input type="number" value={form.diesel || ""} onChange={f("diesel")} min="0" step="1" /></Field>
+          <Field label="Gas Alam" unit="Nm³"><Input type="number" value={form.naturalGas || ""} onChange={f("naturalGas")} min="0" step="1" /></Field>
+          <Field label="Batubara" unit="Ton"><Input type="number" value={form.coal || ""} onChange={f("coal")} min="0" step="0.1" /></Field>
+          <Field label="Biomassa" unit="Ton"><Input type="number" value={form.biomass || ""} onChange={f("biomass")} min="0" step="0.1" /></Field>
+          <Field label="Uap (Steam)" unit="Ton"><Input type="number" value={form.steam || ""} onChange={f("steam")} min="0" step="0.1" /></Field>
           <Field label="LPG" unit="kg"><Input type="number" value={form.lpg || ""} onChange={f("lpg")} min="0" step="1" /></Field>
           <div className="col-span-full flex gap-2">
-            <Button size="sm" onClick={save}><Save className="h-3.5 w-3.5" /> Simpan</Button>
+            <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Simpan</Button>
             <Button size="sm" variant="secondary" onClick={() => setShowForm(false)}><X className="h-3.5 w-3.5" /> Batal</Button>
           </div>
         </div>
       )}
-      <EntryTable
-        entries={entries}
-        columns={[
-          { key: "date", label: "Tanggal" },
-          { key: "electricity", label: "Listrik (kWh)", render: (r) => fmt((r as EnergyEntry).electricity) },
-          { key: "diesel", label: "Diesel (L)", render: (r) => fmt((r as EnergyEntry).diesel) },
-          { key: "naturalGas", label: "Gas (Nm³)", render: (r) => fmt((r as EnergyEntry).naturalGas) },
-          { key: "coal", label: "Batubara (T)", render: (r) => fmt((r as EnergyEntry).coal) },
-          { key: "biomass", label: "Biomassa (T)", render: (r) => fmt((r as EnergyEntry).biomass) },
-        ]}
-        onDelete={(id) => { deleteEntry("energy", industryId, id); refresh(); onCalcUpdate() }}
-      />
+      <EntryTable loading={loading} entries={entries} columns={[
+        { key: "date", label: "Tanggal" },
+        { key: "electricity", label: "Listrik (kWh)", render: (r) => fmt((r as EnergyEntry).electricity) },
+        { key: "diesel", label: "Diesel (L)", render: (r) => fmt((r as EnergyEntry).diesel) },
+        { key: "naturalGas", label: "Gas (Nm³)", render: (r) => fmt((r as EnergyEntry).naturalGas) },
+        { key: "coal", label: "Batubara (T)", render: (r) => fmt((r as EnergyEntry).coal) },
+        { key: "biomass", label: "Biomassa (T)", render: (r) => fmt((r as EnergyEntry).biomass) },
+      ]} onDelete={async (id) => {
+        const e = entries.find(x => x.id === id)
+        await deleteHubEntry("energy", id)
+        auditDelete("energy", siteId, industryId, role, e ? `Listrik ${e.electricity} kWh · ${e.date}` : id)
+        refresh(); onCalcUpdate()
+      }} />
     </Section>
   )
 }
 
-function WaterForm({ industryId }: { industryId: string }) {
+function WaterForm({ siteId, industryId, role }: { siteId: string; industryId: string; role: string }) {
   const meta = CATEGORY_META.find((m) => m.key === "water")!
   const [entries, setEntries] = useState<WaterEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const blank = { date: today(), rawWater: 0, groundwater: 0, processWater: 0, wastewater: 0, flowRate: 0 }
   const [form, setForm] = useState<Omit<WaterEntry, "id">>(blank)
-  const refresh = useCallback(() => setEntries(getEntries<WaterEntry>("water", industryId)), [industryId])
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    const data = await getHubEntries<WaterEntry>("water", siteId, industryId)
+    setEntries(data); setLoading(false)
+  }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "date" ? v : num(v) }))
-  const save = () => { saveEntry("water", industryId, { ...form, id: newId() }); refresh(); setShowForm(false); setForm(blank) }
+  const save = async () => {
+    setSaving(true)
+    await saveHubEntry("water", siteId, industryId, { ...form, id: newId() })
+    auditSave("water", siteId, industryId, role, `Air Baku ${form.rawWater} m³ · Air Tanah ${form.groundwater} m³ · ${form.date}`)
+    await refresh(); setShowForm(false); setForm(blank); setSaving(false)
+  }
   return (
     <Section meta={meta} entryCount={entries.length}>
       {!showForm && <Button size="sm" variant="secondary" onClick={() => setShowForm(true)} className="mb-4"><Plus className="h-3.5 w-3.5" /> Tambah Data Air</Button>}
@@ -356,32 +408,48 @@ function WaterForm({ industryId }: { industryId: string }) {
           <Field label="Air Limbah Keluar" unit="m³"><Input type="number" value={form.wastewater || ""} onChange={f("wastewater")} min="0" /></Field>
           <Field label="Debit Aliran" unit="m³/h"><Input type="number" value={form.flowRate || ""} onChange={f("flowRate")} min="0" step="0.1" /></Field>
           <div className="col-span-full flex gap-2">
-            <Button size="sm" onClick={save}><Save className="h-3.5 w-3.5" /> Simpan</Button>
+            <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Simpan</Button>
             <Button size="sm" variant="secondary" onClick={() => setShowForm(false)}><X className="h-3.5 w-3.5" /> Batal</Button>
           </div>
         </div>
       )}
-      <EntryTable entries={entries} columns={[
+      <EntryTable loading={loading} entries={entries} columns={[
         { key: "date", label: "Tanggal" },
         { key: "rawWater", label: "Air Baku (m³)", render: (r) => fmt((r as WaterEntry).rawWater) },
         { key: "groundwater", label: "Air Tanah (m³)", render: (r) => fmt((r as WaterEntry).groundwater) },
         { key: "wastewater", label: "Limbah Cair (m³)", render: (r) => fmt((r as WaterEntry).wastewater) },
-      ]} onDelete={(id) => { deleteEntry("water", industryId, id); refresh() }} />
+      ]} onDelete={async (id) => {
+        const e = entries.find(x => x.id === id)
+        await deleteHubEntry("water", id)
+        auditDelete("water", siteId, industryId, role, e ? `Air Baku ${e.rawWater} m³ · ${e.date}` : id)
+        refresh()
+      }} />
     </Section>
   )
 }
 
-function LabForm({ industryId }: { industryId: string }) {
+function LabForm({ siteId, industryId, role }: { siteId: string; industryId: string; role: string }) {
   const meta = CATEGORY_META.find((m) => m.key === "laboratory")!
   const [entries, setEntries] = useState<LabEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const blank: Omit<LabEntry, "id"> = { date: today(), samplePoint: "", ph: 0, cod: 0, bod: 0, tss: 0, nh3: 0, oilGrease: 0, phenol: 0, heavyMetals: {} }
   const [form, setForm] = useState<Omit<LabEntry, "id">>(blank)
-  const refresh = useCallback(() => setEntries(getEntries<LabEntry>("laboratory", industryId)), [industryId])
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    const data = await getHubEntries<LabEntry>("laboratory", siteId, industryId)
+    setEntries(data); setLoading(false)
+  }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
   const f = (k: keyof Omit<LabEntry, "id" | "heavyMetals">) => (v: string) =>
     setForm((p) => ({ ...p, [k]: k === "date" || k === "samplePoint" ? v : num(v) }))
-  const save = () => { saveEntry("laboratory", industryId, { ...form, id: newId() }); refresh(); setShowForm(false); setForm(blank) }
+  const save = async () => {
+    setSaving(true)
+    await saveHubEntry("laboratory", siteId, industryId, { ...form, id: newId() })
+    auditSave("laboratory", siteId, industryId, role, `${form.samplePoint} — pH ${form.ph} · COD ${form.cod} mg/L · BOD ${form.bod} mg/L`)
+    await refresh(); setShowForm(false); setForm(blank); setSaving(false)
+  }
   return (
     <Section meta={meta} entryCount={entries.length}>
       <div className="mb-4 rounded-lg border border-purple-100 bg-purple-50 px-3 py-2 text-xs text-purple-800">
@@ -391,42 +459,56 @@ function LabForm({ industryId }: { industryId: string }) {
       {showForm && (
         <div className="mb-4 grid gap-3 rounded-lg border border-purple-100 bg-purple-50/40 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Tanggal" required><Input type="date" value={form.date} onChange={f("date")} /></Field>
-          <Field label="Titik Sampling" required tooltip="Contoh: Outlet IPAL, Titik Penaatan 1"><Input value={form.samplePoint} onChange={f("samplePoint")} placeholder="Outlet IPAL" /></Field>
-          <Field label="pH" tooltip="Rentang baku mutu umumnya 6–9"><Input type="number" value={form.ph || ""} onChange={f("ph")} min="0" max="14" step="0.1" /></Field>
+          <Field label="Titik Sampling" required><Input value={form.samplePoint} onChange={f("samplePoint")} placeholder="Outlet IPAL" /></Field>
+          <Field label="pH"><Input type="number" value={form.ph || ""} onChange={f("ph")} min="0" max="14" step="0.1" /></Field>
           <Field label="COD" unit="mg/L"><Input type="number" value={form.cod || ""} onChange={f("cod")} min="0" step="0.1" /></Field>
           <Field label="BOD" unit="mg/L"><Input type="number" value={form.bod || ""} onChange={f("bod")} min="0" step="0.1" /></Field>
           <Field label="TSS" unit="mg/L"><Input type="number" value={form.tss || ""} onChange={f("tss")} min="0" step="0.1" /></Field>
           <Field label="NH₃-N (Amonia)" unit="mg/L"><Input type="number" value={form.nh3 || ""} onChange={f("nh3")} min="0" step="0.01" /></Field>
           <Field label="Minyak & Lemak" unit="mg/L"><Input type="number" value={form.oilGrease || ""} onChange={f("oilGrease")} min="0" step="0.01" /></Field>
-          <Field label="Fenol Total" unit="mg/L"><Input type="number" value={form.phenol || ""} onChange={f("phenol")} min="0" step="0.001" /></Field>
           <div className="col-span-full flex gap-2">
-            <Button size="sm" onClick={save}><Save className="h-3.5 w-3.5" /> Simpan</Button>
+            <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Simpan</Button>
             <Button size="sm" variant="secondary" onClick={() => setShowForm(false)}><X className="h-3.5 w-3.5" /> Batal</Button>
           </div>
         </div>
       )}
-      <EntryTable entries={entries} columns={[
-        { key: "date", label: "Tanggal" },
-        { key: "samplePoint", label: "Titik Sampling" },
+      <EntryTable loading={loading} entries={entries} columns={[
+        { key: "date", label: "Tanggal" }, { key: "samplePoint", label: "Titik Sampling" },
         { key: "ph", label: "pH", render: (r) => String((r as LabEntry).ph) },
         { key: "cod", label: "COD", render: (r) => `${(r as LabEntry).cod} mg/L` },
         { key: "bod", label: "BOD", render: (r) => `${(r as LabEntry).bod} mg/L` },
         { key: "tss", label: "TSS", render: (r) => `${(r as LabEntry).tss} mg/L` },
-      ]} onDelete={(id) => { deleteEntry("laboratory", industryId, id); refresh() }} />
+      ]} onDelete={async (id) => {
+        const e = entries.find(x => x.id === id)
+        await deleteHubEntry("laboratory", id)
+        auditDelete("laboratory", siteId, industryId, role, e ? `${e.samplePoint} · ${e.date}` : id)
+        refresh()
+      }} />
     </Section>
   )
 }
 
-function StackForm({ industryId, onCalcUpdate }: { industryId: string; onCalcUpdate: () => void }) {
+function StackForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string; industryId: string; role: string; onCalcUpdate: () => void }) {
   const meta = CATEGORY_META.find((m) => m.key === "stack")!
   const [entries, setEntries] = useState<StackEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const blank: Omit<StackEntry, "id"> = { date: today(), stackId: "", tsp: 0, so2: 0, nox: 0, co: 0, opacity: 0, flowRate: 0 }
   const [form, setForm] = useState<Omit<StackEntry, "id">>(blank)
-  const refresh = useCallback(() => setEntries(getEntries<StackEntry>("stack", industryId)), [industryId])
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    const data = await getHubEntries<StackEntry>("stack", siteId, industryId)
+    setEntries(data); setLoading(false)
+  }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "date" || k === "stackId" ? v : num(v) }))
-  const save = () => { saveEntry("stack", industryId, { ...form, id: newId() }); refresh(); onCalcUpdate(); setShowForm(false); setForm(blank) }
+  const save = async () => {
+    setSaving(true)
+    await saveHubEntry("stack", siteId, industryId, { ...form, id: newId() })
+    auditSave("stack", siteId, industryId, role, `${form.stackId} — TSP ${form.tsp} · SO₂ ${form.so2} · NOx ${form.nox} mg/Nm³`)
+    await refresh(); onCalcUpdate(); setShowForm(false); setForm(blank); setSaving(false)
+  }
   return (
     <Section meta={meta} entryCount={entries.length}>
       <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-800">
@@ -436,43 +518,56 @@ function StackForm({ industryId, onCalcUpdate }: { industryId: string; onCalcUpd
       {showForm && (
         <div className="mb-4 grid gap-3 rounded-lg border border-red-100 bg-red-50/40 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Tanggal" required><Input type="date" value={form.date} onChange={f("date")} /></Field>
-          <Field label="ID Cerobong" required tooltip="Contoh: Stack-01, Boiler-A"><Input value={form.stackId} onChange={f("stackId")} placeholder="Stack-01" /></Field>
-          <Field label="TSP (Partikulat)" unit="mg/Nm³" tooltip="Baku mutu umum ≤ 150 mg/Nm³"><Input type="number" value={form.tsp || ""} onChange={f("tsp")} min="0" step="0.1" /></Field>
-          <Field label="SO₂" unit="mg/Nm³" tooltip="Baku mutu umum ≤ 800 mg/Nm³"><Input type="number" value={form.so2 || ""} onChange={f("so2")} min="0" step="0.1" /></Field>
-          <Field label="NOx" unit="mg/Nm³" tooltip="Baku mutu umum ≤ 1000 mg/Nm³"><Input type="number" value={form.nox || ""} onChange={f("nox")} min="0" step="0.1" /></Field>
+          <Field label="ID Cerobong" required><Input value={form.stackId} onChange={f("stackId")} placeholder="Stack-01" /></Field>
+          <Field label="TSP (Partikulat)" unit="mg/Nm³"><Input type="number" value={form.tsp || ""} onChange={f("tsp")} min="0" step="0.1" /></Field>
+          <Field label="SO₂" unit="mg/Nm³"><Input type="number" value={form.so2 || ""} onChange={f("so2")} min="0" step="0.1" /></Field>
+          <Field label="NOx" unit="mg/Nm³"><Input type="number" value={form.nox || ""} onChange={f("nox")} min="0" step="0.1" /></Field>
           <Field label="CO" unit="mg/Nm³"><Input type="number" value={form.co || ""} onChange={f("co")} min="0" step="0.1" /></Field>
-          <Field label="Opasitas" unit="%" tooltip="Persentase penggelapan asap. Baku mutu ≤ 35%"><Input type="number" value={form.opacity || ""} onChange={f("opacity")} min="0" max="100" step="1" /></Field>
+          <Field label="Opasitas" unit="%"><Input type="number" value={form.opacity || ""} onChange={f("opacity")} min="0" max="100" step="1" /></Field>
           <Field label="Laju Alir Cerobong" unit="Nm³/jam"><Input type="number" value={form.flowRate || ""} onChange={f("flowRate")} min="0" step="1" /></Field>
           <div className="col-span-full flex gap-2">
-            <Button size="sm" onClick={save}><Save className="h-3.5 w-3.5" /> Simpan</Button>
+            <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Simpan</Button>
             <Button size="sm" variant="secondary" onClick={() => setShowForm(false)}><X className="h-3.5 w-3.5" /> Batal</Button>
           </div>
         </div>
       )}
-      <EntryTable entries={entries} columns={[
-        { key: "date", label: "Tanggal" },
-        { key: "stackId", label: "Cerobong" },
+      <EntryTable loading={loading} entries={entries} columns={[
+        { key: "date", label: "Tanggal" }, { key: "stackId", label: "Cerobong" },
         { key: "tsp", label: "TSP", render: (r) => `${(r as StackEntry).tsp} mg/Nm³` },
         { key: "so2", label: "SO₂", render: (r) => `${(r as StackEntry).so2} mg/Nm³` },
         { key: "nox", label: "NOx", render: (r) => `${(r as StackEntry).nox} mg/Nm³` },
         { key: "opacity", label: "Opasitas", render: (r) => `${(r as StackEntry).opacity}%` },
-      ]} onDelete={(id) => { deleteEntry("stack", industryId, id); refresh(); onCalcUpdate() }} />
+      ]} onDelete={async (id) => {
+        const e = entries.find(x => x.id === id)
+        await deleteHubEntry("stack", id)
+        auditDelete("stack", siteId, industryId, role, e ? `${e.stackId} · ${e.date}` : id)
+        refresh(); onCalcUpdate()
+      }} />
     </Section>
   )
 }
 
-function B3Form({ industryId }: { industryId: string }) {
+function B3Form({ siteId, industryId, role }: { siteId: string; industryId: string; role: string }) {
   const meta = CATEGORY_META.find((m) => m.key === "b3")!
   const [entries, setEntries] = useState<B3Entry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const blank: Omit<B3Entry, "id"> = { date: today(), wasteType: "", wasteCode: "", qty: 0, storageDuration: 0, manifestNo: "", recycler: "", disposalCompany: "" }
   const [form, setForm] = useState<Omit<B3Entry, "id">>(blank)
-  const refresh = useCallback(() => setEntries(getEntries<B3Entry>("b3", industryId)), [industryId])
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    const data = await getHubEntries<B3Entry>("b3", siteId, industryId)
+    setEntries(data); setLoading(false)
+  }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "qty" || k === "storageDuration" ? num(v) : v }))
-  const save = () => {
+  const save = async () => {
     if (!form.wasteType) return
-    saveEntry("b3", industryId, { ...form, id: newId() }); refresh(); setShowForm(false); setForm(blank)
+    setSaving(true)
+    await saveHubEntry("b3", siteId, industryId, { ...form, id: newId() })
+    auditSave("b3", siteId, industryId, role, `${form.wasteType} (${form.wasteCode}) — ${form.qty} kg · Simpan ${form.storageDuration} hari`)
+    await refresh(); setShowForm(false); setForm(blank); setSaving(false)
   }
   return (
     <Section meta={meta} entryCount={entries.length}>
@@ -483,41 +578,57 @@ function B3Form({ industryId }: { industryId: string }) {
       {showForm && (
         <div className="mb-4 grid gap-3 rounded-lg border border-amber-100 bg-amber-50/40 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Tanggal" required><Input type="date" value={form.date} onChange={f("date")} /></Field>
-          <Field label="Jenis Limbah B3" required tooltip="Misal: Aki Bekas, Oli Bekas, Lampu TL"><Input value={form.wasteType} onChange={f("wasteType")} placeholder="Oli Bekas" /></Field>
-          <Field label="Kode Limbah" tooltip="Kode dari Lampiran PP 101/2014, misal B105d"><Input value={form.wasteCode} onChange={f("wasteCode")} placeholder="B105d" /></Field>
+          <Field label="Jenis Limbah B3" required><Input value={form.wasteType} onChange={f("wasteType")} placeholder="Oli Bekas" /></Field>
+          <Field label="Kode Limbah"><Input value={form.wasteCode} onChange={f("wasteCode")} placeholder="B105d" /></Field>
           <Field label="Kuantitas" unit="kg" required><Input type="number" value={form.qty || ""} onChange={f("qty")} min="0" step="0.1" /></Field>
-          <Field label="Lama Penyimpanan" unit="hari" tooltip="Maksimal 90 hari sesuai regulasi"><Input type="number" value={form.storageDuration || ""} onChange={f("storageDuration")} min="0" max="365" /></Field>
-          <Field label="No. Manifest (Festronik)" tooltip="Nomor manifest elektronik KLHK"><Input value={form.manifestNo} onChange={f("manifestNo")} placeholder="FM-2024-XXXXX" /></Field>
-          <Field label="Perusahaan Pengumpul / Daur Ulang"><Input value={form.recycler} onChange={f("recycler")} placeholder="PT Pengolah B3" /></Field>
+          <Field label="Lama Penyimpanan" unit="hari"><Input type="number" value={form.storageDuration || ""} onChange={f("storageDuration")} min="0" max="365" /></Field>
+          <Field label="No. Manifest (Festronik)"><Input value={form.manifestNo} onChange={f("manifestNo")} placeholder="FM-2024-XXXXX" /></Field>
+          <Field label="Perusahaan Pengumpul"><Input value={form.recycler} onChange={f("recycler")} placeholder="PT Pengolah B3" /></Field>
           <Field label="Perusahaan Pemusnah"><Input value={form.disposalCompany} onChange={f("disposalCompany")} placeholder="PT Disposal" /></Field>
           <div className="col-span-full flex gap-2">
-            <Button size="sm" onClick={save}><Save className="h-3.5 w-3.5" /> Simpan</Button>
+            <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Simpan</Button>
             <Button size="sm" variant="secondary" onClick={() => setShowForm(false)}><X className="h-3.5 w-3.5" /> Batal</Button>
           </div>
         </div>
       )}
-      <EntryTable entries={entries} columns={[
-        { key: "date", label: "Tanggal" },
-        { key: "wasteType", label: "Jenis Limbah" },
-        { key: "wasteCode", label: "Kode" },
+      <EntryTable loading={loading} entries={entries} columns={[
+        { key: "date", label: "Tanggal" }, { key: "wasteType", label: "Jenis Limbah" }, { key: "wasteCode", label: "Kode" },
         { key: "qty", label: "Qty (kg)", render: (r) => fmt((r as B3Entry).qty) },
         { key: "storageDuration", label: "Masa Simpan", render: (r) => { const d = (r as B3Entry).storageDuration; return <span className={d > 90 ? "font-bold text-red-600" : ""}>{d} hari</span> } },
         { key: "manifestNo", label: "Manifest" },
-      ]} onDelete={(id) => { deleteEntry("b3", industryId, id); refresh() }} />
+        { key: "recycler", label: "Pengumpul" },
+        { key: "disposalCompany", label: "Pemusnah" },
+      ]} onDelete={async (id) => {
+        const e = entries.find(x => x.id === id)
+        await deleteHubEntry("b3", id)
+        auditDelete("b3", siteId, industryId, role, e ? `${e.wasteType} — ${e.qty} kg` : id)
+        refresh()
+      }} />
     </Section>
   )
 }
 
-function TransportForm({ industryId, onCalcUpdate }: { industryId: string; onCalcUpdate: () => void }) {
+function TransportForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string; industryId: string; role: string; onCalcUpdate: () => void }) {
   const meta = CATEGORY_META.find((m) => m.key === "transport")!
   const [entries, setEntries] = useState<TransportEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const blank: Omit<TransportEntry, "id"> = { date: today(), vehicleType: "truck", fuelType: "diesel", distance: 0, cargoWeight: 0 }
   const [form, setForm] = useState<Omit<TransportEntry, "id">>(blank)
-  const refresh = useCallback(() => setEntries(getEntries<TransportEntry>("transport", industryId)), [industryId])
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    const data = await getHubEntries<TransportEntry>("transport", siteId, industryId)
+    setEntries(data); setLoading(false)
+  }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "vehicleType" || k === "fuelType" || k === "date" ? v : num(v) }))
-  const save = () => { saveEntry("transport", industryId, { ...form, id: newId() }); refresh(); onCalcUpdate(); setShowForm(false); setForm(blank) }
+  const save = async () => {
+    setSaving(true)
+    await saveHubEntry("transport", siteId, industryId, { ...form, id: newId() })
+    auditSave("transport", siteId, industryId, role, `${form.vehicleType} · ${form.distance} km · ${form.cargoWeight} ton`)
+    await refresh(); onCalcUpdate(); setShowForm(false); setForm(blank); setSaving(false)
+  }
   return (
     <Section meta={meta} entryCount={entries.length}>
       <div className="mb-4 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-700">
@@ -541,32 +652,47 @@ function TransportForm({ industryId, onCalcUpdate }: { industryId: string; onCal
           <Field label="Jarak Tempuh" unit="km" required><Input type="number" value={form.distance || ""} onChange={f("distance")} min="0" step="0.1" /></Field>
           <Field label="Berat Muatan" unit="ton" required><Input type="number" value={form.cargoWeight || ""} onChange={f("cargoWeight")} min="0" step="0.1" /></Field>
           <div className="col-span-full flex gap-2">
-            <Button size="sm" onClick={save}><Save className="h-3.5 w-3.5" /> Simpan</Button>
+            <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Simpan</Button>
             <Button size="sm" variant="secondary" onClick={() => setShowForm(false)}><X className="h-3.5 w-3.5" /> Batal</Button>
           </div>
         </div>
       )}
-      <EntryTable entries={entries} columns={[
-        { key: "date", label: "Tanggal" },
-        { key: "vehicleType", label: "Kendaraan" },
-        { key: "fuelType", label: "BBM" },
+      <EntryTable loading={loading} entries={entries} columns={[
+        { key: "date", label: "Tanggal" }, { key: "vehicleType", label: "Kendaraan" }, { key: "fuelType", label: "BBM" },
         { key: "distance", label: "Jarak (km)", render: (r) => fmt((r as TransportEntry).distance) },
         { key: "cargoWeight", label: "Muatan (ton)", render: (r) => fmt((r as TransportEntry).cargoWeight) },
-      ]} onDelete={(id) => { deleteEntry("transport", industryId, id); refresh(); onCalcUpdate() }} />
+      ]} onDelete={async (id) => {
+        const e = entries.find(x => x.id === id)
+        await deleteHubEntry("transport", id)
+        auditDelete("transport", siteId, industryId, role, e ? `${e.vehicleType} · ${e.distance} km · ${e.date}` : id)
+        refresh(); onCalcUpdate()
+      }} />
     </Section>
   )
 }
 
-function MaterialForm({ industryId }: { industryId: string }) {
+function MaterialForm({ siteId, industryId, role }: { siteId: string; industryId: string; role: string }) {
   const meta = CATEGORY_META.find((m) => m.key === "materials")!
   const [entries, setEntries] = useState<MaterialEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const blank: Omit<MaterialEntry, "id"> = { date: today(), material: "", supplier: "", qty: 0, unit: "Ton", countryOfOrigin: "Indonesia" }
   const [form, setForm] = useState<Omit<MaterialEntry, "id">>(blank)
-  const refresh = useCallback(() => setEntries(getEntries<MaterialEntry>("materials", industryId)), [industryId])
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    const data = await getHubEntries<MaterialEntry>("materials", siteId, industryId)
+    setEntries(data); setLoading(false)
+  }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "qty" ? num(v) : v }))
-  const save = () => { if (!form.material) return; saveEntry("materials", industryId, { ...form, id: newId() }); refresh(); setShowForm(false); setForm(blank) }
+  const save = async () => {
+    if (!form.material) return
+    setSaving(true)
+    await saveHubEntry("materials", siteId, industryId, { ...form, id: newId() })
+    auditSave("materials", siteId, industryId, role, `${form.material} — ${form.qty} ${form.unit} dari ${form.supplier || "—"}`)
+    await refresh(); setShowForm(false); setForm(blank); setSaving(false)
+  }
   return (
     <Section meta={meta} entryCount={entries.length}>
       {!showForm && <Button size="sm" variant="secondary" onClick={() => setShowForm(true)} className="mb-4"><Plus className="h-3.5 w-3.5" /> Tambah Data Material</Button>}
@@ -579,32 +705,49 @@ function MaterialForm({ industryId }: { industryId: string }) {
           <Field label="Satuan">
             <Select value={form.unit} onChange={f("unit")} options={[{ value: "Ton", label: "Ton" }, { value: "kg", label: "kg" }, { value: "L", label: "Liter" }, { value: "m³", label: "m³" }, { value: "Unit", label: "Unit" }]} />
           </Field>
-          <Field label="Negara Asal" tooltip="Country of Origin — relevan untuk Scope 3 upstream"><Input value={form.countryOfOrigin} onChange={f("countryOfOrigin")} placeholder="Indonesia" /></Field>
+          <Field label="Negara Asal"><Input value={form.countryOfOrigin} onChange={f("countryOfOrigin")} placeholder="Indonesia" /></Field>
           <div className="col-span-full flex gap-2">
-            <Button size="sm" onClick={save}><Save className="h-3.5 w-3.5" /> Simpan</Button>
+            <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Simpan</Button>
             <Button size="sm" variant="secondary" onClick={() => setShowForm(false)}><X className="h-3.5 w-3.5" /> Batal</Button>
           </div>
         </div>
       )}
-      <EntryTable entries={entries} columns={[
-        { key: "date", label: "Tanggal" }, { key: "material", label: "Material" },
-        { key: "supplier", label: "Pemasok" }, { key: "qty", label: "Qty", render: (r) => `${fmt((r as MaterialEntry).qty)} ${(r as MaterialEntry).unit}` },
+      <EntryTable loading={loading} entries={entries} columns={[
+        { key: "date", label: "Tanggal" }, { key: "material", label: "Material" }, { key: "supplier", label: "Pemasok" },
+        { key: "qty", label: "Qty", render: (r) => `${fmt((r as MaterialEntry).qty)} ${(r as MaterialEntry).unit}` },
         { key: "countryOfOrigin", label: "Asal" },
-      ]} onDelete={(id) => { deleteEntry("materials", industryId, id); refresh() }} />
+      ]} onDelete={async (id) => {
+        const e = entries.find(x => x.id === id)
+        await deleteHubEntry("materials", id)
+        auditDelete("materials", siteId, industryId, role, e ? `${e.material} — ${e.qty} ${e.unit}` : id)
+        refresh()
+      }} />
     </Section>
   )
 }
 
-function SupplierForm({ industryId }: { industryId: string }) {
+function SupplierForm({ siteId, industryId, role }: { siteId: string; industryId: string; role: string }) {
   const meta = CATEGORY_META.find((m) => m.key === "supplier")!
   const [entries, setEntries] = useState<SupplierEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const blank: Omit<SupplierEntry, "id"> = { date: today(), supplierName: "", category: "", country: "Indonesia", sustainability: "none", notes: "" }
   const [form, setForm] = useState<Omit<SupplierEntry, "id">>(blank)
-  const refresh = useCallback(() => setEntries(getEntries<SupplierEntry>("supplier", industryId)), [industryId])
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    const data = await getHubEntries<SupplierEntry>("supplier", siteId, industryId)
+    setEntries(data); setLoading(false)
+  }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: v }))
-  const save = () => { if (!form.supplierName) return; saveEntry("supplier", industryId, { ...form, id: newId() }); refresh(); setShowForm(false); setForm(blank) }
+  const save = async () => {
+    if (!form.supplierName) return
+    setSaving(true)
+    await saveHubEntry("supplier", siteId, industryId, { ...form, id: newId() })
+    auditSave("supplier", siteId, industryId, role, `${form.supplierName} · ${form.country} · ${form.sustainability}`)
+    await refresh(); setShowForm(false); setForm(blank); setSaving(false)
+  }
   return (
     <Section meta={meta} entryCount={entries.length}>
       {!showForm && <Button size="sm" variant="secondary" onClick={() => setShowForm(true)} className="mb-4"><Plus className="h-3.5 w-3.5" /> Tambah Pemasok</Button>}
@@ -623,37 +766,47 @@ function SupplierForm({ industryId }: { industryId: string }) {
           </Field>
           <Field label="Catatan"><Input value={form.notes} onChange={f("notes")} placeholder="Keterangan tambahan..." /></Field>
           <div className="col-span-full flex gap-2">
-            <Button size="sm" onClick={save}><Save className="h-3.5 w-3.5" /> Simpan</Button>
+            <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Simpan</Button>
             <Button size="sm" variant="secondary" onClick={() => setShowForm(false)}><X className="h-3.5 w-3.5" /> Batal</Button>
           </div>
         </div>
       )}
-      <EntryTable entries={entries} columns={[
-        { key: "date", label: "Tanggal" }, { key: "supplierName", label: "Pemasok" },
-        { key: "country", label: "Negara" }, { key: "sustainability", label: "Status",
-          render: (r) => { const s = (r as SupplierEntry).sustainability; return <span className={s === "certified" ? "text-emerald-700 font-semibold" : s === "partial" ? "text-amber-700" : "text-red-600"}>{s === "certified" ? "Tersertifikasi" : s === "partial" ? "Sebagian" : "Belum"}</span> } },
-      ]} onDelete={(id) => { deleteEntry("supplier", industryId, id); refresh() }} />
+      <EntryTable loading={loading} entries={entries} columns={[
+        { key: "date", label: "Tanggal" }, { key: "supplierName", label: "Pemasok" }, { key: "country", label: "Negara" },
+        { key: "sustainability", label: "Status", render: (r) => { const s = (r as SupplierEntry).sustainability; return <span className={s === "certified" ? "text-emerald-700 font-semibold" : s === "partial" ? "text-amber-700" : "text-red-600"}>{s === "certified" ? "Tersertifikasi" : s === "partial" ? "Sebagian" : "Belum"}</span> } },
+      ]} onDelete={async (id) => {
+        const e = entries.find(x => x.id === id)
+        await deleteHubEntry("supplier", id)
+        auditDelete("supplier", siteId, industryId, role, e ? `${e.supplierName} · ${e.country}` : id)
+        refresh()
+      }} />
     </Section>
   )
 }
 
-function DocumentsForm({ industryId }: { industryId: string }) {
+function DocumentsForm({ siteId, industryId, role }: { siteId: string; industryId: string; role: string }) {
   const meta = CATEGORY_META.find((m) => m.key === "documents")!
   const [entries, setEntries] = useState<DocumentEntry[]>([])
+  const [loading, setLoading] = useState(true)
   const [docType, setDocType] = useState("lab_report")
   const [notes, setNotes] = useState("")
-  const refresh = useCallback(() => setEntries(getEntries<DocumentEntry>("documents", industryId)), [industryId])
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    const data = await getHubEntries<DocumentEntry>("documents", siteId, industryId)
+    setEntries(data); setLoading(false)
+  }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = (ev) => {
-      saveEntry("documents", industryId, {
+    reader.onload = async (ev) => {
+      await saveHubEntry("documents", siteId, industryId, {
         id: newId(), date: today(), docType, fileName: file.name,
         fileSize: file.size, fileDataUrl: ev.target?.result as string, notes,
       })
+      auditSave("documents", siteId, industryId, role, `${file.name} (${docType})`)
       refresh(); setNotes("")
     }
     reader.readAsDataURL(file)
@@ -693,7 +846,11 @@ function DocumentsForm({ industryId }: { industryId: string }) {
           <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={handleFile} className="hidden" />
         </label>
       </div>
-      {entries.length === 0
+      {loading ? (
+        <div className="flex items-center justify-center py-8 text-sm text-neutral-400 gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" /> Memuat dokumen...
+        </div>
+      ) : entries.length === 0
         ? <p className="py-6 text-center text-sm text-neutral-400">Belum ada dokumen yang diunggah.</p>
         : (
           <div className="grid gap-2 sm:grid-cols-2">
@@ -706,7 +863,11 @@ function DocumentsForm({ industryId }: { industryId: string }) {
                     <p className="text-[11px] text-neutral-400">{docTypeOptions.find((o) => o.value === doc.docType)?.label} · {doc.date}</p>
                   </div>
                 </div>
-                <button onClick={() => { deleteEntry("documents", industryId, doc.id); refresh() }} className="ml-2 shrink-0 rounded p-1 text-neutral-300 hover:bg-red-50 hover:text-red-500">
+                <button onClick={async () => {
+                  await deleteHubEntry("documents", doc.id)
+                  auditDelete("documents", siteId, industryId, role, doc.fileName)
+                  refresh()
+                }} className="ml-2 shrink-0 rounded p-1 text-neutral-300 hover:bg-red-50 hover:text-red-500">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -722,23 +883,22 @@ function DocumentsForm({ industryId }: { industryId: string }) {
 ══════════════════════════════════════════════ */
 
 export default function DataHubPage() {
-  const role = getRoleClient()
+  const role = getRoleClient() ?? "operator"
   const readOnly = isReadOnly(role)
   const industryId = useIndustryId()
+  const siteId = useSiteId()
   const industry = INDUSTRIES.find((i) => i.id === industryId)
   const [kpis, setKpis] = useState<CalculatedKPIs | null>(null)
   const [showKpi, setShowKpi] = useState(false)
 
-  const refreshKpis = useCallback(() => {
-    if (industryId) setKpis(calcEngine(industryId))
-  }, [industryId])
+  const refreshKpis = useCallback(async () => {
+    if (siteId && industryId) {
+      const res = await calcEngineAsync(siteId, industryId)
+      setKpis(res)
+    }
+  }, [siteId, industryId])
 
   useEffect(() => { refreshKpis() }, [refreshKpis])
-
-  const totalEntries = CATEGORY_META.reduce((sum, m) => {
-    if (!industryId) return sum
-    return sum + getEntries(m.key, industryId).length
-  }, 0)
 
   return (
     <div className="space-y-6">
@@ -755,24 +915,18 @@ export default function DataHubPage() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-            <Database className="h-3.5 w-3.5" /> Single Source of Truth — Model Hibrida Enterprise
+            <Database className="h-3.5 w-3.5" /> Single Source of Truth — Database Terpusat
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Data Hub (Pusat Ingest Data Operasional)</h1>
           <p className="mt-1 max-w-2xl text-sm text-neutral-500">
-            Pusat penampungan data operasional site (Operator/Staff Input Data). Seluruh data kuantitatif yang diinput atau diimpor di sini mengalir secara otomatis ke 13 modul analitik LCA, Carbon, dan ESG.
+            Pusat penampungan data operasional site. Data tersimpan secara permanen di database dan mengalir otomatis ke 13 modul analitik LCA, Carbon, dan ESG.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {industryId && totalEntries > 0 && (
-            <span className="text-xs text-neutral-500">
-              <Clock className="inline h-3.5 w-3.5 mr-1" />
-              {totalEntries} total entri
-            </span>
-          )}
-          <Button
-            onClick={() => { refreshKpis(); setShowKpi(true) }}
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
-          >
+          <span className="text-xs text-neutral-500 flex items-center gap-1">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Terhubung ke Database
+          </span>
+          <Button onClick={() => { refreshKpis(); setShowKpi(true) }} className="bg-emerald-600 text-white hover:bg-emerald-700">
             <Calculator className="h-4 w-4" /> Lihat KPI Terhitung
           </Button>
           <Link href="/dashboard/settings">
@@ -793,7 +947,7 @@ export default function DataHubPage() {
         </div>
       )}
 
-      {/* ── Calculated KPI notice banner ── */}
+      {/* ── KPI banner ── */}
       {industry && (
         <div className="rounded-xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 px-5 py-3.5">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -804,7 +958,7 @@ export default function DataHubPage() {
               <div>
                 <p className="text-sm font-bold text-emerald-900">{industry.name}</p>
                 <p className="text-xs text-emerald-700">
-                  Scope 1, 2, 3 · GWP · AP · EP · Total Energi · Intensitas Energi → dihitung otomatis dari data di bawah ini
+                  Scope 1, 2, 3 · GWP · AP · EP · Total Energi → dihitung otomatis dari data di bawah ini
                 </p>
               </div>
             </div>
@@ -827,16 +981,16 @@ export default function DataHubPage() {
       {/* ── Category Forms ── */}
       {industry && (
         <div className="space-y-4">
-          <ProductionForm industryId={industryId!} />
-          <MaterialForm industryId={industryId!} />
-          <EnergyForm industryId={industryId!} onCalcUpdate={refreshKpis} />
-          <WaterForm industryId={industryId!} />
-          <LabForm industryId={industryId!} />
-          <StackForm industryId={industryId!} onCalcUpdate={refreshKpis} />
-          <B3Form industryId={industryId!} />
-          <TransportForm industryId={industryId!} onCalcUpdate={refreshKpis} />
-          <SupplierForm industryId={industryId!} />
-          <DocumentsForm industryId={industryId!} />
+          <ProductionForm siteId={siteId} industryId={industryId} role={role} />
+          <MaterialForm siteId={siteId} industryId={industryId} role={role} />
+          <EnergyForm siteId={siteId} industryId={industryId} role={role} onCalcUpdate={refreshKpis} />
+          <WaterForm siteId={siteId} industryId={industryId} role={role} />
+          <LabForm siteId={siteId} industryId={industryId} role={role} />
+          <StackForm siteId={siteId} industryId={industryId} role={role} onCalcUpdate={refreshKpis} />
+          <B3Form siteId={siteId} industryId={industryId} role={role} />
+          <TransportForm siteId={siteId} industryId={industryId} role={role} onCalcUpdate={refreshKpis} />
+          <SupplierForm siteId={siteId} industryId={industryId} role={role} />
+          <DocumentsForm siteId={siteId} industryId={industryId} role={role} />
         </div>
       )}
 

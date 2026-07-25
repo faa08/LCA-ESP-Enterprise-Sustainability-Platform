@@ -244,12 +244,12 @@ export function Sidebar({
           <div className="flex items-center px-4 py-3">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-sm font-semibold text-muted">
-                {role === "manager" ? "IT" : "AT"}
+                {role ? role.slice(0, 2).toUpperCase() : "??"}
               </div>
               <div className="flex min-w-0 items-center gap-2">
                 <div className="truncate">
                   <div className="text-sm font-medium text-primary">
-                    {role === "manager" ? "Tim IT" : "Petinggi"}
+                    {ROLE_LABELS[role ?? "viewer"]?.title ?? role}
                   </div>
                   {role ? (
                     <span className={cn("inline-block rounded px-1.5 py-0.5 text-[10px] font-medium", roleBadge[role])}>
