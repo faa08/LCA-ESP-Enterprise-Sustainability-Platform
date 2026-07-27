@@ -105,10 +105,10 @@ export function ProperRankCard({ compact = false }: { compact?: boolean }) {
             <p className="text-[11px] font-medium opacity-80">{t(dict, "ai.proper_rank")}</p>
             <p className="text-xl font-bold">{rank}</p>
           </div>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-red-600"><b>{airFails}</b> {t(dict, "proper.air_limbah")}</span>
-            <span className="text-red-600"><b>{emFails}</b> {t(dict, "proper.emisi")}</span>
-            <span className="text-red-600"><b>{b3Fails}</b> {t(dict, "proper.limbah_b3")}</span>
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <span className={airFails > 0 ? "text-red-600" : "text-emerald-600"}><b>{airFails}</b> {t(dict, "proper.air_limbah")}</span>
+            <span className={emFails > 0 ? "text-red-600" : "text-emerald-600"}><b>{emFails}</b> {t(dict, "proper.emisi")}</span>
+            <span className={b3Fails > 0 ? "text-red-600" : "text-emerald-600"}><b>{b3Fails}</b> {t(dict, "proper.limbah_b3")}</span>
             {entered === 0 && <Badge variant="neutral">{t(dict, "proper.no_data_short")}</Badge>}
           </div>
         </div>
@@ -140,15 +140,15 @@ export function ProperRankCard({ compact = false }: { compact?: boolean }) {
       </CardHeader>
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-lg border border-neutral-100 p-3 text-center">
-          <p className="text-xl font-bold text-red-600">{airFails}</p>
+          <p className={`text-xl font-bold ${airFails > 0 ? "text-red-600" : "text-emerald-600"}`}>{airFails}</p>
           <p className="text-xs text-neutral-500">{t(dict, "proper.air_limbah")}</p>
         </div>
         <div className="rounded-lg border border-neutral-100 p-3 text-center">
-          <p className="text-xl font-bold text-red-600">{emFails}</p>
+          <p className={`text-xl font-bold ${emFails > 0 ? "text-red-600" : "text-emerald-600"}`}>{emFails}</p>
           <p className="text-xs text-neutral-500">{t(dict, "proper.emisi")}</p>
         </div>
         <div className="rounded-lg border border-neutral-100 p-3 text-center">
-          <p className="text-xl font-bold text-red-600">{b3Fails}</p>
+          <p className={`text-xl font-bold ${b3Fails > 0 ? "text-red-600" : "text-emerald-600"}`}>{b3Fails}</p>
           <p className="text-xs text-neutral-500">{t(dict, "proper.limbah_b3")}</p>
         </div>
       </div>
