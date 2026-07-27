@@ -217,15 +217,15 @@ export default function ProductAssessmentPage() {
           {/* BOM Table */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><Factory className="h-4 w-4" /></div>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><Factory className="h-4 w-4" /></div>
                   <div>
                     <CardTitle>Bill of Material (BOM)</CardTitle>
                     <p className="text-xs text-neutral-500 mt-0.5">Daftar bahan baku &amp; komponen penyusun produk — dasar Life Cycle Inventory (LCI)</p>
                   </div>
                 </div>
-                <Button variant="secondary" size="sm" onClick={() => addBOM(active.id)}>
+                <Button variant="secondary" size="sm" onClick={() => addBOM(active.id)} className="w-full sm:w-auto shrink-0">
                   <Plus className="mr-1.5 h-3.5 w-3.5" />Tambah Material
                 </Button>
               </div>
