@@ -938,16 +938,18 @@ export default function DataHubPage() {
             Pusat penampungan data operasional site. Data tersimpan secara permanen di database dan mengalir otomatis ke 13 modul analitik LCA, Carbon, dan ESG.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col items-start lg:items-end gap-3">
           <span className="text-xs text-neutral-500 flex items-center gap-1">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Terhubung ke Database
           </span>
-          <Button onClick={() => { refreshKpis(); setShowKpi(true) }} className="bg-emerald-600 text-white hover:bg-emerald-700">
-            <Calculator className="h-4 w-4" /> Lihat KPI Terhitung
-          </Button>
-          <Link href="/dashboard/company-profile">
-            <Button variant="secondary"><Building2 className="h-4 w-4" /> Profil Perusahaan</Button>
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/dashboard/company-profile">
+              <Button variant="secondary" size="sm"><Building2 className="h-4 w-4" /> Profil Perusahaan</Button>
+            </Link>
+            <Button size="sm" onClick={() => { refreshKpis(); setShowKpi(true) }} className="bg-emerald-600 text-white hover:bg-emerald-700">
+              <Calculator className="h-4 w-4" /> Lihat KPI Terhitung
+            </Button>
+          </div>
         </div>
       </div>
 
