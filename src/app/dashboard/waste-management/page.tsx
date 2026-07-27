@@ -123,12 +123,22 @@ export default function WasteManagement() {
                 <div className="flex h-72 items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={compData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" nameKey="name" label={({ name, percent }: { name?: string; percent?: number }) => `${name || ""} (${((percent || 0) * 100).toFixed(0)}%)`}>
+                      <Pie data={compData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" nameKey="name">
                         {compData.map((_, i) => (
                           <Cell key={i} fill={COLORS[i % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip formatter={(value: any) => [`${fmt(Number(value) || 0)} kg`, "Jumlah"]} />
+                      <Legend
+                        layout="horizontal"
+                        verticalAlign="bottom"
+                        align="center"
+                        formatter={(value, entry: any) => {
+                          const item = compData.find(d => d.name === value)
+                          const pct = item && totalQtyKg ? ((item.value / totalQtyKg) * 100).toFixed(0) : "0"
+                          return <span className="text-xs text-neutral-600">{value} ({pct}%)</span>
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
