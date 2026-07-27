@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useState, useEffect, useCallback } from "react"
 import {
   Database, CheckCircle2, AlertTriangle, ArrowRight, ChevronDown, ChevronUp,
-  Plus, Trash2, Calculator, Settings2, Clock, FileText, Upload, Info,
+  Plus, Trash2, Calculator, Settings2, Building2, Clock, FileText, Upload, Info,
   Zap, BarChart3, X, Save, Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -945,8 +945,8 @@ export default function DataHubPage() {
           <Button onClick={() => { refreshKpis(); setShowKpi(true) }} className="bg-emerald-600 text-white hover:bg-emerald-700">
             <Calculator className="h-4 w-4" /> Lihat KPI Terhitung
           </Button>
-          <Link href="/dashboard/settings">
-            <Button variant="secondary"><Settings2 className="h-4 w-4" /> Pengaturan Industri</Button>
+          <Link href="/dashboard/company-profile">
+            <Button variant="secondary"><Building2 className="h-4 w-4" /> Profil Perusahaan</Button>
           </Link>
         </div>
       </div>
@@ -956,9 +956,9 @@ export default function DataHubPage() {
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
           <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-amber-500" />
           <p className="font-semibold text-amber-800">Industri belum dipilih</p>
-          <p className="mt-1 text-sm text-amber-700">Pilih jenis industri di Pengaturan terlebih dahulu untuk memulai input data.</p>
-          <Link href="/dashboard/settings" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-amber-700 hover:underline">
-            Buka Pengaturan <ArrowRight className="h-3.5 w-3.5" />
+          <p className="mt-1 text-sm text-amber-700">Pilih jenis industri di Modul 1 (Company Profile) terlebih dahulu untuk memulai input data.</p>
+          <Link href="/dashboard/company-profile" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-amber-700 hover:underline">
+            Buka Profil Perusahaan <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       )}
