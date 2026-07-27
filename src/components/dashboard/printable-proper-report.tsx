@@ -6,7 +6,7 @@ import { Printer, X, Download, ShieldCheck, CheckCircle2, AlertTriangle, FileTex
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useIndustryId } from "@/lib/use-industry-id"
-import { getMeasurements, paramValue, evaluate } from "@/lib/measurements"
+import { useMeasurements, paramValue, evaluate } from "@/lib/measurements"
 import {
   INDUSTRIES,
   getEmissionParams,
@@ -18,7 +18,7 @@ import {
 export function PrintableProperReportModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const industryId = useIndustryId()
   const industry = INDUSTRIES.find((i) => i.id === industryId) ?? INDUSTRIES[0]
-  const measurements = getMeasurements(industryId)
+  const measurements = useMeasurements(industryId)
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
 

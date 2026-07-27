@@ -53,13 +53,13 @@ export default function BiodiversityPage() {
   const handleAdd = () => {
     const newRecord: BiodiversityRecord = {
       id: genId(),
-      siteName: "Site Baru",
-      conservationAreaHa: 10,
+      siteName: "",
+      conservationAreaHa: 0,
       protectedFloraCount: 0,
       protectedFaunaCount: 0,
-      rehabilitationStatus: "Perencanaan Baseline",
-      shannonIndex: 2.0,
-      partnerInstitution: "Mitra Konservasi",
+      rehabilitationStatus: "",
+      shannonIndex: 0,
+      partnerInstitution: "",
     }
     setRecords((prev) => [...prev, newRecord])
     setSaved(false)

@@ -193,7 +193,7 @@ function Section({
 }
 
 export default function InputPage() {
-  const locale = getLocaleClient()
+  const [locale, setLocale] = useState<Locale>("id")
   const dict = dicts[locale]
   const industryId = useIndustryId()
 
@@ -204,6 +204,7 @@ export default function InputPage() {
 
   // Load saved measurements when industry changes
   useEffect(() => {
+    setLocale(getLocaleClient())
     if (!industryId) {
       setValues({})
       return

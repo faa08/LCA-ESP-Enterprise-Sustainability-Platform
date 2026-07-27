@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Sparkles, AlertTriangle, CheckCircle2, TrendingDown, Lightbulb, ShieldCheck } from "lucide-react"
@@ -35,48 +36,23 @@ const statusMeta: Record<ComplianceStatus | "empty", { dot: string; labelKey: st
   empty: { dot: "bg-neutral-300", labelKey: "proper.status_empty", adviceKey: "ai.proper_ok" },
 }
 
-import { useEffect, useState } from "react"
 import { useSiteId } from "@/lib/use-site-id"
 import { getHubEntries, type LabEntry, type StackEntry, type B3Entry } from "@/lib/supabase/data-service"
 
 export default function AIInsights() {
-  const locale = getLocaleClient()
+  const [locale, setLocale] = useState<Locale>("id")
   const dict = dicts[locale]
   const industryId = useIndustryId()
   const siteId = useSiteId()
   const [sbMeasurements, setSbMeasurements] = useState<Record<string, string>>({})
 
   useEffect(() => {
+    setLocale(getLocaleClient())
     const loadSbData = async () => {
       if (!siteId) return
-      const labs = await getHubEntries<LabEntry>("laboratory", siteId, industryId)
-      const stacks = await getHubEntries<StackEntry>("stack", siteId, industryId)
-      const b3s = await getHubEntries<B3Entry>("b3", siteId, industryId)
-
-      const merged: Record<string, string> = { ...getMeasurements(industryId) }
-
-      if (labs.length > 0) {
-        const l = labs[0]
-        if (l.ph) merged.ph = String(l.ph)
-        if (l.cod) merged.cod = String(l.cod)
-        if (l.bod) merged.bod = String(l.bod)
-        if (l.tss) merged.tss = String(l.tss)
-      }
-      if (stacks.length > 0) {
-        const s = stacks[0]
-        if (s.tsp) merged.tsp = String(s.tsp)
-        if (s.so2) merged.so2 = String(s.so2)
-        if (s.nox) merged.nox = String(s.nox)
-        if (s.co) merged.co = String(s.co)
-        if (s.opacity) merged.opacity = String(s.opacity)
-      }
-      if (b3s.length > 0) {
-        const b = b3s[0]
-        if (b.storageDuration) merged.b3_storage_days = String(b.storageDuration)
-        if (b.qty) merged.b3_tonnage = String(b.qty)
-      }
-
-      setSbMeasurements(merged)
+      import("@/lib/measurements").then(m => {
+        m.getMeasurementsFromHub(siteId, industryId).then(setSbMeasurements).catch(console.error)
+      })
     }
 
     loadSbData()

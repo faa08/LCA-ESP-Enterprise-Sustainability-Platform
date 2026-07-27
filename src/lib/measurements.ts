@@ -1,13 +1,67 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSiteId } from "@/lib/use-site-id"
 import { evaluateParam, type ComplianceStatus, type ProperParam } from "@/lib/proper"
+import { getHubEntries, type LabEntry, type StackEntry, type B3Entry, type EnergyEntry, type WaterEntry } from "@/lib/supabase/data-service"
 
 export type EvalResult = "empty" | ComplianceStatus
 
 const STORAGE_PREFIX = "enspr_measurements_"
 
-// Read user-entered measurements for an industry.
+// Translates Data Hub entries into the legacy Key-Value map used by PROPER rank engine
+export async function getMeasurementsFromHub(siteId: string, industryId: string): Promise<Record<string, string>> {
+  if (!siteId || !industryId) return {}
+
+  const labs = await getHubEntries<LabEntry>("laboratory", siteId, industryId)
+  const stacks = await getHubEntries<StackEntry>("stack", siteId, industryId)
+  const b3s = await getHubEntries<B3Entry>("b3", siteId, industryId)
+  const energy = await getHubEntries<EnergyEntry>("energy", siteId, industryId)
+  const water = await getHubEntries<WaterEntry>("water", siteId, industryId)
+
+  const merged: Record<string, string> = {}
+
+  if (labs.length > 0) {
+    const avg = (key: keyof LabEntry) => {
+      const vals = labs.map(l => Number(l[key] ?? 0)).filter(v => v > 0)
+      return vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : 0
+    }
+    const ph = avg("ph"); const cod = avg("cod"); const bod = avg("bod"); const tss = avg("tss"); const nh3 = avg("nh3"); const oil = avg("oilGrease")
+    if (ph > 0) merged.ph = String(Math.round(ph * 100) / 100)
+    if (cod > 0) merged.cod = String(Math.round(cod * 100) / 100)
+    if (bod > 0) merged.bod = String(Math.round(bod * 100) / 100)
+    if (tss > 0) merged.tss = String(Math.round(tss * 100) / 100)
+    if (nh3 > 0) merged.nh3 = String(Math.round(nh3 * 100) / 100)
+    if (oil > 0) merged.oil_grease = String(Math.round(oil * 100) / 100)
+  }
+
+  if (stacks.length > 0) {
+    const avgS = (key: keyof StackEntry) => {
+      const vals = stacks.map(s => Number(s[key] ?? 0)).filter(v => v > 0)
+      return vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : 0
+    }
+    const tsp = avgS("tsp"); const so2 = avgS("so2"); const nox = avgS("nox"); const co = avgS("co"); const opacity = avgS("opacity")
+    if (tsp > 0) merged.tsp = String(Math.round(tsp * 10) / 10)
+    if (so2 > 0) merged.so2 = String(Math.round(so2 * 10) / 10)
+    if (nox > 0) merged.nox = String(Math.round(nox * 10) / 10)
+    if (co > 0) merged.co = String(Math.round(co * 10) / 10)
+    if (opacity > 0) merged.opacity = String(Math.round(opacity))
+  }
+
+  if (b3s.length > 0) {
+    const maxStorage = Math.max(...b3s.map(b => b.storageDuration || 0))
+    if (maxStorage > 0) merged.b3_storage_days = String(maxStorage)
+    const allHaveManifest = b3s.every(b => (b.manifestNo || "").trim().length > 0)
+    merged.b3_permit = allHaveManifest ? "365" : "0"
+  }
+
+  if (energy.length > 0) { merged.energy_intensity = "true"; merged.ghg_reduction = "true" }
+  if (water.length > 0) { merged.water_efficiency = "true" }
+
+  return merged
+}
+
+// Read user-entered measurements for an industry (Legacy localStorage mode).
 export function getMeasurements(industryId: string | null): Record<string, string> {
   if (!industryId || typeof window === "undefined") return {}
   const stored = localStorage.getItem(STORAGE_PREFIX + industryId)
@@ -46,18 +100,19 @@ export function evaluate(param: ProperParam, measurements: Record<string, string
   return { value, status: evaluateParam(param, value) }
 }
 
-// Hook: live measurements for the current industry (reactive to storage changes).
+// Hook: live measurements for the current industry (now reactive to Supabase Data Hub).
 export function useMeasurements(industryId: string): Record<string, string> {
   const [values, setValues] = useState<Record<string, string>>({})
-
+  const siteId = useSiteId()
+  
   useEffect(() => {
-    if (!industryId) {
+    if (!industryId || !siteId || typeof window === "undefined") {
       setValues({})
       return
     }
-    const stored = localStorage.getItem(STORAGE_PREFIX + industryId)
-    setValues(stored ? JSON.parse(stored) : {})
-  }, [industryId])
+    
+    getMeasurementsFromHub(siteId, industryId).then(setValues).catch(console.error)
+  }, [industryId, siteId])
 
   return values
 }

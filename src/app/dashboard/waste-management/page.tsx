@@ -23,7 +23,10 @@ function fmt(n: number): string {
 }
 
 export default function WasteManagement() {
-  const locale = getLocaleClient()
+  const [locale, setLocale] = useState<Locale>("id")
+  useEffect(() => {
+    setLocale(getLocaleClient())
+  }, [])
   const dict = dicts[locale]
   const industryId = useIndustryId()
   const siteId = useSiteId()

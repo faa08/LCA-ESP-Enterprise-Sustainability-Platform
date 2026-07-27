@@ -204,7 +204,7 @@ export default function CircularEconomyPage() {
         {/* Material List */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <CardTitle>Aliran Material</CardTitle>
               <Button variant="secondary" size="sm" onClick={add}>+ Tambah Material</Button>
             </div>

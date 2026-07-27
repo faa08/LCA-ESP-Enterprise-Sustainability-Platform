@@ -113,6 +113,8 @@ export default function TransportationPage() {
         fuelType: e.fuelType,
         distance: parseFloat(e.distanceKm) || 0,
         cargoWeight: parseFloat(e.cargoTon) || 0,
+        direction: e.direction ?? "upstream",
+        frequencyPerYear: parseFloat(e.frequencyPerYear) || 1,
       }
       await saveHubEntry("transport", siteId, industryId, payload)
     }

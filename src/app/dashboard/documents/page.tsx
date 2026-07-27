@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { FileText, FileCheck, BookOpen, Award, ScrollText, FolderOpen, Upload, Search, Filter, MoreHorizontal } from "lucide-react"
@@ -10,7 +11,10 @@ import { en as enDict } from "@/locales/en"
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
 export default function Documents() {
-  const locale = getLocaleClient()
+  const [locale, setLocale] = useState<Locale>("id")
+  useEffect(() => {
+    setLocale(getLocaleClient())
+  }, [])
   const dict = dicts[locale]
 
   const documentCategories = [

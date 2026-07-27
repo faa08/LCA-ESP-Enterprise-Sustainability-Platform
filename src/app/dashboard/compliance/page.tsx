@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 
 import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
@@ -11,7 +11,7 @@ import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
 import { useIndustryId } from "@/lib/use-industry-id"
-import { getMeasurements, evaluate } from "@/lib/measurements"
+import { evaluate } from "@/lib/measurements"
 import {
   INDUSTRIES,
   getEmissionParams,
@@ -81,54 +81,82 @@ import { useSiteId } from "@/lib/use-site-id"
 import { getHubEntries, type LabEntry, type StackEntry, type B3Entry } from "@/lib/supabase/data-service"
 
 export default function Compliance() {
-  const locale = getLocaleClient()
+  const [locale, setLocale] = useState<Locale>("id")
   const dict = dicts[locale]
   const industryId = useIndustryId()
   const siteId = useSiteId()
   const [fuelType, setFuelType] = useState<string>("batubara")
   const [sbMeasurements, setSbMeasurements] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
 
-  // Load fuelType & fetch live entries from Data Hub
+  // Load locale & fetch live entries from Data Hub (fully Supabase-based, no localStorage fallback)
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("enspr_fuel_type")
-      if (stored) setFuelType(stored)
+    setLocale(getLocaleClient())
+  }, [])
+
+  const loadSbData = useCallback(async () => {
+    if (!siteId) return
+    setLoading(true)
+    const labs = await getHubEntries<LabEntry>("laboratory", siteId, industryId)
+    const stacks = await getHubEntries<StackEntry>("stack", siteId, industryId)
+    const b3s = await getHubEntries<B3Entry>("b3", siteId, industryId)
+
+    const merged: Record<string, string> = {}
+
+    // Lab: average of all entries for each parameter
+    if (labs.length > 0) {
+      const avg = (key: keyof LabEntry) => {
+        const vals = labs.map(l => Number(l[key] ?? 0)).filter(v => v > 0)
+        return vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : 0
+      }
+      const ph = avg("ph")
+      const cod = avg("cod")
+      const bod = avg("bod")
+      const tss = avg("tss")
+      const nh3 = avg("nh3")
+      const oil = avg("oilGrease")
+      if (ph > 0) merged.ph = String(Math.round(ph * 100) / 100)
+      if (cod > 0) merged.cod = String(Math.round(cod * 100) / 100)
+      if (bod > 0) merged.bod = String(Math.round(bod * 100) / 100)
+      if (tss > 0) merged.tss = String(Math.round(tss * 100) / 100)
+      if (nh3 > 0) merged.nh3 = String(Math.round(nh3 * 100) / 100)
+      if (oil > 0) merged.oil_grease = String(Math.round(oil * 100) / 100)
     }
 
-    const loadSbData = async () => {
-      if (!siteId) return
-      const labs = await getHubEntries<LabEntry>("laboratory", siteId, industryId)
-      const stacks = await getHubEntries<StackEntry>("stack", siteId, industryId)
-      const b3s = await getHubEntries<B3Entry>("b3", siteId, industryId)
-
-      const merged: Record<string, string> = { ...getMeasurements(industryId) }
-
-      if (labs.length > 0) {
-        const l = labs[0]
-        if (l.ph) merged.ph = String(l.ph)
-        if (l.cod) merged.cod = String(l.cod)
-        if (l.bod) merged.bod = String(l.bod)
-        if (l.tss) merged.tss = String(l.tss)
+    // Stack: average of all cerobong entries
+    if (stacks.length > 0) {
+      const avgS = (key: keyof StackEntry) => {
+        const vals = stacks.map(s => Number(s[key] ?? 0)).filter(v => v > 0)
+        return vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : 0
       }
-      if (stacks.length > 0) {
-        const s = stacks[0]
-        if (s.tsp) merged.tsp = String(s.tsp)
-        if (s.so2) merged.so2 = String(s.so2)
-        if (s.nox) merged.nox = String(s.nox)
-        if (s.co) merged.co = String(s.co)
-        if (s.opacity) merged.opacity = String(s.opacity)
-      }
-      if (b3s.length > 0) {
-        const b = b3s[0]
-        if (b.storageDuration) merged.b3_storage_days = String(b.storageDuration)
-        if (b.qty) merged.b3_tonnage = String(b.qty)
-      }
-
-      setSbMeasurements(merged)
+      const tsp = avgS("tsp")
+      const so2 = avgS("so2")
+      const nox = avgS("nox")
+      const co = avgS("co")
+      const opacity = avgS("opacity")
+      if (tsp > 0) merged.tsp = String(Math.round(tsp * 10) / 10)
+      if (so2 > 0) merged.so2 = String(Math.round(so2 * 10) / 10)
+      if (nox > 0) merged.nox = String(Math.round(nox * 10) / 10)
+      if (co > 0) merged.co = String(Math.round(co * 10) / 10)
+      if (opacity > 0) merged.opacity = String(Math.round(opacity))
     }
 
-    loadSbData()
+    // B3: worst-case (max) storage duration across all entries
+    if (b3s.length > 0) {
+      const maxStorage = Math.max(...b3s.map(b => b.storageDuration || 0))
+      const totalQty = b3s.reduce((s, b) => s + (b.qty || 0), 0)
+      if (maxStorage > 0) merged.b3_storage_days = String(maxStorage)
+      if (totalQty > 0) merged.b3_tonnage = String(Math.round(totalQty * 100) / 100)
+      // Check if any B3 lacks manifest (b3_permit proxy)
+      const noManifest = b3s.some(b => !b.manifestNo || b.manifestNo.trim() === "")
+      merged.b3_permit = noManifest ? "false" : "true"
+    }
+
+    setSbMeasurements(merged)
+    setLoading(false)
   }, [siteId, industryId])
+
+  useEffect(() => { loadSbData() }, [loadSbData])
 
   const industry = INDUSTRIES.find((i) => i.id === industryId) ?? null
 

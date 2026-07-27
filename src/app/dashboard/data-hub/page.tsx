@@ -248,7 +248,7 @@ function ProductionForm({ siteId, industryId, role }: { siteId: string; industry
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState<Omit<ProductionEntry, "id">>({
-    date: today(), plant: "", line: "", product: "", qty: 0, qtyUnit: "Ton", hours: 0, rejectQty: 0,
+    date: "", plant: "", line: "", product: "", qty: 0, qtyUnit: "Ton", hours: 0, rejectQty: 0,
   })
   const [showForm, setShowForm] = useState(false)
   const refresh = useCallback(async () => {
@@ -317,7 +317,7 @@ function EnergyForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const blank = { date: today(), electricity: 0, diesel: 0, naturalGas: 0, coal: 0, biomass: 0, steam: 0, lpg: 0 }
+  const blank = { date: "", electricity: 0, diesel: 0, naturalGas: 0, coal: 0, biomass: 0, steam: 0, lpg: 0 }
   const [form, setForm] = useState<Omit<EnergyEntry, "id">>(blank)
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -325,6 +325,8 @@ function EnergyForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string
     setEntries(data); setLoading(false)
   }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
+  // client-only date init
+  useEffect(() => { setForm((p) => ({ ...p, date: p.date || today() })) }, [])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "date" ? v : num(v) }))
   const save = async () => {
     setSaving(true)
@@ -381,7 +383,7 @@ function WaterForm({ siteId, industryId, role }: { siteId: string; industryId: s
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const blank = { date: today(), rawWater: 0, groundwater: 0, processWater: 0, wastewater: 0, flowRate: 0 }
+  const blank = { date: "", rawWater: 0, groundwater: 0, processWater: 0, wastewater: 0, flowRate: 0 }
   const [form, setForm] = useState<Omit<WaterEntry, "id">>(blank)
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -389,6 +391,8 @@ function WaterForm({ siteId, industryId, role }: { siteId: string; industryId: s
     setEntries(data); setLoading(false)
   }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
+  // client-only date init
+  useEffect(() => { setForm((p) => ({ ...p, date: p.date || today() })) }, [])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "date" ? v : num(v) }))
   const save = async () => {
     setSaving(true)
@@ -434,7 +438,7 @@ function LabForm({ siteId, industryId, role }: { siteId: string; industryId: str
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const blank: Omit<LabEntry, "id"> = { date: today(), samplePoint: "", ph: 0, cod: 0, bod: 0, tss: 0, nh3: 0, oilGrease: 0, phenol: 0, heavyMetals: {} }
+  const blank: Omit<LabEntry, "id"> = { date: "", samplePoint: "", ph: 0, cod: 0, bod: 0, tss: 0, nh3: 0, oilGrease: 0, phenol: 0, heavyMetals: {} }
   const [form, setForm] = useState<Omit<LabEntry, "id">>(blank)
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -442,6 +446,8 @@ function LabForm({ siteId, industryId, role }: { siteId: string; industryId: str
     setEntries(data); setLoading(false)
   }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
+  // client-only date init
+  useEffect(() => { setForm((p) => ({ ...p, date: p.date || today() })) }, [])
   const f = (k: keyof Omit<LabEntry, "id" | "heavyMetals">) => (v: string) =>
     setForm((p) => ({ ...p, [k]: k === "date" || k === "samplePoint" ? v : num(v) }))
   const save = async () => {
@@ -494,7 +500,7 @@ function StackForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string;
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const blank: Omit<StackEntry, "id"> = { date: today(), stackId: "", tsp: 0, so2: 0, nox: 0, co: 0, opacity: 0, flowRate: 0 }
+  const blank: Omit<StackEntry, "id"> = { date: "", stackId: "", tsp: 0, so2: 0, nox: 0, co: 0, opacity: 0, flowRate: 0 }
   const [form, setForm] = useState<Omit<StackEntry, "id">>(blank)
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -502,6 +508,8 @@ function StackForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string;
     setEntries(data); setLoading(false)
   }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
+  // client-only date init
+  useEffect(() => { setForm((p) => ({ ...p, date: p.date || today() })) }, [])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "date" || k === "stackId" ? v : num(v) }))
   const save = async () => {
     setSaving(true)
@@ -553,7 +561,7 @@ function B3Form({ siteId, industryId, role }: { siteId: string; industryId: stri
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const blank: Omit<B3Entry, "id"> = { date: today(), wasteType: "", wasteCode: "", qty: 0, storageDuration: 0, manifestNo: "", recycler: "", disposalCompany: "" }
+  const blank: Omit<B3Entry, "id"> = { date: "", wasteType: "", wasteCode: "", qty: 0, storageDuration: 0, manifestNo: "", recycler: "", disposalCompany: "" }
   const [form, setForm] = useState<Omit<B3Entry, "id">>(blank)
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -561,6 +569,8 @@ function B3Form({ siteId, industryId, role }: { siteId: string; industryId: stri
     setEntries(data); setLoading(false)
   }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
+  // client-only date init
+  useEffect(() => { setForm((p) => ({ ...p, date: p.date || today() })) }, [])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "qty" || k === "storageDuration" ? num(v) : v }))
   const save = async () => {
     if (!form.wasteType) return
@@ -614,7 +624,7 @@ function TransportForm({ siteId, industryId, role, onCalcUpdate }: { siteId: str
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const blank: Omit<TransportEntry, "id"> = { date: today(), vehicleType: "truck", fuelType: "diesel", distance: 0, cargoWeight: 0 }
+  const blank: Omit<TransportEntry, "id"> = { date: "", vehicleType: "truck", fuelType: "diesel", distance: 0, cargoWeight: 0, direction: "upstream", frequencyPerYear: 1 }
   const [form, setForm] = useState<Omit<TransportEntry, "id">>(blank)
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -622,6 +632,8 @@ function TransportForm({ siteId, industryId, role, onCalcUpdate }: { siteId: str
     setEntries(data); setLoading(false)
   }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
+  // client-only date init
+  useEffect(() => { setForm((p) => ({ ...p, date: p.date || today() })) }, [])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "vehicleType" || k === "fuelType" || k === "date" ? v : num(v) }))
   const save = async () => {
     setSaving(true)
@@ -677,7 +689,7 @@ function MaterialForm({ siteId, industryId, role }: { siteId: string; industryId
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const blank: Omit<MaterialEntry, "id"> = { date: today(), material: "", supplier: "", qty: 0, unit: "Ton", countryOfOrigin: "Indonesia" }
+  const blank: Omit<MaterialEntry, "id"> = { date: "", material: "", supplier: "", qty: 0, unit: "Ton", countryOfOrigin: "Indonesia" }
   const [form, setForm] = useState<Omit<MaterialEntry, "id">>(blank)
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -685,6 +697,8 @@ function MaterialForm({ siteId, industryId, role }: { siteId: string; industryId
     setEntries(data); setLoading(false)
   }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
+  // client-only date init
+  useEffect(() => { setForm((p) => ({ ...p, date: p.date || today() })) }, [])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: k === "qty" ? num(v) : v }))
   const save = async () => {
     if (!form.material) return
@@ -732,7 +746,7 @@ function SupplierForm({ siteId, industryId, role }: { siteId: string; industryId
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const blank: Omit<SupplierEntry, "id"> = { date: today(), supplierName: "", category: "", country: "Indonesia", sustainability: "none", notes: "" }
+  const blank: Omit<SupplierEntry, "id"> = { date: "", supplierName: "", category: "", country: "Indonesia", sustainability: "none", notes: "" }
   const [form, setForm] = useState<Omit<SupplierEntry, "id">>(blank)
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -740,6 +754,8 @@ function SupplierForm({ siteId, industryId, role }: { siteId: string; industryId
     setEntries(data); setLoading(false)
   }, [siteId, industryId])
   useEffect(() => { refresh() }, [refresh])
+  // client-only date init
+  useEffect(() => { setForm((p) => ({ ...p, date: p.date || today() })) }, [])
   const f = (k: keyof typeof form) => (v: string) => setForm((p) => ({ ...p, [k]: v }))
   const save = async () => {
     if (!form.supplierName) return

@@ -18,7 +18,10 @@ const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 const fmt = (v: number | null, unit = "", dec = 1) => (v === null || v === 0 ? "—" : `${v.toLocaleString("id-ID", { maximumFractionDigits: dec })}${unit}`)
 
 export default function EnergyMonitoring() {
-  const locale = getLocaleClient()
+  const [locale, setLocale] = useState<Locale>("id")
+  useEffect(() => {
+    setLocale(getLocaleClient())
+  }, [])
   const dict = dicts[locale]
   const industryId = useIndustryId()
   const siteId = useSiteId()

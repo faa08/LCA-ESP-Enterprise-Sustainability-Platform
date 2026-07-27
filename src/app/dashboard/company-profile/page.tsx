@@ -1,28 +1,43 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Building2, Plus, Trash2, CheckCircle2, Users, MapPin, Factory, ChevronDown, ChevronRight } from "lucide-react"
+import {
+  Building2, Plus, Trash2, CheckCircle2, Users, MapPin,
+  Factory, ChevronDown, ChevronRight, Loader2, AlertCircle, Database,
+} from "lucide-react"
+import { useSiteId } from "@/lib/use-site-id"
+import {
+  getCompanyProfile, saveCompanyProfile, saveSiteIndustry,
+  type EntityRecord,
+} from "@/lib/supabase/data-service"
 
 type EntityLevel = "korporat" | "subholding" | "site"
-
-interface Entity {
-  id: string
-  level: EntityLevel
-  name: string
-  location: string
-  industry: string
-  employees: string
-  parentId: string | null
-}
 
 const INDUSTRY_OPTIONS = [
   "Minyak & Gas", "Pertambangan Batubara", "Pertambangan Mineral", "Pembangkitan Listrik",
   "Manufaktur Semen", "Manufaktur Baja", "Manufaktur Kimia", "Perkebunan Kelapa Sawit",
   "Pengolahan Makanan & Minuman", "Tekstil", "Pulp & Kertas", "Transportasi", "Lainnya",
 ]
+
+// Mapping dari label panjang ke industryId pendek yang dipakai modul lain
+const INDUSTRY_ID_MAP: Record<string, string> = {
+  "Minyak & Gas": "migas",
+  "Pertambangan Batubara": "tambang",
+  "Pertambangan Mineral": "tambang",
+  "Pembangkitan Listrik": "pltu",
+  "Manufaktur Semen": "semen",
+  "Manufaktur Baja": "baja",
+  "Manufaktur Kimia": "kimia",
+  "Perkebunan Kelapa Sawit": "sawit",
+  "Pengolahan Makanan & Minuman": "fmcg",
+  "Tekstil": "tekstil",
+  "Pulp & Kertas": "pulp",
+  "Transportasi": "transportasi",
+  "Lainnya": "lainnya",
+}
 
 const levelColor: Record<EntityLevel, string> = {
   korporat: "bg-purple-100 text-purple-700 border-purple-200",
@@ -36,56 +51,114 @@ const levelLabel: Record<EntityLevel, string> = {
   site: "Site / Fasilitas",
 }
 
-function genId() { return Math.random().toString(36).slice(2, 9) }
+function genId() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0
+    return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16)
+  })
+}
+
+function emptyEntities(): EntityRecord[] {
+  return [{ id: genId(), level: "korporat", name: "", location: "", industry: "", employees: 0, parentId: null }]
+}
 
 export default function CompanyProfilePage() {
-  const [entities, setEntities] = useState<Entity[]>([
-    { id: "corp1", level: "korporat", name: "", location: "", industry: "", employees: "", parentId: null },
-  ])
-  const [expandedIds, setExpandedIds] = useState<string[]>(["corp1"])
-  const [saved, setSaved] = useState(false)
-  const STORAGE_KEY = "enspr_company_profile"
+  const siteId = useSiteId()
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed) && parsed.length > 0) setEntities(parsed)
-        } catch {}
+  const [entities, setEntities] = useState<EntityRecord[]>(emptyEntities())
+  const [expandedIds, setExpandedIds] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const refresh = useCallback(async () => {
+    if (!siteId) return
+    setLoading(true)
+    const data = await getCompanyProfile(siteId)
+    if (data.length > 0) {
+      setEntities(data)
+      setExpandedIds(data.map(e => e.id))
+    } else {
+      // Try fallback dari localStorage (migrasi dari versi lama)
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("enspr_company_profile")
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setEntities(parsed.map((p: Record<string, unknown>) => ({
+                id: String(p.id ?? genId()),
+                level: (p.level as EntityLevel) ?? "korporat",
+                name: String(p.name ?? ""),
+                location: String(p.location ?? ""),
+                industry: String(p.industry ?? ""),
+                employees: Number(p.employees ?? 0),
+                parentId: (p.parentId as string | null) ?? null,
+              })))
+              setExpandedIds(parsed.map((p: Record<string, unknown>) => String(p.id)))
+            }
+          } catch { /* ignore */ }
+        }
+      }
+      const initial = emptyEntities()
+      if (entities.length === 0) {
+        setEntities(initial)
+        setExpandedIds([initial[0].id])
       }
     }
-  }, [])
+    setLoading(false)
+  }, [siteId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSave = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entities))
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    }
-  }
+  useEffect(() => { refresh() }, [refresh])
 
   const toggleExpand = (id: string) =>
     setExpandedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
 
   const addEntity = (level: EntityLevel, parentId: string | null) => {
-    const newEntity: Entity = { id: genId(), level, name: "", location: "", industry: "", employees: "", parentId }
+    const newEntity: EntityRecord = { id: genId(), level, name: "", location: "", industry: "", employees: 0, parentId }
     setEntities(prev => [...prev, newEntity])
     setExpandedIds(prev => [...prev, newEntity.id])
   }
 
-  const updateEntity = (id: string, field: keyof Entity, value: string) =>
-    setEntities(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e))
-
   const removeEntity = (id: string) =>
     setEntities(prev => prev.filter(e => e.id !== id && e.parentId !== id))
 
+  const updateEntity = (id: string, field: keyof EntityRecord, value: string | number) =>
+    setEntities(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e))
+
+  const handleSave = async () => {
+    if (!siteId) return
+    setSaving(true)
+    setError(null)
+
+    // Simpan company profile ke Supabase
+    const result = await saveCompanyProfile(siteId, entities)
+
+    // Simpan industryId dari site entity ke Supabase
+    const siteEntity = entities.find(e => e.level === "site")
+    const industryLabel = siteEntity?.industry ?? entities.find(e => e.level === "korporat")?.industry ?? ""
+    const industryId = INDUSTRY_ID_MAP[industryLabel] ?? industryLabel.toLowerCase()
+    if (industryId) await saveSiteIndustry(siteId, industryId)
+
+    // Backup ke localStorage juga (untuk kompatibilitas)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("enspr_company_profile", JSON.stringify(entities))
+    }
+
+    setSaving(false)
+    if (result.error) {
+      setError(result.error)
+    } else {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    }
+  }
+
   const roots = entities.filter(e => e.parentId === null)
   const children = (parentId: string) => entities.filter(e => e.parentId === parentId)
-  const filledEntities = entities.filter(e => e.name.trim().length > 0).length
 
-  const renderEntity = (entity: Entity, depth = 0) => {
+  const renderEntity = (entity: EntityRecord, depth = 0): React.ReactNode => {
     const isExpanded = expandedIds.includes(entity.id)
     const kids = children(entity.id)
     return (
@@ -108,30 +181,39 @@ export default function CompanyProfilePage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="lg:col-span-2">
                   <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Nama {levelLabel[entity.level]} <span className="text-red-500">*</span></label>
-                  <input type="text" value={entity.name} onChange={e => updateEntity(entity.id, "name", e.target.value)}
+                  <input type="text" value={entity.name}
+                    onChange={e => updateEntity(entity.id, "name", e.target.value)}
                     placeholder={entity.level === "korporat" ? "PT Contoh Tbk" : entity.level === "subholding" ? "PT Anak Usaha" : "Pabrik / Fasilitas Produksi A"}
                     className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Lokasi</label>
-                  <input type="text" value={entity.location} onChange={e => updateEntity(entity.id, "location", e.target.value)}
-                    placeholder="Kota, Provinsi"
+                  <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Lokasi (Kota, Provinsi)</label>
+                  <input type="text" value={entity.location}
+                    onChange={e => updateEntity(entity.id, "location", e.target.value)}
+                    placeholder="Cilegon, Banten"
                     className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Jumlah Tenaga Kerja</label>
-                  <input type="number" value={entity.employees} onChange={e => updateEntity(entity.id, "employees", e.target.value)}
+                  <input type="number" value={entity.employees || ""}
+                    onChange={e => updateEntity(entity.id, "employees", parseInt(e.target.value) || 0)}
                     placeholder="0"
                     className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
                 </div>
-                <div className="sm:col-span-2 lg:col-span-2">
-                  <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Jenis Industri / Sektor</label>
-                  <select value={entity.industry} onChange={e => updateEntity(entity.id, "industry", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 bg-white">
-                    <option value="">-- Pilih Sektor --</option>
-                    {INDUSTRY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                  </select>
-                </div>
+                {(entity.level === "korporat" || entity.level === "site") && (
+                  <div className="sm:col-span-2 lg:col-span-2">
+                    <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
+                      Jenis Industri / Sektor
+                      {entity.level === "site" && <span className="ml-1 text-emerald-600 font-normal">(menentukan baku mutu & metodologi)</span>}
+                    </label>
+                    <select value={entity.industry}
+                      onChange={e => updateEntity(entity.id, "industry", e.target.value)}
+                      className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 bg-white">
+                      <option value="">-- Pilih Sektor --</option>
+                      {INDUSTRY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                  </div>
+                )}
               </div>
               <div className="flex flex-wrap gap-2 mt-4">
                 {entity.level === "korporat" && (
@@ -159,48 +241,95 @@ export default function CompanyProfilePage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="neutral" className="text-[10px]">Modul 1</Badge>
+            <Badge variant="neutral" className="text-[10px] font-bold">Multi-Entity Enterprise</Badge>
           </div>
           <h1 className="text-xl font-bold text-neutral-900">Company Profile</h1>
-          <p className="mt-1 text-sm text-neutral-500">Data dasar perusahaan dengan dukungan struktur multi-entitas untuk grup usaha besar.</p>
+          <p className="mt-1 text-sm text-neutral-500">Data dasar perusahaan dengan struktur multi-entitas (Korporat → Subholding → Site). Tersimpan permanen di database.</p>
         </div>
-        <Button onClick={handleSave}>
-          {saved ? <><CheckCircle2 className="mr-2 h-4 w-4" />Tersimpan</> : "Simpan Profil"}
+        <Button onClick={handleSave} disabled={saving || loading}>
+          {saving
+            ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menyimpan...</>
+            : saved
+              ? <><CheckCircle2 className="mr-2 h-4 w-4" />Tersimpan</>
+              : "Simpan Profil"}
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2"><Building2 className="h-5 w-5 text-purple-600" /><CardTitle className="text-sm">Entitas Terdaftar</CardTitle></div>
-            <p className="text-2xl font-bold text-neutral-900 mt-1">{entities.length}</p>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2"><Users className="h-5 w-5 text-blue-600" /><CardTitle className="text-sm">Total Tenaga Kerja</CardTitle></div>
-            <p className="text-2xl font-bold text-neutral-900 mt-1">
-              {entities.reduce((s, e) => s + (parseInt(e.employees) || 0), 0).toLocaleString("id-ID")}
-            </p>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2"><MapPin className="h-5 w-5 text-emerald-600" /><CardTitle className="text-sm">Site / Fasilitas</CardTitle></div>
-            <p className="text-2xl font-bold text-neutral-900 mt-1">{entities.filter(e => e.level === "site").length}</p>
-          </CardHeader>
-        </Card>
+      {/* Supabase badge */}
+      <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+        <Database className="h-3.5 w-3.5 shrink-0" />
+        <span>Data tersimpan di Supabase (bukan localStorage). Jenis industri yang dipilih di sini akan otomatis menjadi konteks untuk semua modul.</span>
       </div>
 
-      <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-xs text-neutral-500">
-        <span className={`rounded border px-2 py-0.5 font-bold ${levelColor.korporat}`}>Korporat Induk</span>
-        <span>→</span>
-        <span className={`rounded border px-2 py-0.5 font-bold ${levelColor.subholding}`}>Subholding / Anak Usaha</span>
-        <span>→</span>
-        <span className={`rounded border px-2 py-0.5 font-bold ${levelColor.site}`}>Site / Fasilitas</span>
-        <span className="text-neutral-400">· Data diagregasi otomatis ke level grup</span>
-      </div>
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>Gagal menyimpan: {error}. Cek kolom <code>industry_type</code> dan <code>employee_count</code> di tabel <code>sites</code>.</span>
+        </div>
+      )}
 
-      <div>{roots.map(e => renderEntity(e, 0))}</div>
+      {loading ? (
+        <div className="flex items-center justify-center py-16 gap-2 text-sm text-neutral-400">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Memuat profil perusahaan dari database...
+        </div>
+      ) : (
+        <>
+          {/* Summary Cards */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2"><Building2 className="h-5 w-5 text-purple-600" /><CardTitle className="text-sm">Entitas Terdaftar</CardTitle></div>
+                <p className="text-2xl font-bold text-neutral-900 mt-1">{entities.length}</p>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2"><Users className="h-5 w-5 text-blue-600" /><CardTitle className="text-sm">Total Tenaga Kerja</CardTitle></div>
+                <p className="text-2xl font-bold text-neutral-900 mt-1">
+                  {entities.reduce((s, e) => s + (e.employees || 0), 0).toLocaleString("id-ID")}
+                </p>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2"><MapPin className="h-5 w-5 text-emerald-600" /><CardTitle className="text-sm">Site / Fasilitas</CardTitle></div>
+                <p className="text-2xl font-bold text-neutral-900 mt-1">{entities.filter(e => e.level === "site").length}</p>
+              </CardHeader>
+            </Card>
+          </div>
+
+          {/* Industry indicator */}
+          {(() => {
+            const siteEnt = entities.find(e => e.level === "site") ?? entities.find(e => e.level === "korporat")
+            const industryLabel = siteEnt?.industry
+            const industryId = industryLabel ? (INDUSTRY_ID_MAP[industryLabel] ?? industryLabel) : null
+            return industryLabel ? (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                <Factory className="h-3.5 w-3.5 shrink-0" />
+                <span>Industri aktif: <strong>{industryLabel}</strong> → ID: <code className="bg-amber-100 px-1 rounded">{industryId}</code> — digunakan untuk baku mutu PROPER, faktor emisi, dan metodologi LCA</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-4 py-2.5 text-xs text-orange-700">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <span>Jenis industri belum dipilih. Pilih di field <strong>Jenis Industri</strong> di entitas Site atau Korporat, lalu simpan — ini diperlukan agar Data Hub dan semua modul berfungsi dengan benar.</span>
+              </div>
+            )
+          })()}
+
+          {/* Hierarchy Legend */}
+          <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-xs text-neutral-500">
+            <span className={`rounded border px-2 py-0.5 font-bold ${levelColor.korporat}`}>Korporat Induk</span>
+            <span>→</span>
+            <span className={`rounded border px-2 py-0.5 font-bold ${levelColor.subholding}`}>Subholding / Anak Usaha</span>
+            <span>→</span>
+            <span className={`rounded border px-2 py-0.5 font-bold ${levelColor.site}`}>Site / Fasilitas</span>
+            <span className="text-neutral-400">· Data diagregasi otomatis ke level grup</span>
+          </div>
+
+          <div>{roots.map(e => renderEntity(e, 0))}</div>
+        </>
+      )}
     </div>
   )
 }

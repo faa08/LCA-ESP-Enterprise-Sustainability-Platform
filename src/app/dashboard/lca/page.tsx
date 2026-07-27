@@ -30,7 +30,10 @@ const FUEL_CO2_FACTOR: Record<string, number> = {
 const CARBON_PRICE_IDR = 70000
 
 export default function LCAPage() {
-  const locale = getLocaleClient()
+  const [locale, setLocale] = useState<Locale>("id")
+  useEffect(() => {
+    setLocale(getLocaleClient())
+  }, [])
   const dict = dicts[locale]
   const industryId = useIndustryId()
   const siteId = useSiteId()

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { StatCard } from "@/components/ui/stat-card"
 import { Badge } from "@/components/ui/badge"
@@ -17,7 +18,10 @@ const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 const CARBON_PRICE_IDR = 70_000 // Rp/tCO₂e (IDXCarbon referensi)
 
 export default function CarbonCreditPage() {
-  const locale = getLocaleClient()
+  const [locale, setLocale] = useState<Locale>("id")
+  useEffect(() => {
+    setLocale(getLocaleClient())
+  }, [])
   const dict = dicts[locale]
   const industryId = useIndustryId()
   const m = useMeasurements(industryId)

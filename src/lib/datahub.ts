@@ -94,6 +94,8 @@ export interface TransportEntry {
   fuelType: string
   distance: number
   cargoWeight: number
+  direction: "upstream" | "downstream" | "internal"
+  frequencyPerYear: number
 }
 
 export interface SupplierEntry {

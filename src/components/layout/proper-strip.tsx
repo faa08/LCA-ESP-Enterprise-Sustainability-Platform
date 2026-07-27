@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ShieldCheck } from "lucide-react"
@@ -7,6 +8,7 @@ import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
 import { useIndustryId } from "@/lib/use-industry-id"
+import { useSiteId } from "@/lib/use-site-id"
 import { getMeasurements, evaluate } from "@/lib/measurements"
 import {
   INDUSTRIES,
@@ -34,19 +36,38 @@ const statusLabelKey: Record<ComplianceStatus | "empty", string> = {
 }
 
 export function ProperStrip({ category, titleKey }: { category: ProperCategory; titleKey: string }) {
-  const locale = getLocaleClient()
-  const dict = dicts[locale]
+  const [locale, setLocale] = useState<Locale>("id")
   const industryId = useIndustryId()
+  const siteId = useSiteId()
+  
+  const [measurements, setMeasurements] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
 
+  useEffect(() => {
+    setLocale(getLocaleClient())
+  }, [])
+
+  useEffect(() => {
+    if (!siteId || !industryId) return
+    setLoading(true)
+    import("@/lib/measurements").then(m => {
+      m.getMeasurementsFromHub(siteId, industryId).then(data => {
+        setMeasurements(data)
+        setLoading(false)
+      })
+    })
+  }, [siteId, industryId])
+
+  const dict = dicts[locale]
   const industry = INDUSTRIES.find((i) => i.id === industryId) ?? null
-  if (!industry) return null
+
+  if (!industry || loading) return null
 
   let params: ProperParam[] = []
   if (category === "air_limbah") params = industry.params.filter((p) => p.category === "air_limbah")
   else if (category === "emisi") params = EMISSIONS_PARAMS
   else params = LIMBAH_B3_PARAMS
 
-  const measurements = getMeasurements(industryId)
   const results = params.map((p) => ({ p, ...evaluate(p, measurements) }))
   const fails = results.filter((r) => r.status === "fail").length
   const warns = results.filter((r) => r.status === "warn").length

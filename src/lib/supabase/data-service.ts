@@ -66,7 +66,7 @@ function toDbRow(category: HubCategory, entry: AnyEntry, siteId: string, industr
     }
     case "transport": {
       const e = entry as TransportEntry
-      return { ...base, log_date: e.date, vehicle_type: e.vehicleType, fuel_type: e.fuelType, distance: e.distance, cargo_weight: e.cargoWeight }
+      return { ...base, log_date: e.date, vehicle_type: e.vehicleType, fuel_type: e.fuelType, distance: e.distance, cargo_weight: e.cargoWeight, direction: e.direction ?? "upstream", frequency_per_year: e.frequencyPerYear ?? 1 }
     }
     case "supplier": {
       const e = entry as SupplierEntry
@@ -96,7 +96,7 @@ function fromDbRow(category: HubCategory, row: Record<string, unknown>): AnyEntr
     case "b3":
       return { id: String(row.id), date: String(row.log_date), wasteType: String(row.waste_type ?? ""), wasteCode: String(row.waste_code ?? ""), qty: Number(row.qty ?? 0), storageDuration: Number(row.storage_duration ?? 0), manifestNo: String(row.manifest_no ?? ""), recycler: String(row.recycler ?? ""), disposalCompany: String(row.disposal_company ?? "") } as B3Entry
     case "transport":
-      return { id: String(row.id), date: String(row.log_date), vehicleType: String(row.vehicle_type ?? "truck"), fuelType: String(row.fuel_type ?? "diesel"), distance: Number(row.distance ?? 0), cargoWeight: Number(row.cargo_weight ?? 0) } as TransportEntry
+      return { id: String(row.id), date: String(row.log_date), vehicleType: String(row.vehicle_type ?? "truck"), fuelType: String(row.fuel_type ?? "diesel"), distance: Number(row.distance ?? 0), cargoWeight: Number(row.cargo_weight ?? 0), direction: (String(row.direction ?? "upstream")) as "upstream" | "downstream" | "internal", frequencyPerYear: Number(row.frequency_per_year ?? 1) } as TransportEntry
     case "supplier":
       return { id: String(row.id), date: String(row.log_date), supplierName: String(row.supplier_name ?? ""), category: String(row.category ?? ""), country: String(row.country ?? "Indonesia"), sustainability: String(row.sustainability ?? "none"), notes: String(row.notes ?? "") } as SupplierEntry
     case "documents":
@@ -526,9 +526,11 @@ export async function resetAllData(siteId: string): Promise<{ error: string | nu
     "data_hub_suppliers",
     "data_hub_documents",
     "audit_trail_logs",
-    "biodiversity_records",
-    "circular_flows",
+    "biodiversity_logs",
+    "circular_economy_flows",
     "lca_goals_scopes",
+    "product_assessments",
+    "sdg_progress",
   ]
 
   for (const table of tables) {
@@ -551,5 +553,314 @@ export async function resetAllData(siteId: string): Promise<{ error: string | nu
     keys.forEach((k) => localStorage.removeItem(k))
   }
 
+  return { error: null }
+}
+
+// ─── Product Assessment (M2) — Supabase ───
+
+export interface BOMItemRecord {
+  id: string
+  material: string
+  supplier: string
+  massKg: number
+  recycledPct: number
+  origin: string
+}
+
+export interface ProductAssessmentRecord {
+  id: string
+  name: string
+  category: string
+  massKg: number
+  unit: string
+  bom: BOMItemRecord[]
+}
+
+export async function getProductAssessments(
+  siteId: string,
+  industryId: string,
+): Promise<ProductAssessmentRecord[]> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from("product_assessments")
+    .select("*")
+    .eq("site_id", siteId)
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.warn("[ProductAssessment] getProductAssessments:", error.message)
+    return []
+  }
+
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    name: String(row.name ?? ""),
+    category: String(row.category ?? ""),
+    massKg: Number(row.mass_kg ?? 0),
+    unit: String(row.unit ?? "unit"),
+    bom: (row.bom_json as BOMItemRecord[]) ?? [],
+  }))
+}
+
+export async function saveProductAssessment(
+  siteId: string,
+  industryId: string,
+  product: ProductAssessmentRecord,
+): Promise<{ error: string | null }> {
+  await ensureSiteExists(siteId)
+  const supabase = createClient()
+
+  const { error } = await supabase.from("product_assessments").upsert({
+    id: product.id,
+    site_id: siteId,
+    industry_id: industryId,
+    name: product.name,
+    category: product.category,
+    mass_kg: product.massKg,
+    unit: product.unit,
+    bom_json: product.bom,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "id" })
+
+  if (error) {
+    console.warn("[ProductAssessment] saveProductAssessment:", error.message)
+    return { error: error.message }
+  }
+  return { error: null }
+}
+
+export async function deleteProductAssessment(id: string): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase.from("product_assessments").delete().eq("id", id)
+  if (error) return { error: error.message }
+  return { error: null }
+}
+
+// ─── SDG Progress (M12) — Supabase ───
+
+export interface SDGProgressRecord {
+  sdgId: number
+  indicatorStates: boolean[]  // index = indicator index, value = achieved
+}
+
+export async function getSDGProgress(
+  siteId: string,
+  industryId: string,
+): Promise<Record<number, boolean[]>> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from("sdg_progress")
+    .select("*")
+    .eq("site_id", siteId)
+
+  if (error) {
+    console.warn("[SDGProgress] getSDGProgress:", error.message)
+    return {}
+  }
+
+  const result: Record<number, boolean[]> = {}
+  for (const row of data ?? []) {
+    result[Number(row.sdg_id)] = (row.indicator_states as boolean[]) ?? []
+  }
+  return result
+}
+
+export async function saveSDGProgress(
+  siteId: string,
+  industryId: string,
+  progress: SDGProgressRecord[],
+): Promise<{ error: string | null }> {
+  await ensureSiteExists(siteId)
+  const supabase = createClient()
+
+  const rows = progress.map((p) => ({
+    site_id: siteId,
+    industry_id: industryId,
+    sdg_id: p.sdgId,
+    indicator_states: p.indicatorStates,
+    updated_at: new Date().toISOString(),
+  }))
+
+  const { error } = await supabase
+    .from("sdg_progress")
+    .upsert(rows, { onConflict: "site_id,sdg_id" })
+
+  if (error) {
+    console.warn("[SDGProgress] saveSDGProgress:", error.message)
+    return { error: error.message }
+  }
+  return { error: null }
+}
+
+// ─── Company Profile (M1) — Supabase ───
+
+export interface EntityRecord {
+  id: string
+  level: "korporat" | "subholding" | "site"
+  name: string
+  location: string
+  industry: string
+  employees: number
+  parentId: string | null
+  // For site-level: province/city split
+  province?: string
+  city?: string
+}
+
+export async function getCompanyProfile(siteId: string): Promise<EntityRecord[]> {
+  const supabase = createClient()
+
+  // Get site to find company
+  const { data: siteData } = await supabase
+    .from("sites")
+    .select("*, subholdings(*, companies(*))")
+    .eq("id", siteId)
+    .single()
+
+  if (!siteData) return []
+
+  const results: EntityRecord[] = []
+
+  const company = (siteData as Record<string, unknown>)?.subholdings as Record<string, unknown> | null
+  const parentCompany = company?.companies as Record<string, unknown> | null
+
+  if (parentCompany) {
+    results.push({
+      id: String(parentCompany.id ?? ""),
+      level: "korporat",
+      name: String(parentCompany.name ?? ""),
+      location: "",
+      industry: String(parentCompany.industry_type ?? ""),
+      employees: 0,
+      parentId: null,
+    })
+  }
+
+  if (company) {
+    results.push({
+      id: String(company.id ?? ""),
+      level: "subholding",
+      name: String(company.name ?? ""),
+      location: "",
+      industry: "",
+      employees: 0,
+      parentId: parentCompany ? String(parentCompany.id ?? "") : null,
+    })
+  }
+
+  results.push({
+    id: siteId,
+    level: "site",
+    name: String(siteData.name ?? ""),
+    location: `${siteData.city ?? ""}, ${siteData.province ?? ""}`.replace(/^, |, $/, ""),
+    industry: String(siteData.industry_type ?? ""),
+    employees: Number(siteData.employee_count ?? 0),
+    parentId: company ? String(company.id ?? "") : null,
+    province: String(siteData.province ?? ""),
+    city: String(siteData.city ?? ""),
+  })
+
+  return results
+}
+
+export async function saveCompanyProfile(
+  siteId: string,
+  entities: EntityRecord[],
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+
+  // Find the company-level entity
+  const korporat = entities.find(e => e.level === "korporat")
+  const subholding = entities.find(e => e.level === "subholding")
+  const siteEntity = entities.find(e => e.level === "site")
+
+  // 1. Upsert company
+  if (korporat?.name) {
+    const { error } = await supabase.from("companies").upsert({
+      id: korporat.id.length === 36 ? korporat.id : undefined,
+      name: korporat.name,
+      code: korporat.name.substring(0, 20).toUpperCase().replace(/\s+/g, "-"),
+      industry_type: korporat.industry,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "id", ignoreDuplicates: false })
+
+    if (error) console.warn("[CompanyProfile] upsert company:", error.message)
+  }
+
+  // 2. Upsert subholding
+  if (subholding?.name) {
+    const { error } = await supabase.from("subholdings").upsert({
+      id: subholding.id.length === 36 ? subholding.id : undefined,
+      name: subholding.name,
+      code: subholding.name.substring(0, 20).toUpperCase().replace(/\s+/g, "-"),
+    }, { onConflict: "id", ignoreDuplicates: false })
+
+    if (error) console.warn("[CompanyProfile] upsert subholding:", error.message)
+  }
+
+  // 3. Update site with name, location, industry
+  if (siteEntity) {
+    const [city, province] = siteEntity.location.split(",").map(s => s.trim())
+    const { error } = await supabase.from("sites").update({
+      name: siteEntity.name || undefined,
+      city: city || undefined,
+      province: province || undefined,
+      industry_type: siteEntity.industry || undefined,
+      employee_count: siteEntity.employees || undefined,
+      updated_at: new Date().toISOString(),
+    }).eq("id", siteId)
+
+    if (error) console.warn("[CompanyProfile] update site:", error.message)
+
+    // Also save industryId to localStorage for fast reads (Supabase is source of truth)
+    if (typeof window !== "undefined" && siteEntity.industry) {
+      localStorage.setItem("enspr_industry", siteEntity.industry)
+    }
+  }
+
+  return { error: null }
+}
+
+// ─── Industry ID — Supabase + localStorage hybrid ───
+
+export async function getSiteIndustry(siteId: string): Promise<string> {
+  const supabase = createClient()
+
+  const { data } = await supabase
+    .from("sites")
+    .select("industry_type")
+    .eq("id", siteId)
+    .single()
+
+  const industry = String(data?.industry_type ?? "")
+  if (industry && typeof window !== "undefined") {
+    // Sync ke localStorage sebagai cache cepat
+    localStorage.setItem("enspr_industry", industry)
+  }
+  return industry
+}
+
+export async function saveSiteIndustry(
+  siteId: string,
+  industryId: string,
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from("sites")
+    .update({ industry_type: industryId, updated_at: new Date().toISOString() })
+    .eq("id", siteId)
+
+  if (error) {
+    console.warn("[Industry] saveSiteIndustry:", error.message)
+    return { error: error.message }
+  }
+
+  // Sync ke localStorage sebagai cache
+  if (typeof window !== "undefined") {
+    localStorage.setItem("enspr_industry", industryId)
+  }
   return { error: null }
 }

@@ -21,7 +21,10 @@ function fmt(n: number | null, unit = " m³"): string {
 }
 
 export default function WaterMonitoring() {
-  const locale = getLocaleClient()
+  const [locale, setLocale] = useState<Locale>("id")
+  useEffect(() => {
+    setLocale(getLocaleClient())
+  }, [])
   const dict = dicts[locale]
   const industryId = useIndustryId()
   const siteId = useSiteId()

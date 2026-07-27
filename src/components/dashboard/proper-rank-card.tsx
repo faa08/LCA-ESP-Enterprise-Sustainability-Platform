@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ShieldCheck } from "lucide-react"
@@ -7,6 +8,7 @@ import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
 import { en as enDict } from "@/locales/en"
 import { useIndustryId } from "@/lib/use-industry-id"
+import { useSiteId } from "@/lib/use-site-id"
 import { getMeasurements, evaluate } from "@/lib/measurements"
 import {
   INDUSTRIES,
@@ -28,12 +30,32 @@ const rankColor: Record<ProperRank, string> = {
 }
 
 export function ProperRankCard({ compact = false }: { compact?: boolean }) {
-  const locale = getLocaleClient()
-  const dict = dicts[locale]
+  const [locale, setLocale] = useState<Locale>("id")
   const industryId = useIndustryId()
+  const siteId = useSiteId()
+  
+  const [measurements, setMeasurements] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
 
+  useEffect(() => {
+    setLocale(getLocaleClient())
+  }, [])
+
+  useEffect(() => {
+    if (!siteId || !industryId) return
+    setLoading(true)
+    import("@/lib/measurements").then(m => {
+      m.getMeasurementsFromHub(siteId, industryId).then(data => {
+        setMeasurements(data)
+        setLoading(false)
+      })
+    })
+  }, [siteId, industryId])
+
+  const dict = dicts[locale]
   const industry = INDUSTRIES.find((i) => i.id === industryId) ?? null
-  if (!industry) {
+
+  if (!industry || loading) {
     return (
       <Card>
         <CardHeader>
@@ -44,19 +66,20 @@ export function ProperRankCard({ compact = false }: { compact?: boolean }) {
             <CardTitle>{t(dict, "proper.snapshot_title")}</CardTitle>
           </div>
         </CardHeader>
-        <p className="rounded-lg bg-amber-50 px-3 py-3 text-sm text-amber-700">{t(dict, "ai.proper_select")}</p>
+        <p className="rounded-lg bg-amber-50 px-3 py-3 text-sm text-amber-700">
+          {loading ? "Memuat status kepatuhan PROPER..." : t(dict, "ai.proper_select")}
+        </p>
       </Card>
     )
   }
 
   const air = industry.params.filter((p) => p.category === "air_limbah")
-  const measurements = getMeasurements(industryId)
   const airFails = air.filter((p) => evaluate(p, measurements).status === "fail").length
   const emFails = EMISSIONS_PARAMS.filter((p) => evaluate(p, measurements).status === "fail").length
   const b3Fails = LIMBAH_B3_PARAMS.filter((p) => evaluate(p, measurements).status === "fail").length
   const lcaFilledCount = LCA_PARAMS.filter((p) => {
     const raw = measurements[p.code]
-    return raw !== undefined && raw !== "" && Number(raw) > 0
+    return raw !== undefined && raw !== "" && raw !== "0"
   }).length
   const entered =
     air.filter((p) => evaluate(p, measurements).status !== "empty").length +
