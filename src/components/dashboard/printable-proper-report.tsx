@@ -50,8 +50,8 @@ export function PrintableProperReportModal({ isOpen, onClose }: { isOpen: boolea
 
   return createPortal(
     <div id="printable-portal-root">
-      <div className="printable-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-        <div id="printable-report-modal" className="relative w-full max-w-4xl rounded-2xl bg-white p-8 shadow-2xl my-8">
+      <div className="printable-modal-backdrop fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+        <div id="printable-report-modal" className="relative w-full max-w-4xl shrink-0 rounded-2xl bg-white p-8 shadow-2xl my-8">
         {/* Header Control (Hidden during print) */}
         <div className="mb-6 flex items-center justify-between border-b border-neutral-200 pb-4 print-hide">
           <div>
