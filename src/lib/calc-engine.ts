@@ -108,6 +108,8 @@ export function calcEngineFromEntries(
   let renewableMWh = 0
   let totalMWh = 0
 
+  const PLN_RENEWABLE_MIX = 0.13 // 13% EBT in national grid
+
   for (const e of safeEnergy) {
     scope1_kg +=
       (e.diesel      || 0) * EF.diesel +
@@ -116,15 +118,19 @@ export function calcEngineFromEntries(
       (e.lpg         || 0) * EF.lpg +
       (e.steam       || 0) * EF.steam
 
+    const elecMWh = (e.electricity || 0) * ENERGY_TO_MWH.electricity
+    const elecFossilMWh = elecMWh * (1 - PLN_RENEWABLE_MIX)
+    const elecRenewableMWh = elecMWh * PLN_RENEWABLE_MIX
+
     fossilMWh +=
-      (e.electricity || 0) * ENERGY_TO_MWH.electricity +
+      elecFossilMWh +
       (e.diesel      || 0) * ENERGY_TO_MWH.diesel +
       (e.naturalGas  || 0) * ENERGY_TO_MWH.naturalGas +
       (e.coal        || 0) * ENERGY_TO_MWH.coal +
       (e.lpg         || 0) * ENERGY_TO_MWH.lpg +
       (e.steam       || 0) * ENERGY_TO_MWH.steam
 
-    renewableMWh += (e.biomass || 0) * ENERGY_TO_MWH.biomass
+    renewableMWh += elecRenewableMWh + (e.biomass || 0) * ENERGY_TO_MWH.biomass
   }
 
   totalMWh = fossilMWh + renewableMWh
