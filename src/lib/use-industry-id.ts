@@ -14,6 +14,7 @@ export function useIndustryId(): string {
   useEffect(() => {
     // Load from cache first for instant UI update
     const cached = localStorage.getItem("enspr_industry")
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (cached) setIndustryId(cached)
 
     if (!siteId) return

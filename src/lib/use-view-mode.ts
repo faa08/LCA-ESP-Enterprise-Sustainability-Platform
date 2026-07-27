@@ -10,6 +10,7 @@ export function useViewMode() {
   useEffect(() => {
     const stored = localStorage.getItem("enspr_view_mode") as ViewMode | null
     if (stored === "engineer" || stored === "executive") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setViewModeState(stored)
     }
 

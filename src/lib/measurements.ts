@@ -107,6 +107,7 @@ export function useMeasurements(industryId: string): Record<string, string> {
   
   useEffect(() => {
     if (!industryId || !siteId || typeof window === "undefined") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setValues({})
       return
     }
@@ -160,6 +161,7 @@ export function useImportLog(industryId: string): ImportLogEntry[] {
 
   useEffect(() => {
     if (!industryId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLog([])
       return
     }

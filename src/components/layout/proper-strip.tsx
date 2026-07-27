@@ -49,6 +49,7 @@ export function ProperStrip({ category, titleKey }: { category: ProperCategory; 
 
   useEffect(() => {
     if (!siteId || !industryId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     import("@/lib/measurements").then(m => {
       m.getMeasurementsFromHub(siteId, industryId).then(data => {
