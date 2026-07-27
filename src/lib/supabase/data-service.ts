@@ -356,29 +356,39 @@ export async function getCircularFlows(
   siteId: string,
   industryId: string,
 ): Promise<CircularFlowRecord[]> {
-  const supabase = createClient()
+  const fallbackKey = `enspr_ce_${siteId}_${industryId}`
+  try {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("circular_economy_flows")
+      .select("*")
+      .eq("site_id", siteId)
+      .eq("industry_id", industryId)
+      .order("created_at", { ascending: false })
 
-  const { data, error } = await supabase
-    .from("circular_economy_flows")
-    .select("*")
-    .eq("site_id", siteId)
-    .eq("industry_id", industryId)
-    .order("created_at", { ascending: false })
+    if (error) throw error
 
-  if (error) {
-    console.error("[CircularEconomy] getCircularFlows:", error.message)
+    return (data ?? []).map((row) => ({
+      id: String(row.id),
+      name: String(row.name ?? ""),
+      totalKgYear: Number(row.total_kg_year ?? 0),
+      recycledPct: Number(row.recycled_pct ?? 0),
+      reusedPct: Number(row.reused_pct ?? 0),
+      recoveredPct: Number(row.recovered_pct ?? 0),
+      landfillPct: Number(row.landfill_pct ?? 100),
+    }))
+  } catch (err: unknown) {
+    console.warn("[CircularEconomy] Supabase failed, fallback to localStorage:", err)
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(fallbackKey)
+      if (stored) {
+        try {
+          return JSON.parse(stored) as CircularFlowRecord[]
+        } catch { return [] }
+      }
+    }
     return []
   }
-
-  return (data ?? []).map((row) => ({
-    id: String(row.id),
-    name: String(row.name ?? ""),
-    totalKgYear: Number(row.total_kg_year ?? 0),
-    recycledPct: Number(row.recycled_pct ?? 0),
-    reusedPct: Number(row.reused_pct ?? 0),
-    recoveredPct: Number(row.recovered_pct ?? 0),
-    landfillPct: Number(row.landfill_pct ?? 100),
-  }))
 }
 
 export async function upsertCircularFlow(
@@ -386,33 +396,58 @@ export async function upsertCircularFlow(
   industryId: string,
   flow: CircularFlowRecord,
 ): Promise<{ error: string | null }> {
-  await ensureSiteExists(siteId)
-  const supabase = createClient()
+  const fallbackKey = `enspr_ce_${siteId}_${industryId}`
+  try {
+    await ensureSiteExists(siteId)
+    const supabase = createClient()
+    const { error } = await supabase.from("circular_economy_flows").upsert({
+      id: flow.id,
+      site_id: siteId,
+      industry_id: industryId,
+      name: flow.name,
+      total_kg_year: flow.totalKgYear,
+      recycled_pct: flow.recycledPct,
+      reused_pct: flow.reusedPct,
+      recovered_pct: flow.recoveredPct,
+      landfill_pct: flow.landfillPct,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "id" })
 
-  const { error } = await supabase.from("circular_economy_flows").upsert({
-    id: flow.id,
-    site_id: siteId,
-    industry_id: industryId,
-    name: flow.name,
-    total_kg_year: flow.totalKgYear,
-    recycled_pct: flow.recycledPct,
-    reused_pct: flow.reusedPct,
-    recovered_pct: flow.recoveredPct,
-    landfill_pct: flow.landfillPct,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: "id" })
-
-  if (error) {
-    console.error("[CircularEconomy] upsertCircularFlow:", error.message)
-    return { error: error.message }
+    if (error) throw error
+  } catch (err: unknown) {
+    console.warn("[CircularEconomy] Supabase upsert failed, fallback to localStorage:", err)
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(fallbackKey)
+      let flows: CircularFlowRecord[] = stored ? JSON.parse(stored) : []
+      flows = flows.filter(f => f.id !== flow.id)
+      flows.push(flow)
+      localStorage.setItem(fallbackKey, JSON.stringify(flows))
+    }
   }
   return { error: null }
 }
 
 export async function deleteCircularFlow(id: string): Promise<{ error: string | null }> {
-  const supabase = createClient()
-  const { error } = await supabase.from("circular_economy_flows").delete().eq("id", id)
-  if (error) return { error: error.message }
+  try {
+    const supabase = createClient()
+    const { error } = await supabase.from("circular_economy_flows").delete().eq("id", id)
+    if (error) throw error
+  } catch (err: unknown) {
+    console.warn("[CircularEconomy] Supabase delete failed, fallback to localStorage:", err)
+    if (typeof window !== "undefined") {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key?.startsWith("enspr_ce_")) {
+          try {
+            let flows: CircularFlowRecord[] = JSON.parse(localStorage.getItem(key) || "[]")
+            const initLen = flows.length
+            flows = flows.filter(f => f.id !== id)
+            if (flows.length !== initLen) localStorage.setItem(key, JSON.stringify(flows))
+          } catch {}
+        }
+      }
+    }
+  }
   return { error: null }
 }
 
