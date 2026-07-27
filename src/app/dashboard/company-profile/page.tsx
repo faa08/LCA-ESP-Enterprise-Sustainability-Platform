@@ -17,27 +17,19 @@ import {
 type EntityLevel = "korporat" | "subholding" | "site"
 
 const INDUSTRY_OPTIONS = [
-  "Minyak & Gas", "Pertambangan Batubara", "Pertambangan Mineral", "Pembangkitan Listrik",
-  "Manufaktur Semen", "Manufaktur Baja", "Manufaktur Kimia", "Perkebunan Kelapa Sawit",
-  "Pengolahan Makanan & Minuman", "Tekstil", "Pulp & Kertas", "Transportasi", "Lainnya",
+  { id: "migas", label: "Minyak & Gas" },
+  { id: "tambang", label: "Pertambangan" },
+  { id: "pltu", label: "Pembangkitan Listrik" },
+  { id: "semen", label: "Manufaktur Semen" },
+  { id: "baja", label: "Manufaktur Baja" },
+  { id: "kimia", label: "Manufaktur Kimia" },
+  { id: "sawit", label: "Perkebunan Kelapa Sawit" },
+  { id: "fmcg", label: "Pengolahan Makanan & Minuman" },
+  { id: "tekstil", label: "Tekstil" },
+  { id: "pulp", label: "Pulp & Kertas" },
+  { id: "transportasi", label: "Transportasi" },
+  { id: "lainnya", label: "Lainnya" },
 ]
-
-// Mapping dari label panjang ke industryId pendek yang dipakai modul lain
-const INDUSTRY_ID_MAP: Record<string, string> = {
-  "Minyak & Gas": "migas",
-  "Pertambangan Batubara": "tambang",
-  "Pertambangan Mineral": "tambang",
-  "Pembangkitan Listrik": "pltu",
-  "Manufaktur Semen": "semen",
-  "Manufaktur Baja": "baja",
-  "Manufaktur Kimia": "kimia",
-  "Perkebunan Kelapa Sawit": "sawit",
-  "Pengolahan Makanan & Minuman": "fmcg",
-  "Tekstil": "tekstil",
-  "Pulp & Kertas": "pulp",
-  "Transportasi": "transportasi",
-  "Lainnya": "lainnya",
-}
 
 const levelColor: Record<EntityLevel, string> = {
   korporat: "bg-purple-100 text-purple-700 border-purple-200",
@@ -137,8 +129,7 @@ export default function CompanyProfilePage() {
 
     // Simpan industryId dari site entity ke Supabase
     const siteEntity = entities.find(e => e.level === "site")
-    const industryLabel = siteEntity?.industry ?? entities.find(e => e.level === "korporat")?.industry ?? ""
-    const industryId = INDUSTRY_ID_MAP[industryLabel] ?? industryLabel.toLowerCase()
+    const industryId = siteEntity?.industry ?? entities.find(e => e.level === "korporat")?.industry ?? ""
     if (industryId) await saveSiteIndustry(siteId, industryId)
 
     // Backup ke localStorage juga (untuk kompatibilitas)
@@ -210,7 +201,7 @@ export default function CompanyProfilePage() {
                       onChange={e => updateEntity(entity.id, "industry", e.target.value)}
                       className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 bg-white">
                       <option value="">-- Pilih Sektor --</option>
-                      {INDUSTRY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                      {INDUSTRY_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
                     </select>
                   </div>
                 )}
@@ -302,9 +293,9 @@ export default function CompanyProfilePage() {
           {/* Industry indicator */}
           {(() => {
             const siteEnt = entities.find(e => e.level === "site") ?? entities.find(e => e.level === "korporat")
-            const industryLabel = siteEnt?.industry
-            const industryId = industryLabel ? (INDUSTRY_ID_MAP[industryLabel] ?? industryLabel) : null
-            return industryLabel ? (
+            const industryId = siteEnt?.industry
+            const industryLabel = INDUSTRY_OPTIONS.find(o => o.id === industryId)?.label ?? industryId
+            return industryId ? (
               <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
                 <Factory className="h-3.5 w-3.5 shrink-0" />
                 <span>Industri aktif: <strong>{industryLabel}</strong> → ID: <code className="bg-amber-100 px-1 rounded">{industryId}</code> — digunakan untuk baku mutu PROPER, faktor emisi, dan metodologi LCA</span>

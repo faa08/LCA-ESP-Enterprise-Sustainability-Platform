@@ -117,6 +117,18 @@ const limbahB3: ProperParam[] = [
 export const INDUSTRIES: IndustryProfile[] = [
   manufaktur,
   pertambangan,
+  { ...manufaktur, id: "migas", name: "Minyak & Gas" },
+  { ...pertambangan, id: "tambang", name: "Pertambangan" },
+  { ...manufaktur, id: "pltu", name: "Pembangkitan Listrik" },
+  { ...manufaktur, id: "semen", name: "Manufaktur Semen" },
+  { ...manufaktur, id: "baja", name: "Manufaktur Baja" },
+  { ...manufaktur, id: "kimia", name: "Manufaktur Kimia" },
+  { ...manufaktur, id: "sawit", name: "Perkebunan Kelapa Sawit" },
+  { ...manufaktur, id: "fmcg", name: "Pengolahan Makanan & Minuman" },
+  { ...manufaktur, id: "tekstil", name: "Tekstil" },
+  { ...manufaktur, id: "pulp", name: "Pulp & Kertas" },
+  { ...manufaktur, id: "transportasi", name: "Transportasi" },
+  { ...manufaktur, id: "lainnya", name: "Lainnya" },
 ]
 
 export const LIMBAH_B3_PARAMS: ProperParam[] = limbahB3
