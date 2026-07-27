@@ -22,6 +22,7 @@ import {
   type TransportEntry,
   type B3Entry,
 } from "@/lib/supabase/data-service"
+import { seedLautanOtsukaData } from "@/lib/demo-lautan-otsuka"
 import {
   Cloud,
   Zap,
@@ -89,6 +90,7 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
   const [transportCount, setTransportCount] = useState(0)
   const [b3Count, setB3Count] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [seeding, setSeeding] = useState(false)
 
   const refresh = useCallback(async () => {
     if (!siteId) return
@@ -140,6 +142,15 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
   // Audit readiness: needs at least energy + one of lab/stack to be verifiable
   const auditReady = energyCount > 0 && (labCount > 0 || stackCount > 0)
 
+  const handleSeedData = async () => {
+    if (!siteId) return
+    if (!confirm("Tindakan ini akan menghapus data saat ini dan mengisinya dengan mock data PT. Lautan Otsuka Chemical. Lanjutkan?")) return
+    setSeeding(true)
+    await seedLautanOtsukaData(siteId)
+    await refresh()
+    setSeeding(false)
+  }
+
   return (
     <div className="space-y-6">
       {/* Mode Indicator Banner */}
@@ -159,9 +170,19 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
             </p>
           </div>
         </div>
-        <Badge variant={viewMode === "executive" ? "success" : "brand"}>
-          {viewMode.toUpperCase()} MODE
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2 mt-3 sm:mt-0">
+          <button 
+            onClick={handleSeedData}
+            disabled={seeding}
+            className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50"
+          >
+            {seeding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
+            Demo: Data PT. Lautan Otsuka
+          </button>
+          <Badge variant={viewMode === "executive" ? "success" : "brand"}>
+            {viewMode.toUpperCase()} MODE
+          </Badge>
+        </div>
       </div>
 
       {/* Loading state */}
