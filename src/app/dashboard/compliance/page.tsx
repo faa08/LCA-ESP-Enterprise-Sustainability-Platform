@@ -79,6 +79,7 @@ const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
 import { useSiteId } from "@/lib/use-site-id"
 import { getHubEntries, type LabEntry, type StackEntry, type B3Entry } from "@/lib/supabase/data-service"
+import { CalcTraceModal, TraceCalcButton, type TraceGroup } from "@/components/dashboard/calc-trace-modal"
 
 export default function Compliance() {
   const [locale, setLocale] = useState<Locale>("id")
@@ -88,6 +89,7 @@ export default function Compliance() {
   const [fuelType, setFuelType] = useState<string>("batubara")
   const [sbMeasurements, setSbMeasurements] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
+  const [traceOpen, setTraceOpen] = useState(false)
 
   // Load locale & fetch live entries from Data Hub (fully Supabase-based, no localStorage fallback)
   useEffect(() => {
@@ -233,6 +235,9 @@ export default function Compliance() {
             <div>
               <CardTitle>{t(dict, "proper.snapshot_title")}</CardTitle>
               <p className="mt-1 text-sm text-neutral-500">{t(dict, "proper.snapshot_desc")}</p>
+              <div className="mt-2">
+                <TraceCalcButton onClick={() => setTraceOpen(true)} />
+              </div>
             </div>
             <div className={`rounded-xl border px-5 py-3 text-center ${rankColor[rank]}`}>
               <p className="text-xs font-medium opacity-80">{t(dict, "proper.predicted_rank")}</p>
@@ -665,7 +670,67 @@ export default function Compliance() {
           <p className="text-sm font-semibold text-purple-900">Pemetaan Otomatis Aktif</p>
           <p className="text-xs text-purple-700 mt-0.5">Setiap data baru yang diinput di modul lain akan otomatis memperbarui status pemetaan di atas. Gunakan Modul 13 Reporting untuk menggenerate laporan resmi.</p>
         </div>
-      </Card>
+  </Card>
+
+  <CalcTraceModal
+    isOpen={traceOpen}
+    onClose={() => setTraceOpen(false)}
+    title="Rincian Penilaian PROPER (KLHK)"
+    subtitle="Modul 10 — Regulatory Compliance Mapping"
+    groups={[
+      {
+        title: "Kualitas Air Limbah (SP PL)",
+        description: "Sumber: Data Hub › Tab Laboratorium. Nilai rata-rata dari semua entri bulanan.",
+        icon: <Droplets className="h-3.5 w-3.5" />,
+        steps: airResults.map(r => {
+          const unit = "unit" in r.p ? r.p.unit : ""
+          const max = "max" in r.p ? r.p.max : "-"
+          return {
+            source: r.p.name,
+            sourceValue: r.value !== null && r.value !== undefined ? `Nilai terukur: ${r.value} ${unit}` : "Data belum dimasukkan",
+            sourceColor: "teal" as const,
+            formula: `Baku mutu maks: ${max} ${unit}. Status = Nilai ÷ Batas Maksimum`,
+            result: r.status === "ok" ? `✅ Aman (${max} ${unit})` : r.status === "warn" ? `⚠️ Mendekati Batas` : r.status === "fail" ? `❌ Melanggar Baku Mutu` : "— Belum ada data",
+            status: r.status as "ok" | "warn" | "empty",
+          }
+        }),
+      },
+      {
+        title: "Emisi Udara Cerobong (SP Parmen)",
+        description: "Sumber: Data Hub › Tab Stack Emissions. Nilai rata-rata dari pengukuran cerobong.",
+        icon: <Wind className="h-3.5 w-3.5" />,
+        steps: emResults.map(r => {
+          const unit = "unit" in r.p ? r.p.unit : ""
+          const max = "max" in r.p ? r.p.max : "-"
+          return {
+            source: r.p.name,
+            sourceValue: r.value !== null && r.value !== undefined ? `Nilai terukur: ${r.value} ${unit}` : "Data belum dimasukkan",
+            sourceColor: "blue" as const,
+            formula: `Baku mutu cerobong maks: ${max} ${unit}`,
+            result: r.status === "ok" ? `✅ Aman (${max} ${unit})` : r.status === "warn" ? `⚠️ Mendekati Batas` : r.status === "fail" ? `❌ Melanggar Baku Mutu` : "— Belum ada data",
+            status: r.status as "ok" | "warn" | "empty",
+          }
+        }),
+      },
+      {
+        title: "Pengelolaan Limbah B3 (SP LB3)",
+        description: "Sumber: Data Hub › Tab Limbah B3. Masa simpan & kelengkapan manifest.",
+        icon: <Recycle className="h-3.5 w-3.5" />,
+        steps: b3Results.map(r => {
+          const unit = "unit" in r.p ? r.p.unit : ""
+          const limit = "max" in r.p && r.p.max !== undefined ? r.p.max : ("min" in r.p && r.p.min !== undefined ? r.p.min : "-")
+          return {
+            source: r.p.name,
+            sourceValue: r.value !== null && r.value !== undefined ? `Nilai: ${r.value} ${unit}` : "Data belum dimasukkan",
+            sourceColor: "purple" as const,
+            formula: `Batas: ${limit} ${unit}. Pelanggaran jika melewati batas ini.`,
+            result: r.status === "ok" ? `✅ Patuh` : r.status === "warn" ? `⚠️ Perlu Perhatian` : r.status === "fail" ? `❌ Melanggar` : "— Belum ada data",
+            status: r.status as "ok" | "warn" | "empty",
+          }
+        }),
+      },
+    ]}
+  />
     </div>
   )
 }

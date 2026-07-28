@@ -67,6 +67,7 @@ const navGroups: NavGroup[] = [
       { labelKey: "sidebar.goal_scope", href: "/dashboard/goal-scope", icon: Target },
       { labelKey: "sidebar.company_profile", href: "/dashboard/company-profile", icon: Building2 },
       { labelKey: "sidebar.product_assessment", href: "/dashboard/product-assessment", icon: Package },
+      { labelKey: "sidebar.data_hub", href: "/dashboard/data-hub", icon: Database, allowedRoles: ["admin", "manager", "operator"] },
     ],
   },
   {
@@ -94,7 +95,6 @@ const navGroups: NavGroup[] = [
   {
     label: "DATA & SYSTEM",
     items: [
-      { labelKey: "sidebar.data_hub", href: "/dashboard/data-hub", icon: Database, allowedRoles: ["admin", "manager", "operator"] },
       { labelKey: "sidebar.settings", href: "/dashboard/settings", icon: Settings, allowedRoles: ["admin", "manager"] },
     ],
   },

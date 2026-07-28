@@ -6,6 +6,7 @@ import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Cpu, Beaker, Package, BarChart3, Zap, TrendingDown, ArrowRight, Loader2 } from "lucide-react"
+import { CalcTraceModal, TraceCalcButton, type TraceGroup } from "@/components/dashboard/calc-trace-modal"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts"
 import { t, type Locale, getLocaleClient } from "@/lib/i18n"
 import { id as idDict } from "@/locales/id"
@@ -14,20 +15,85 @@ import { useIndustryId } from "@/lib/use-industry-id"
 import { useSiteId } from "@/lib/use-site-id"
 import { calcEngineAsync, type CalculatedKPIs } from "@/lib/calc-engine"
 import { getGoalScope, type GoalScopeRecord } from "@/lib/supabase/data-service"
-import { LCA_PARAMS, EMISSION_PROFILES } from "@/lib/proper"
+import { LCA_PARAMS } from "@/lib/proper"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
 const fmt = (v: number | null, unit = "", dec = 2) => (v === null || v === 0 ? "—" : `${v.toLocaleString("id-ID", { maximumFractionDigits: dec })}${unit}`)
 
-const FUEL_CO2_FACTOR: Record<string, number> = {
-  batubara: 94.6,
-  biomassa: 0,
-  gas: 56.1,
-  minyak: 74.1,
-}
+function buildLcaTraceGroups(kpis: CalculatedKPIs | null): TraceGroup[] {
+  const gwp    = kpis?.gwp_kgCO2e ?? 0
+  const ap     = kpis?.ap_kgSO2e  ?? 0
+  const ep     = kpis?.ep_kgPO4e  ?? 0
+  const wud    = kpis?.wud_m3     ?? 0
+  const adpf   = kpis?.adpf_MJ    ?? 0
+  const pm     = kpis?.pm_kgPM25e ?? 0
 
-const CARBON_PRICE_IDR = 70000
+  return [
+    {
+      title: "Kategori Dampak Lingkungan — Inventori Energi",
+      description: "Sumber: Data Hub › Konsumsi Energi Bulanan. Setiap jenis energi mengandung beberapa faktor karakterisasi LCIA.",
+      icon: <Zap className="h-3.5 w-3.5" />,
+      steps: [
+        {
+          source: "Listrik + Gas + Diesel",
+          sourceValue: "Semua entri energi bulanan",
+          sourceColor: "blue",
+          formula: "× Faktor GWP (Global Warming Potential) — ISO 14044 / IPCC AR6",
+          result: gwp > 0 ? `${gwp.toLocaleString("id-ID", { maximumFractionDigits: 2 })} kg CO₂e` : "Belum ada data",
+          status: gwp > 0 ? "ok" : "empty",
+        },
+        {
+          source: "Gas Bumi + Batubara",
+          sourceValue: "Emisi SO₂ dari pembakaran",
+          sourceColor: "orange",
+          formula: "× Faktor Karakterisasi AP (Acidification) kg SO₂e/unit",
+          result: ap > 0 ? `${ap.toLocaleString("id-ID", { maximumFractionDigits: 4 })} kg SO₂e` : "Belum ada data",
+          status: ap > 0 ? "ok" : "empty",
+        },
+        {
+          source: "Gas Bumi + Diesel",
+          sourceValue: "Emisi NOx & Fosfor",
+          sourceColor: "purple",
+          formula: "× Faktor Eutrophication Potential (EP) kg PO₄e/unit",
+          result: ep > 0 ? `${ep.toLocaleString("id-ID", { maximumFractionDigits: 4 })} kg PO₄e` : "Belum ada data",
+          status: ep > 0 ? "ok" : "empty",
+        },
+        {
+          source: "Diesel (partikulat halus)",
+          sourceValue: "PM2.5 dari exhaust",
+          sourceColor: "orange",
+          formula: "× Faktor PM (Particulate Matter) kg PM2.5e/unit",
+          result: pm > 0 ? `${pm.toLocaleString("id-ID", { maximumFractionDigits: 4 })} kg PM2.5e` : "Belum ada data",
+          status: pm > 0 ? "ok" : "empty",
+        },
+      ],
+    },
+    {
+      title: "Kategori Dampak — Sumber Daya Alam",
+      description: "Sumber: Data Hub › Konsumsi Air & Energi. Jejak penggunaan sumber daya terbatas.",
+      icon: <Beaker className="h-3.5 w-3.5" />,
+      steps: [
+        {
+          source: "Pemakaian Air Proses",
+          sourceValue: "Dari Data Hub › Air",
+          sourceColor: "teal",
+          formula: "Volume air proses yang diambil (m³) dikurangi volume yang di-recycle / reuse",
+          result: wud > 0 ? `${wud.toLocaleString("id-ID", { maximumFractionDigits: 2 })} m³` : "Belum ada data",
+          status: wud > 0 ? "ok" : "empty",
+        },
+        {
+          source: "Bahan Bakar Fosil",
+          sourceValue: "Gas + Diesel + Batubara",
+          sourceColor: "orange",
+          formula: "Konversi energi ke MJ (Megajoule) × Faktor ADP-Fosil (Abiotic Depletion)",
+          result: adpf > 0 ? `${adpf.toLocaleString("id-ID", { maximumFractionDigits: 2 })} MJ` : "Belum ada data",
+          status: adpf > 0 ? "ok" : "empty",
+        },
+      ],
+    },
+  ]
+}
 
 export default function LCAPage() {
   const [locale, setLocale] = useState<Locale>("id")
@@ -41,10 +107,7 @@ export default function LCAPage() {
   const [kpis, setKpis] = useState<CalculatedKPIs | null>(null)
   const [goalScope, setGoalScope] = useState<GoalScopeRecord | null>(null)
   const [loading, setLoading] = useState(true)
-
-  const [coalPct, setCoalPct] = useState(100)
-  const [simCoalPct, setSimCoalPct] = useState(60)
-  const fuelMix = simCoalPct < 100 ? "biomassa" : "batubara"
+  const [traceOpen, setTraceOpen] = useState(false)
 
   const refresh = useCallback(async () => {
     if (!siteId) return
@@ -60,16 +123,6 @@ export default function LCAPage() {
 
   const gwp = kpis?.gwp_kgCO2e ?? 0
   const water = kpis?.wud_m3 ?? 0
-
-  const currentCO2Factor = FUEL_CO2_FACTOR.batubara * (coalPct / 100)
-  const simCO2Factor = FUEL_CO2_FACTOR.batubara * (simCoalPct / 100) + FUEL_CO2_FACTOR.biomassa * ((100 - simCoalPct) / 100)
-  const reductionPct = currentCO2Factor > 0 ? Math.round(((currentCO2Factor - simCO2Factor) / currentCO2Factor) * 100) : 0
-  const baselineEmission = kpis?.total_ghg_tCO2e ?? 0
-  const savedTons = Math.round(baselineEmission * reductionPct / 100)
-  const carbonCreditIdr = savedTons * CARBON_PRICE_IDR
-
-  const simRank = simCoalPct <= 60 ? "Hijau" : "Biru"
-  const simEmissionProfile = EMISSION_PROFILES[fuelMix]
 
   const impactData = [
     { name: "GWP (Klimat)", value: kpis?.gwp_kgCO2e ?? 0 },
@@ -88,13 +141,14 @@ export default function LCAPage() {
       {/* Prasyarat: Goal & Scope Status */}
       <div className="flex items-center justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-semibold text-blue-900">Modul 6 — LCIA Multi-Impact</p>
             {goalScope?.isLocked ? (
               <Badge variant="success">Goal &amp; Scope Terkunci (ISO 14040/44 Valid)</Badge>
             ) : (
               <Badge variant="warning">Goal &amp; Scope Belum Dikunci</Badge>
             )}
+            <TraceCalcButton onClick={() => setTraceOpen(true)} />
           </div>
           <p className="text-xs text-blue-700 mt-0.5">
             {goalScope?.isLocked
@@ -120,77 +174,6 @@ export default function LCAPage() {
             <StatCard title="Indikator LCIA Terisi" value={`${lcaFilledCount}/11`} description="Kategori Dampak Lingkungan" icon={Package} />
             <StatCard title="Status PROPER LCA" value={lcaFilledCount >= 6 ? "EMAS" : lcaFilledCount >= 3 ? "HIJAU" : "BIRU"} description={lcaFilledCount >= 6 ? "LCIA Terpenuhi" : `Butuh ${Math.max(0, 3 - lcaFilledCount)} data lagi → Hijau`} icon={Cpu} />
           </div>
-
-          {/* What-If Decision Simulator */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                  <Zap className="h-4 w-4" />
-                </div>
-                <div>
-                  <CardTitle>What-If Decision Simulator</CardTitle>
-                  <p className="mt-0.5 text-sm text-neutral-500">Simulasikan dampak penggantian bahan bakar boiler terhadap emisi riil {fmt(baselineEmission, " tCO₂e")}, PROPER rank, dan karbon kredit</p>
-                </div>
-              </div>
-            </CardHeader>
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-5">
-                <div>
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <label className="font-medium text-neutral-700">Kondisi Saat Ini — % Batubara</label>
-                    <span className="font-bold text-neutral-900">{coalPct}%</span>
-                  </div>
-                  <input type="range" min={0} max={100} value={coalPct} onChange={(e) => setCoalPct(Number(e.target.value))}
-                    className="h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 accent-orange-500" />
-                </div>
-                <div>
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <label className="font-medium text-neutral-700">Setelah Retrofit — % Batubara</label>
-                    <span className="font-bold text-emerald-700">{simCoalPct}%</span>
-                  </div>
-                  <input type="range" min={0} max={100} value={simCoalPct} onChange={(e) => setSimCoalPct(Number(e.target.value))}
-                    className="h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 accent-emerald-500" />
-                </div>
-                <div className="rounded-lg border border-neutral-100 bg-neutral-50 p-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                    Batas Emisi Proyeksi — {simEmissionProfile.label}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(simEmissionProfile.limits).map(([code, lim]) => (
-                      <div key={code} className="rounded border border-neutral-200 bg-white px-2 py-1 text-center">
-                        <p className="text-[10px] font-semibold uppercase text-neutral-400">{code === "opacity" ? "Opasitas" : code.toUpperCase()}</p>
-                        <p className="text-xs font-bold text-neutral-800">{lim}<span className="ml-0.5 text-[10px] font-normal text-neutral-400">{code === "opacity" ? "%" : " mg/Nm³"}</span></p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-center">
-                    <TrendingDown className="mx-auto h-5 w-5 text-emerald-600" />
-                    <p className="mt-1 text-2xl font-bold text-emerald-700">↓{reductionPct}%</p>
-                    <p className="text-xs text-emerald-600">Penurunan Emisi CO₂</p>
-                  </div>
-                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-center">
-                    <p className="text-lg font-bold text-blue-700">{simRank}</p>
-                    <p className="mt-0.5 text-xs text-blue-600">Proyeksi Peringkat PROPER</p>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-wider text-amber-800">POTENSI REVENUE KARBON KREDIT (IDXCARBON)</p>
-                    <Badge variant="warning">Rp 70.000 / tCO₂e</Badge>
-                  </div>
-                  <p className="mt-1 text-2xl font-black text-amber-900">{savedTons.toLocaleString("id-ID")} tCO₂e/tahun</p>
-                  <p className="mt-0.5 text-sm font-extrabold text-amber-700">
-                    ≈ Rp {carbonCreditIdr.toLocaleString("id-ID")} <span className="text-xs font-normal text-amber-600">/ tahun</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
 
           {/* 11 Indikator LCA */}
           <div className="grid gap-6 lg:grid-cols-2">
@@ -242,6 +225,13 @@ export default function LCAPage() {
           </div>
         </>
       )}
+      <CalcTraceModal
+        isOpen={traceOpen}
+        onClose={() => setTraceOpen(false)}
+        title="Rincian Kalkulasi LCIA Multi-Impact (ISO 14044)"
+        subtitle="Modul 6 — LCIA · 11 Kategori Dampak Lingkungan"
+        groups={buildLcaTraceGroups(kpis)}
+      />
     </div>
   )
 }

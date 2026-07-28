@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   TrendingDown, TrendingUp, Download, Target, Leaf, Users, Shield, Loader2,
-  CheckCircle2, AlertTriangle, Info,
+  CheckCircle2, AlertTriangle, Info, Cloud, Zap, Droplets, Truck,
 } from "lucide-react"
+import { CalcTraceModal, TraceCalcButton } from "@/components/dashboard/calc-trace-modal"
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
   RadarChart, Radar, PolarGrid, PolarAngleAxis,
@@ -16,6 +17,15 @@ import { useIndustryId } from "@/lib/use-industry-id"
 import { useSiteId } from "@/lib/use-site-id"
 import { calcEngineAsync, type CalculatedKPIs } from "@/lib/calc-engine"
 import { getHubEntries, type LabEntry, type StackEntry, type B3Entry, type WaterEntry } from "@/lib/supabase/data-service"
+import { EMISSION_PROFILES } from "@/lib/proper"
+
+const FUEL_CO2_FACTOR: Record<string, number> = {
+  batubara: 94.6,
+  biomassa: 0,
+  gas: 56.1,
+  minyak: 74.1,
+}
+const CARBON_PRICE_IDR = 70000
 
 /* ── Types ── */
 interface ESGScore {
@@ -83,6 +93,10 @@ export default function ESGDashboardPage() {
   const [b3Count, setB3Count] = useState(0)
   const [waterCount, setWaterCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [traceOpen, setTraceOpen] = useState(false)
+
+  const [coalPct, setCoalPct] = useState(100)
+  const [simCoalPct, setSimCoalPct] = useState(60)
 
   const refresh = useCallback(async () => {
     if (!siteId) return
@@ -142,6 +156,16 @@ export default function ESGDashboardPage() {
     { subject: "Rantai Pasok", E: ESG_DATA[0].score > 0 ? Math.round(ESG_DATA[0].score * 0.8) : 0, fullMark: 100 },
   ]
 
+  const fuelMix = simCoalPct < 100 ? "biomassa" : "batubara"
+  const currentCO2Factor = FUEL_CO2_FACTOR.batubara * (coalPct / 100)
+  const simCO2Factor = FUEL_CO2_FACTOR.batubara * (simCoalPct / 100) + FUEL_CO2_FACTOR.biomassa * ((100 - simCoalPct) / 100)
+  const reductionPct = currentCO2Factor > 0 ? Math.round(((currentCO2Factor - simCO2Factor) / currentCO2Factor) * 100) : 0
+  const simBaseline = kpis?.total_ghg_tCO2e ?? 0
+  const savedTons = Math.round(simBaseline * reductionPct / 100)
+  const carbonCreditIdr = savedTons * CARBON_PRICE_IDR
+  const simRank = simCoalPct <= 60 ? "Hijau" : "Biru"
+  const simEmissionProfile = EMISSION_PROFILES[fuelMix]
+
   const active = ESG_DATA.find(d => d.category === activeTab)
 
   if (loading) {
@@ -161,9 +185,12 @@ export default function ESGDashboardPage() {
             <Badge variant="neutral" className="text-[10px] font-bold">GRI Standards · NDC/Net Zero · POJK 51/2017</Badge>
           </div>
           <h1 className="text-xl font-bold text-neutral-900">ESG Dashboard & Target Roadmap</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            Skor ESG aktual dihitung langsung dari data operasional di Data Hub. Tambahkan data di Data Hub untuk memperbarui skor.
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <p className="text-sm text-neutral-500">
+              Skor ESG aktual dihitung langsung dari data operasional di Data Hub. Tambahkan data di Data Hub untuk memperbarui skor.
+            </p>
+            <TraceCalcButton onClick={() => setTraceOpen(true)} />
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={refresh}><Download className="mr-1.5 h-4 w-4" />Refresh Data</Button>
@@ -354,12 +381,134 @@ export default function ESGDashboardPage() {
         ) : null}
       </Card>
 
+      {/* What-If Decision Simulator */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <Zap className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle>What-If Decision Simulator</CardTitle>
+              <p className="mt-0.5 text-sm text-neutral-500">Simulasikan dampak penggantian bahan bakar boiler terhadap emisi riil {simBaseline ? `${simBaseline.toLocaleString("id-ID")} tCO₂e` : "—"}, PROPER rank, dan karbon kredit</p>
+            </div>
+          </div>
+        </CardHeader>
+        <div className="grid gap-6 lg:grid-cols-2 p-6 pt-0">
+          <div className="space-y-5">
+            <div>
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <label className="font-medium text-neutral-700">Kondisi Saat Ini — % Batubara</label>
+                <span className="font-bold text-neutral-900">{coalPct}%</span>
+              </div>
+              <input type="range" min={0} max={100} value={coalPct} onChange={(e) => setCoalPct(Number(e.target.value))}
+                className="h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 accent-orange-500" />
+            </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <label className="font-medium text-neutral-700">Setelah Retrofit — % Batubara</label>
+                <span className="font-bold text-emerald-700">{simCoalPct}%</span>
+              </div>
+              <input type="range" min={0} max={100} value={simCoalPct} onChange={(e) => setSimCoalPct(Number(e.target.value))}
+                className="h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-200 accent-emerald-500" />
+            </div>
+            <div className="rounded-lg border border-neutral-100 bg-neutral-50 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Batas Emisi Proyeksi — {simEmissionProfile.label}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(simEmissionProfile.limits).map(([code, lim]) => (
+                  <div key={code} className="rounded border border-neutral-200 bg-white px-2 py-1 text-center">
+                    <p className="text-[10px] font-semibold uppercase text-neutral-400">{code === "opacity" ? "Opasitas" : code.toUpperCase()}</p>
+                    <p className="text-xs font-bold text-neutral-800">{String(lim)}<span className="ml-0.5 text-[10px] font-normal text-neutral-400">{code === "opacity" ? "%" : " mg/Nm³"}</span></p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-center">
+                <TrendingDown className="mx-auto h-5 w-5 text-emerald-600" />
+                <p className="mt-1 text-2xl font-bold text-emerald-700">↓{reductionPct}%</p>
+                <p className="text-xs font-medium text-emerald-800">Emisi CO₂ Tereduksi</p>
+              </div>
+              <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-center">
+                <Target className="mx-auto h-5 w-5 text-blue-600" />
+                <p className="mt-1 text-2xl font-bold text-blue-700">{simRank}</p>
+                <p className="text-xs font-medium text-blue-800">Proyeksi PROPER</p>
+              </div>
+            </div>
+            <div className="rounded-xl border border-amber-100 bg-amber-50 p-4">
+              <p className="text-xs font-medium uppercase text-amber-600">Potensi Nilai Karbon Kredit (IDR)</p>
+              <p className="text-2xl font-bold text-amber-700">Rp {carbonCreditIdr.toLocaleString("id-ID")}</p>
+              <p className="mt-1 text-xs text-amber-600">Berdasarkan {savedTons.toLocaleString("id-ID")} tCO₂e terefisiensi × harga pasar Rp {CARBON_PRICE_IDR.toLocaleString("id-ID")}</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
         <p className="text-xs text-emerald-700">
           Skor ESG dihitung berdasarkan data aktual dari seluruh modul. Untuk laporan resmi sesuai <b>POJK 51/2017</b>, gunakan Modul 13 — Reporting untuk menggenerate laporan keberlanjutan terstruktur.
         </p>
       </div>
+
+      <CalcTraceModal
+        isOpen={traceOpen}
+        onClose={() => setTraceOpen(false)}
+        title="Rincian Kalkulasi Skor ESG"
+        subtitle="Modul 11 — ESG Dashboard & Target Roadmap"
+        groups={[
+          {
+            title: "Skor E (Environmental) — Kinerja Lingkungan",
+            description: "Sumber: Data Hub › Energi, Lab, Stack Emissions + Kalkulasi Emisi Karbon dari calc-engine.",
+            icon: <Leaf className="h-3.5 w-3.5" />,
+            steps: [
+              {
+                source: "Data Energi Bulanan",
+                sourceValue: `Listrik, Gas, Diesel (${kpis?.hasData ? "Ada" : "Belum ada"})`,
+                sourceColor: "blue" as const,
+                formula: "Hitung emisi Scope 1+2+3 → jika ada data = indikator \"Target GHG ditetapkan\" tercapai",
+                result: kpis?.hasData ? `✅ Tercapai (Scope: ${(kpis.total_ghg_tCO2e ?? 0).toFixed(1)} tCO₂e)` : "— Belum ada data energi",
+                status: kpis?.hasData ? "ok" : "empty",
+              },
+              {
+                source: "Data Lab IPAL",
+                sourceValue: `${labCount} entri pengukuran`,
+                sourceColor: "teal" as const,
+                formula: "labCount > 0 → indikator \"Pemantauan Air Limbah Aktif\" = tercapai",
+                result: labCount > 0 ? `✅ Aktif (${labCount} data lab)` : "— Belum ada data lab",
+                status: labCount > 0 ? "ok" : "empty",
+              },
+              {
+                source: "Data Stack Emissions",
+                sourceValue: `${stackCount} entri pengukuran cerobong`,
+                sourceColor: "orange" as const,
+                formula: "stackCount > 0 → indikator \"Pemantauan Emisi Cerobong Aktif\" = tercapai",
+                result: stackCount > 0 ? `✅ Aktif (${stackCount} data stack)` : "— Belum ada data stack",
+                status: stackCount > 0 ? "ok" : "empty",
+              },
+            ],
+          },
+          {
+            title: "Skor S (Social) — Kinerja Sosial",
+            description: "Beberapa indikator sosial bersifat struktural (manual) dan tidak terhubung ke Data Hub secara otomatis.",
+            icon: <Users className="h-3.5 w-3.5" />,
+            steps: [
+              {
+                source: "Konfigurasi Platform",
+                sourceValue: "Nilai default LTIFR < 0.5 diasumsikan",
+                sourceColor: "purple" as const,
+                formula: "Item sosial yang \"achieved\" dibagi total item sosial × 100",
+                result: `Skor S saat ini: ${Math.round((2 / 5) * 100)}% (2 dari 5 item default tercapai)`,
+                status: "warn",
+              },
+            ],
+          },
+        ]}
+      />
     </div>
   )
 }
