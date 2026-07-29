@@ -10,6 +10,7 @@ import { t, type Locale } from "@/lib/i18n"
 import { id } from "@/locales/id"
 import { en } from "@/locales/en"
 import { type Role, ROLE_LABELS } from "@/lib/role"
+import { useBoundary, isScopeActive, type GHGScope } from "@/lib/boundary-context"
 import {
   LayoutDashboard,
   Cpu,
@@ -46,11 +47,17 @@ type NavItem = {
   href: string
   icon: LucideIcon
   allowedRoles?: Role[]
+  /** Jika true, item hanya muncul setelah Goal & Scope dikonfigurasi */
+  requiresConfigured?: boolean
+  /** Jika diisi, item hanya muncul saat scope ini aktif */
+  requiredScope?: GHGScope
 }
 
 type NavGroup = {
   label: string
   allowedRoles?: Role[]
+  /** Jika true, seluruh grup hanya muncul setelah Goal & Scope dikonfigurasi */
+  requiresConfigured?: boolean
   items: NavItem[]
 }
 
@@ -65,23 +72,25 @@ const navGroups: NavGroup[] = [
     label: "FONDASI LCA",
     items: [
       { labelKey: "sidebar.goal_scope", href: "/dashboard/goal-scope", icon: Target },
-      { labelKey: "sidebar.company_profile", href: "/dashboard/company-profile", icon: Building2 },
-      { labelKey: "sidebar.product_assessment", href: "/dashboard/product-assessment", icon: Package },
-      { labelKey: "sidebar.data_hub", href: "/dashboard/data-hub", icon: Database, allowedRoles: ["admin", "manager", "operator"] },
+      { labelKey: "sidebar.company_profile", href: "/dashboard/company-profile", icon: Building2, requiresConfigured: true },
+      { labelKey: "sidebar.product_assessment", href: "/dashboard/product-assessment", icon: Package, requiresConfigured: true },
+      { labelKey: "sidebar.data_hub", href: "/dashboard/data-hub", icon: Database, requiresConfigured: true, allowedRoles: ["admin", "manager", "operator"] },
     ],
   },
   {
     label: "INVENTORI & DAMPAK",
+    requiresConfigured: true,
     items: [
       { labelKey: "sidebar.energy", href: "/dashboard/energy-monitoring", icon: Zap },
       { labelKey: "sidebar.waste", href: "/dashboard/waste-management", icon: Recycle },
-      { labelKey: "sidebar.transportation", href: "/dashboard/transportation", icon: Truck },
+      { labelKey: "sidebar.transportation", href: "/dashboard/transportation", icon: Truck, requiredScope: "scope3" },
       { labelKey: "sidebar.lca", href: "/dashboard/lca", icon: Cpu },
       { labelKey: "sidebar.carbon", href: "/dashboard/carbon-accounting", icon: BarChart3 },
     ],
   },
   {
     label: "PELAPORAN & KEPATUHAN",
+    requiresConfigured: true,
     items: [
       { labelKey: "sidebar.circular_economy", href: "/dashboard/circular-economy", icon: RefreshCcw },
       { labelKey: "sidebar.biodiversity", href: "/dashboard/biodiversity", icon: Leaf },
@@ -135,16 +144,25 @@ export function Sidebar({
   const dict = dicts[locale]
   const [hovered, setHovered] = useState(false)
   const isCollapsed = collapsed && !hovered
+  const { isConfigured, boundary } = useBoundary()
 
   const visibleGroups = navGroups
     .map((g) => {
+      // Sembunyikan seluruh grup jika requiresConfigured & belum dikonfigurasi
+      if (g.requiresConfigured && !isConfigured) {
+        return { ...g, items: [] }
+      }
+      // Filter per role
       if (g.allowedRoles && role && !g.allowedRoles.includes(role)) {
         return { ...g, items: [] }
       }
       const filteredItems = g.items.filter((item) => {
-        if (item.allowedRoles && role && !item.allowedRoles.includes(role)) {
-          return false
-        }
+        // Filter per role
+        if (item.allowedRoles && role && !item.allowedRoles.includes(role)) return false
+        // Sembunyikan item yang butuh Goal & Scope jika belum dikonfigurasi
+        if (item.requiresConfigured && !isConfigured) return false
+        // Sembunyikan item yang butuh scope tertentu jika scope tidak aktif
+        if (item.requiredScope && !isScopeActive(boundary, item.requiredScope)) return false
         return true
       })
       return { ...g, items: filteredItems }
@@ -192,7 +210,17 @@ export function Sidebar({
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4">
+        {/* Setup Hint Banner — muncul saat Goal & Scope belum dikonfigurasi */}
+        {!isConfigured && !isCollapsed && (
+          <Link href="/dashboard/goal-scope" className="block mb-4">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[11px] text-emerald-800 hover:border-emerald-300 transition-colors">
+              <p className="font-bold text-emerald-900 mb-0.5">⚡ Mulai di sini</p>
+              <p className="leading-snug text-emerald-700">Lengkapi <b>Goal &amp; Scope</b> untuk membuka semua modul LCA</p>
+            </div>
+          </Link>
+        )}
         {visibleGroups.map((group, gi) => (
+
           <div key={group.label} className={gi > 0 ? (isCollapsed ? "mt-3" : "mt-5") : ""}>
             {!isCollapsed && (
               <div className="mb-1.5 px-3">

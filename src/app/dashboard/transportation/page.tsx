@@ -13,6 +13,7 @@ import { useIndustryId } from "@/lib/use-industry-id"
 import { useSiteId } from "@/lib/use-site-id"
 import { getHubEntries, type TransportEntry as SbTransportEntry } from "@/lib/supabase/data-service"
 import { useBoundary, isScopeActive, getBoundaryLabel } from "@/lib/boundary-context"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend,
 } from "recharts"
@@ -87,6 +88,7 @@ export default function TransportationPage() {
   const scope3Active = isScopeActive(boundary, "scope3")
 
   return (
+    <ModuleGate moduleName="M5 · Transportation & Logistik" requiredScope="scope3">
     <div className="space-y-6">
 
       {/* Boundary Warning */}
@@ -213,10 +215,10 @@ export default function TransportationPage() {
                 </div>
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={10}>
+                    <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }) => percent ? `${name} ${(percent * 100).toFixed(0)}%` : name} labelLine={false} fontSize={10}>
                       {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                     </Pie>
-                    <Tooltip formatter={(v: number) => [`${v.toFixed(3)} tCO₂e/thn`]} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                    <Tooltip formatter={(v: any) => [`${Number(v).toFixed(3)} tCO₂e/thn`, "Emisi"]} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
                     <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -298,5 +300,7 @@ export default function TransportationPage() {
         </>
       )}
     </div>
+    </ModuleGate>
   )
 }
+

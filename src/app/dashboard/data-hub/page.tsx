@@ -26,6 +26,7 @@ import {
 import { calcEngineAsync, type CalculatedKPIs } from "@/lib/calc-engine"
 import { getRoleClient, isReadOnly } from "@/lib/role"
 import { useBoundary, isCategoryVisible, getBoundaryLabel, getActiveScopes } from "@/lib/boundary-context"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 
 /* ─── audit helpers ─── */
 function auditSave(category: HubCategory, siteId: string, industryId: string, role: string, summary: string) {
@@ -919,6 +920,7 @@ export default function DataHubPage() {
   useEffect(() => { refreshKpis() }, [refreshKpis])
 
   return (
+    <ModuleGate moduleName="Data Hub">
     <div className="space-y-6">
       {readOnly && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 flex items-center gap-3">
@@ -1036,5 +1038,6 @@ export default function DataHubPage() {
       {/* ── KPI Panel ── */}
       {showKpi && kpis && <KpiPanel kpis={kpis} onClose={() => setShowKpi(false)} />}
     </div>
+    </ModuleGate>
   )
 }

@@ -61,6 +61,8 @@ export function getActiveScopes(boundary: SystemBoundary): string {
 interface BoundaryContextType {
   boundary: SystemBoundary
   isLoading: boolean
+  /** true setelah Goal & Scope (M0) tersimpan — digunakan untuk progressive sidebar disclosure */
+  isConfigured: boolean
   setBoundary: (b: SystemBoundary) => void
   refreshBoundary: () => Promise<void>
 }
@@ -68,6 +70,7 @@ interface BoundaryContextType {
 const BoundaryContext = createContext<BoundaryContextType>({
   boundary: "cradle-to-gate",
   isLoading: true,
+  isConfigured: false,
   setBoundary: () => {},
   refreshBoundary: async () => {},
 })
@@ -83,35 +86,49 @@ export function BoundaryProvider({ children }: { children: ReactNode }) {
   const industryId = useIndustryId()
   const [boundary, setBoundary] = useState<SystemBoundary>("cradle-to-gate")
   const [isLoading, setIsLoading] = useState(true)
+  const [isConfigured, setIsConfigured] = useState(false)
 
   const refreshBoundary = useCallback(async () => {
     if (!siteId) return
     setIsLoading(true)
+    let configured = false
     try {
       const data = await getGoalScope(siteId, industryId)
       if (data?.boundary) {
         setBoundary(data.boundary as SystemBoundary)
       } else if (typeof window !== "undefined") {
-        // fallback: read from localStorage if DB not yet saved
         const stored = localStorage.getItem("enspr_goal_scope")
         if (stored) {
           const parsed = JSON.parse(stored)
           if (parsed?.boundary) setBoundary(parsed.boundary as SystemBoundary)
         }
       }
+      // isConfigured: true jika studyGoal atau functionalUnit sudah diisi
+      if (data?.studyGoal || data?.functionalUnit) {
+        configured = true
+      } else if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("enspr_goal_scope")
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored)
+            if (parsed?.studyGoal || parsed?.functionalUnit) configured = true
+          } catch {}
+        }
+      }
     } catch (err) {
       console.warn("[BoundaryContext] Failed to fetch boundary:", err)
-      // fallback to localStorage on error
       if (typeof window !== "undefined") {
         const stored = localStorage.getItem("enspr_goal_scope")
         if (stored) {
           try {
             const parsed = JSON.parse(stored)
             if (parsed?.boundary) setBoundary(parsed.boundary as SystemBoundary)
+            if (parsed?.studyGoal || parsed?.functionalUnit) configured = true
           } catch {}
         }
       }
     }
+    setIsConfigured(configured)
     setIsLoading(false)
   }, [siteId, industryId])
 
@@ -121,7 +138,7 @@ export function BoundaryProvider({ children }: { children: ReactNode }) {
   }, [refreshBoundary])
 
   return (
-    <BoundaryContext.Provider value={{ boundary, isLoading, setBoundary, refreshBoundary }}>
+    <BoundaryContext.Provider value={{ boundary, isLoading, isConfigured, setBoundary, refreshBoundary }}>
       {children}
     </BoundaryContext.Provider>
   )

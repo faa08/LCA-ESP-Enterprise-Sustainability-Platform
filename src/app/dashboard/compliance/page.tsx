@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback } from "react"
 
@@ -42,7 +42,7 @@ function getAiRecommendation(code: string, name: string, status: "fail" | "warn"
   const c = code.toLowerCase()
   if (c.includes("ph")) {
     return status === "fail"
-      ? `Nilai pH (${val} ${unit}) di luar ambang 6.0–9.0. AI Advisory: Segera sesuaikan injeksi larutan netralisasi (Asam Sulfat H₂SO₄ / Natrium Hidroksida NaOH) pada bak ekualisasi IPAL dan lakukan kalibrasi ulang sensor pH probe.`
+      ? `Nilai pH (${val} ${unit}) di luar ambang 6.0â€“9.0. AI Advisory: Segera sesuaikan injeksi larutan netralisasi (Asam Sulfat Hâ‚‚SOâ‚„ / Natrium Hidroksida NaOH) pada bak ekualisasi IPAL dan lakukan kalibrasi ulang sensor pH probe.`
       : `Nilai pH (${val} ${unit}) mencapai >90% batas ambang. AI Advisory: Lakukan fine-tuning laju alir dosing pump netralisasi IPAL & periksa efisiensi pengadukan bak netralisasi.`
   }
   if (c.includes("bod") || c.includes("cod")) {
@@ -80,6 +80,7 @@ const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 import { useSiteId } from "@/lib/use-site-id"
 import { getHubEntries, type LabEntry, type StackEntry, type B3Entry } from "@/lib/supabase/data-service"
 import { CalcTraceModal, TraceCalcButton, type TraceGroup } from "@/components/dashboard/calc-trace-modal"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 
 export default function Compliance() {
   const [locale, setLocale] = useState<Locale>("id")
@@ -205,12 +206,12 @@ export default function Compliance() {
               <p className="truncate text-sm font-medium text-neutral-900">{r.p.name}</p>
               <p className="text-xs text-neutral-500">
                 {r.value === null
-                  ? `— / ${r.p.kind === "range" ? `${(r.p as { min: number }).min}–${(r.p as { max: number }).max}` : r.p.kind === "numeric" && (r.p as { max?: number }).max !== undefined ? `max ${(r.p as { max: number }).max}` : "—"} ${(r.p as { unit?: string }).unit || ""}`
+                  ? `â€” / ${r.p.kind === "range" ? `${(r.p as { min: number }).min}â€“${(r.p as { max: number }).max}` : r.p.kind === "numeric" && (r.p as { max?: number }).max !== undefined ? `max ${(r.p as { max: number }).max}` : "â€”"} ${(r.p as { unit?: string }).unit || ""}`
                   : r.p.kind === "checklist"
                     ? r.value ? t(dict, "proper.yes") : t(dict, "proper.no")
                     : `${r.value} ${r.p.unit || ""}`}
                 {r.p.kind === "numeric" && (r.p as { max?: number }).max !== undefined ? ` / max ${(r.p as { max: number }).max} ${r.p.unit}` : ""}
-                {r.p.kind === "range" ? ` / ${(r.p as { min: number }).min}–${(r.p as { max: number }).max}` : ""}
+                {r.p.kind === "range" ? ` / ${(r.p as { min: number }).min}â€“${(r.p as { max: number }).max}` : ""}
               </p>
             </div>
             <span className={`flex items-center gap-1.5 text-xs font-medium ${statusMeta[r.status].dot === "bg-emerald-500" ? "text-emerald-600" : statusMeta[r.status].dot === "bg-amber-500" ? "text-amber-600" : statusMeta[r.status].dot === "bg-red-500" ? "text-red-600" : "text-neutral-400"}`}>
@@ -220,13 +221,14 @@ export default function Compliance() {
           </div>
         ))}
         <div className="flex items-center justify-between pt-1 text-xs">
-          <span className="text-neutral-500">{t(dict, "proper.fails")}: <b className="text-red-600">{countFails(results)}</b> · {t(dict, "proper.warn")}: <b className="text-amber-600">{countWarn(results)}</b> · {t(dict, "proper.no_data_short")}: <b className="text-neutral-400">{countEmpty(results)}</b></span>
+          <span className="text-neutral-500">{t(dict, "proper.fails")}: <b className="text-red-600">{countFails(results)}</b> Â· {t(dict, "proper.warn")}: <b className="text-amber-600">{countWarn(results)}</b> Â· {t(dict, "proper.no_data_short")}: <b className="text-neutral-400">{countEmpty(results)}</b></span>
         </div>
       </div>
     </Card>
   )
 
   return (
+  <ModuleGate moduleName="M10 · Regulatory Compliance">
     <div className="space-y-6">
       {/* PROPER Snapshot */}
       <Card>
@@ -262,12 +264,12 @@ export default function Compliance() {
         </div>
       </Card>
 
-      {/* Early Warning Banner — muncul saat ada parameter mendekati baku mutu */}
+      {/* Early Warning Banner â€” muncul saat ada parameter mendekati baku mutu */}
       {(countWarn(airResults) + countWarn(emResults) + countWarn(b3Results)) > 0 && (
         <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           <div>
-            <p className="text-sm font-semibold text-amber-800">Peringatan Dini — {countWarn(airResults) + countWarn(emResults) + countWarn(b3Results)} Parameter Mendekati Baku Mutu</p>
+            <p className="text-sm font-semibold text-amber-800">Peringatan Dini â€” {countWarn(airResults) + countWarn(emResults) + countWarn(b3Results)} Parameter Mendekati Baku Mutu</p>
             <p className="mt-0.5 text-xs text-amber-700">
               Parameter berikut telah melampaui 90% batas baku mutu KLHK. Lakukan tindakan korektif segera sebelum terjadi pelanggaran:
               {" "}<b>{[...airResults, ...emResults, ...b3Results].filter(r => r.status === "warn").map(r => r.p.name).join(", ")}</b>
@@ -276,7 +278,7 @@ export default function Compliance() {
         </div>
       )}
 
-      {/* Rekomendasi AI — berdasarkan status fail/warn */}
+      {/* Rekomendasi AI â€” berdasarkan status fail/warn */}
       {entered > 0 && (
         <Card>
           <CardHeader>
@@ -288,7 +290,7 @@ export default function Compliance() {
               <div className="flex items-start gap-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 <div>
-                  <p className="text-sm font-medium text-emerald-800">Semua parameter dalam batas aman — Peringkat BIRU tercapai</p>
+                  <p className="text-sm font-medium text-emerald-800">Semua parameter dalam batas aman â€” Peringkat BIRU tercapai</p>
                   <p className="text-xs text-emerald-700 mt-0.5">Untuk naik ke Peringkat <b>HIJAU</b>, isi minimal 3 dari 11 indikator LCA (ISO 14040/14044) di modul LCA &amp; Dampak Produk. Saat ini: <b>{lcaFilledCount}/11</b> indikator.</p>
                 </div>
               </div>
@@ -308,7 +310,7 @@ export default function Compliance() {
                 <div key={i} className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50/90 p-3.5 shadow-xs">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
                   <div>
-                    <p className="text-sm font-semibold text-red-900">AI Alert: Pelanggaran Baku Mutu — {r.p.name}</p>
+                    <p className="text-sm font-semibold text-red-900">AI Alert: Pelanggaran Baku Mutu â€” {r.p.name}</p>
                     <p className="text-xs text-red-800 mt-1 leading-relaxed">
                       {getAiRecommendation(r.p.code, r.p.name, "fail", r.value, u)}
                     </p>
@@ -322,7 +324,7 @@ export default function Compliance() {
                 <div key={i} className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/90 p-3.5 shadow-xs">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                   <div>
-                    <p className="text-sm font-semibold text-amber-900">AI Warning: Peringatan Dini — {r.p.name}</p>
+                    <p className="text-sm font-semibold text-amber-900">AI Warning: Peringatan Dini â€” {r.p.name}</p>
                     <p className="text-xs text-amber-800 mt-1 leading-relaxed">
                       {getAiRecommendation(r.p.code, r.p.name, "warn", r.value, u)}
                     </p>
@@ -404,8 +406,8 @@ export default function Compliance() {
                           <td className="px-3 py-2.5">
                             <Badge variant="danger">{t(dict, "common.high")}</Badge>
                           </td>
-                          <td className="px-3 py-2.5 text-neutral-600">—</td>
-                          <td className="px-3 py-2.5 text-neutral-600">—</td>
+                          <td className="px-3 py-2.5 text-neutral-600">â€”</td>
+                          <td className="px-3 py-2.5 text-neutral-600">â€”</td>
                           <td className="px-3 py-2.5">
                             <Badge variant="neutral">{t(dict, "compliance.open")}</Badge>
                           </td>
@@ -457,7 +459,7 @@ export default function Compliance() {
                   title: "Pelaporan SIMPEL KLHK (Triwulanan)",
                   desc: "Baku Mutu Air Limbah & Emisi Cerobong",
                   due: "Tenggat Triwulan I: 31 Maret",
-                  status: (airResults.length > 0 && airResults.every(r => r.status !== "empty")) && (emResults.length > 0 && emResults.every(r => r.status !== "empty")) ? "Data Lengkap — Siap Kirim" : entered > 0 ? "Data Parsial (Lengkapi di Data Hub)" : "Belum Ada Ingest Data",
+                  status: (airResults.length > 0 && airResults.every(r => r.status !== "empty")) && (emResults.length > 0 && emResults.every(r => r.status !== "empty")) ? "Data Lengkap â€” Siap Kirim" : entered > 0 ? "Data Parsial (Lengkapi di Data Hub)" : "Belum Ada Ingest Data",
                   tone: (airResults.length > 0 && airResults.every(r => r.status !== "empty")) && (emResults.length > 0 && emResults.every(r => r.status !== "empty")) ? ("success" as const) : entered > 0 ? ("warning" as const) : ("neutral" as const),
                 },
                 {
@@ -471,14 +473,14 @@ export default function Compliance() {
                   title: "Dokumen LCA Beyond Compliance (ISO 14040/44)",
                   desc: "11 Kategori Dampak Lingkungan Produk",
                   due: "Evaluasi PROPER Hijau/Emas",
-                  status: lcaFilledCount >= 11 ? "11/11 LCA Lengkap (Siap EMAS)" : lcaFilledCount >= 3 ? `${lcaFilledCount}/11 LCA Terisi (Siap HIJAU)` : `Isi ${Math.max(0, 3 - lcaFilledCount)} Indikator LCA lagi → Hijau`,
+                  status: lcaFilledCount >= 11 ? "11/11 LCA Lengkap (Siap EMAS)" : lcaFilledCount >= 3 ? `${lcaFilledCount}/11 LCA Terisi (Siap HIJAU)` : `Isi ${Math.max(0, 3 - lcaFilledCount)} Indikator LCA lagi â†’ Hijau`,
                   tone: lcaFilledCount >= 3 ? ("success" as const) : ("warning" as const),
                 },
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between gap-3 rounded-lg border border-neutral-100 p-2.5">
                   <div>
                     <p className="text-xs font-semibold text-neutral-900">{item.title}</p>
-                    <p className="text-[11px] text-neutral-500">{item.desc} · {item.due}</p>
+                    <p className="text-[11px] text-neutral-500">{item.desc} Â· {item.due}</p>
                   </div>
                   <Badge variant={item.tone}>{item.status}</Badge>
                 </div>
@@ -507,10 +509,10 @@ export default function Compliance() {
                 </thead>
                 <tbody>
                   {[
-                    { std: "PROPER KLHK", status: entered > 0 && countFails(airResults) + countFails(emResults) + countFails(b3Results) === 0 ? "Taat" : entered > 0 ? "Evaluasi" : "Belum Ada Data", score: entered > 0 ? `${Math.max(0, 100 - (countFails(airResults) + countFails(emResults) + countFails(b3Results)) * 20)}%` : "—", next: "Okt 2026" },
-                    { std: "Permen LHK 5/2014 (Air)", status: airResults.some(r => r.status !== "empty") ? "Patuh" : "Belum Ada Data", score: airResults.some(r => r.status !== "empty") ? `${Math.round((airResults.filter(r => r.status === "ok").length / airResults.length) * 100)}%` : "—", next: "Bulanan" },
-                    { std: "Permen LHK P.16/2019 (Emisi)", status: emResults.some(r => r.status !== "empty") ? "Patuh" : "Belum Ada Data", score: emResults.some(r => r.status !== "empty") ? `${Math.round((emResults.filter(r => r.status === "ok").length / emResults.length) * 100)}%` : "—", next: "Bulanan" },
-                    { std: "Permen LHK 6/2021 (B3)", status: b3Results.some(r => r.status !== "empty") ? "Patuh" : "Belum Ada Data", score: b3Results.some(r => r.status !== "empty") ? `${Math.round((b3Results.filter(r => r.status === "ok").length / b3Results.length) * 100)}%` : "—", next: "Semesteran" },
+                    { std: "PROPER KLHK", status: entered > 0 && countFails(airResults) + countFails(emResults) + countFails(b3Results) === 0 ? "Taat" : entered > 0 ? "Evaluasi" : "Belum Ada Data", score: entered > 0 ? `${Math.max(0, 100 - (countFails(airResults) + countFails(emResults) + countFails(b3Results)) * 20)}%` : "â€”", next: "Okt 2026" },
+                    { std: "Permen LHK 5/2014 (Air)", status: airResults.some(r => r.status !== "empty") ? "Patuh" : "Belum Ada Data", score: airResults.some(r => r.status !== "empty") ? `${Math.round((airResults.filter(r => r.status === "ok").length / airResults.length) * 100)}%` : "â€”", next: "Bulanan" },
+                    { std: "Permen LHK P.16/2019 (Emisi)", status: emResults.some(r => r.status !== "empty") ? "Patuh" : "Belum Ada Data", score: emResults.some(r => r.status !== "empty") ? `${Math.round((emResults.filter(r => r.status === "ok").length / emResults.length) * 100)}%` : "â€”", next: "Bulanan" },
+                    { std: "Permen LHK 6/2021 (B3)", status: b3Results.some(r => r.status !== "empty") ? "Patuh" : "Belum Ada Data", score: b3Results.some(r => r.status !== "empty") ? `${Math.round((b3Results.filter(r => r.status === "ok").length / b3Results.length) * 100)}%` : "â€”", next: "Semesteran" },
                   ].map((row, i) => (
                     <tr key={i} className="border-b border-neutral-100">
                       <td className="px-3 py-2.5 font-semibold text-neutral-900">{row.std}</td>
@@ -545,7 +547,7 @@ export default function Compliance() {
                   {[...airResults, ...emResults, ...b3Results].filter((r) => r.status !== "ok" && r.status !== "empty").length === 0 ? (
                     <tr>
                       <td colSpan={4} className="px-3 py-6 text-center text-sm text-emerald-700 font-medium">
-                        Semua parameter aman — 0 Temuan Kritis / Pelanggaran Audit
+                        Semua parameter aman â€” 0 Temuan Kritis / Pelanggaran Audit
                       </td>
                     </tr>
                   ) : (
@@ -602,7 +604,7 @@ export default function Compliance() {
             <p className="text-sm text-amber-700">{t(dict, "compliance.overall_risk")}</p>
             <div className="mt-1 flex items-center gap-2">
               <Gauge className="h-5 w-5 text-amber-600" />
-              <span className="text-2xl font-bold text-amber-700">{entered === 0 ? "—" : t(dict, "compliance.moderate")}</span>
+              <span className="text-2xl font-bold text-amber-700">{entered === 0 ? "â€”" : t(dict, "compliance.moderate")}</span>
             </div>
             <p className="mt-1 text-xs text-amber-600">
               {countFails(airResults) + countFails(emResults) + countFails(b3Results)} high-risk items need immediate action
@@ -611,7 +613,7 @@ export default function Compliance() {
         </div>
       </Card>
 
-      {/* ── Modul 9: Regulatory Compliance Mapping ── */}
+      {/* â”€â”€ Modul 9: Regulatory Compliance Mapping â”€â”€ */}
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -620,11 +622,11 @@ export default function Compliance() {
                 <ClipboardCheck className="h-4 w-4" />
               </div>
               <div>
-                <CardTitle>Modul 9 — Regulatory Compliance Mapping</CardTitle>
+                <CardTitle>Modul 9 â€” Regulatory Compliance Mapping</CardTitle>
                 <p className="mt-0.5 text-xs text-neutral-500">Pemetaan otomatis hasil data ke format regulasi Indonesia</p>
               </div>
             </div>
-            <span className="rounded-md bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">POJK 51 · PROPER · GRI</span>
+            <span className="rounded-md bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">POJK 51 Â· PROPER Â· GRI</span>
           </div>
         </CardHeader>
         <div className="grid gap-4 lg:grid-cols-3">
@@ -676,11 +678,11 @@ export default function Compliance() {
     isOpen={traceOpen}
     onClose={() => setTraceOpen(false)}
     title="Rincian Penilaian PROPER (KLHK)"
-    subtitle="Modul 10 — Regulatory Compliance Mapping"
+    subtitle="Modul 10 â€” Regulatory Compliance Mapping"
     groups={[
       {
         title: "Kualitas Air Limbah (SP PL)",
-        description: "Sumber: Data Hub › Tab Laboratorium. Nilai rata-rata dari semua entri bulanan.",
+        description: "Sumber: Data Hub â€º Tab Laboratorium. Nilai rata-rata dari semua entri bulanan.",
         icon: <Droplets className="h-3.5 w-3.5" />,
         steps: airResults.map(r => {
           const unit = "unit" in r.p ? r.p.unit : ""
@@ -689,15 +691,15 @@ export default function Compliance() {
             source: r.p.name,
             sourceValue: r.value !== null && r.value !== undefined ? `Nilai terukur: ${r.value} ${unit}` : "Data belum dimasukkan",
             sourceColor: "teal" as const,
-            formula: `Baku mutu maks: ${max} ${unit}. Status = Nilai ÷ Batas Maksimum`,
-            result: r.status === "ok" ? `✅ Aman (${max} ${unit})` : r.status === "warn" ? `⚠️ Mendekati Batas` : r.status === "fail" ? `❌ Melanggar Baku Mutu` : "— Belum ada data",
+            formula: `Baku mutu maks: ${max} ${unit}. Status = Nilai Ã· Batas Maksimum`,
+            result: r.status === "ok" ? `âœ… Aman (${max} ${unit})` : r.status === "warn" ? `âš ï¸ Mendekati Batas` : r.status === "fail" ? `âŒ Melanggar Baku Mutu` : "â€” Belum ada data",
             status: r.status as "ok" | "warn" | "empty",
           }
         }),
       },
       {
         title: "Emisi Udara Cerobong (SP Parmen)",
-        description: "Sumber: Data Hub › Tab Stack Emissions. Nilai rata-rata dari pengukuran cerobong.",
+        description: "Sumber: Data Hub â€º Tab Stack Emissions. Nilai rata-rata dari pengukuran cerobong.",
         icon: <Wind className="h-3.5 w-3.5" />,
         steps: emResults.map(r => {
           const unit = "unit" in r.p ? r.p.unit : ""
@@ -707,14 +709,14 @@ export default function Compliance() {
             sourceValue: r.value !== null && r.value !== undefined ? `Nilai terukur: ${r.value} ${unit}` : "Data belum dimasukkan",
             sourceColor: "blue" as const,
             formula: `Baku mutu cerobong maks: ${max} ${unit}`,
-            result: r.status === "ok" ? `✅ Aman (${max} ${unit})` : r.status === "warn" ? `⚠️ Mendekati Batas` : r.status === "fail" ? `❌ Melanggar Baku Mutu` : "— Belum ada data",
+            result: r.status === "ok" ? `âœ… Aman (${max} ${unit})` : r.status === "warn" ? `âš ï¸ Mendekati Batas` : r.status === "fail" ? `âŒ Melanggar Baku Mutu` : "â€” Belum ada data",
             status: r.status as "ok" | "warn" | "empty",
           }
         }),
       },
       {
         title: "Pengelolaan Limbah B3 (SP LB3)",
-        description: "Sumber: Data Hub › Tab Limbah B3. Masa simpan & kelengkapan manifest.",
+        description: "Sumber: Data Hub â€º Tab Limbah B3. Masa simpan & kelengkapan manifest.",
         icon: <Recycle className="h-3.5 w-3.5" />,
         steps: b3Results.map(r => {
           const unit = "unit" in r.p ? r.p.unit : ""
@@ -724,7 +726,7 @@ export default function Compliance() {
             sourceValue: r.value !== null && r.value !== undefined ? `Nilai: ${r.value} ${unit}` : "Data belum dimasukkan",
             sourceColor: "purple" as const,
             formula: `Batas: ${limit} ${unit}. Pelanggaran jika melewati batas ini.`,
-            result: r.status === "ok" ? `✅ Patuh` : r.status === "warn" ? `⚠️ Perlu Perhatian` : r.status === "fail" ? `❌ Melanggar` : "— Belum ada data",
+            result: r.status === "ok" ? `âœ… Patuh` : r.status === "warn" ? `âš ï¸ Perlu Perhatian` : r.status === "fail" ? `âŒ Melanggar` : "â€” Belum ada data",
             status: r.status as "ok" | "warn" | "empty",
           }
         }),
@@ -732,5 +734,6 @@ export default function Compliance() {
     ]}
   />
     </div>
+    </ModuleGate>
   )
 }

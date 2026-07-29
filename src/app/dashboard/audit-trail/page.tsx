@@ -10,6 +10,7 @@ import { getAuditLogSb } from "@/lib/supabase/data-service"
 import { useIndustryId } from "@/lib/use-industry-id"
 import { useSiteId } from "@/lib/use-site-id"
 import { getRoleClient } from "@/lib/role"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 
 const ACTION_COLOR: Record<string, string> = {
   CREATE: "bg-emerald-100 text-emerald-700",
@@ -91,6 +92,7 @@ export default function AuditTrailPage() {
   }
 
   return (
+    <ModuleGate moduleName="M13 · Audit Trail">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
@@ -278,6 +280,7 @@ export default function AuditTrailPage() {
         )}
       </Card>
     </div>
+    </ModuleGate>
   )
 }
 

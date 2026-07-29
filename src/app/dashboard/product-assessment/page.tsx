@@ -11,6 +11,7 @@ import {
   getProductAssessments, saveProductAssessment, deleteProductAssessment,
   type ProductAssessmentRecord, type BOMItemRecord,
 } from "@/lib/supabase/data-service"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 
 function genId() {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -128,6 +129,7 @@ export default function ProductAssessmentPage() {
   const totalMass = active?.bom.reduce((s, b) => s + (b.massKg || 0), 0) ?? 0
 
   return (
+    <ModuleGate moduleName="M2 · Product Assessment">
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
@@ -303,5 +305,6 @@ export default function ProductAssessmentPage() {
         </>
       )}
     </div>
+    </ModuleGate>
   )
 }

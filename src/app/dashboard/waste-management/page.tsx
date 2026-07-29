@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback } from "react"
 import { StatCard } from "@/components/ui/stat-card"
@@ -13,6 +13,7 @@ import { ProperStrip } from "@/components/layout/proper-strip"
 import { useIndustryId } from "@/lib/use-industry-id"
 import { useSiteId } from "@/lib/use-site-id"
 import { getHubEntries, type B3Entry } from "@/lib/supabase/data-service"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
@@ -66,6 +67,7 @@ export default function WasteManagement() {
   const trendData = Object.entries(monthMap).map(([month, qty]) => ({ month, total: qty }))
 
   return (
+  <ModuleGate moduleName="M4 · Waste Assessment">
     <div className="space-y-6">
       <div>
         <h1 className="text-lg font-semibold text-neutral-900">{t(dict, "waste.page_title")}</h1>
@@ -81,10 +83,10 @@ export default function WasteManagement() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard title="Total Limbah Terdaftar" value={noData ? "—" : `${fmt(totalQtyKg)} kg`} description={noData ? "Belum ada entri" : `${entries.length} catatan TPS B3`} icon={Trash2} />
-            <StatCard title="Total Tonase" value={noData ? "—" : `${fmt(totalQtyTon)} Ton`} description="Terdaftar di Festronik" icon={Recycle} />
+            <StatCard title="Total Limbah Terdaftar" value={noData ? "â€”" : `${fmt(totalQtyKg)} kg`} description={noData ? "Belum ada entri" : `${entries.length} catatan TPS B3`} icon={Trash2} />
+            <StatCard title="Total Tonase" value={noData ? "â€”" : `${fmt(totalQtyTon)} Ton`} description="Terdaftar di Festronik" icon={Recycle} />
             <StatCard title="Peringatan Masa Simpan" value={noData ? "0" : String(over90Days)} description="Melebihi 90 hari izin TPS" icon={AlertTriangle} />
-            <StatCard title="Kepatuhan TPS B3" value={noData ? "—" : over90Days === 0 ? "100%" : "Perlu Tindakan"} description="Permen LHK No. 6/2021" icon={ShieldCheck} />
+            <StatCard title="Kepatuhan TPS B3" value={noData ? "â€”" : over90Days === 0 ? "100%" : "Perlu Tindakan"} description="Permen LHK No. 6/2021" icon={ShieldCheck} />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
@@ -173,15 +175,15 @@ export default function WasteManagement() {
                       <tr key={e.id} className="border-b border-neutral-100">
                         <td className="px-3 py-2.5 font-medium text-neutral-900">{e.date}</td>
                         <td className="px-3 py-2.5 text-neutral-800">{e.wasteType}</td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-neutral-600">{e.wasteCode || "—"}</td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-neutral-600">{e.wasteCode || "â€”"}</td>
                         <td className="px-3 py-2.5 font-bold text-neutral-900">{fmt(e.qty)} kg</td>
                         <td className="px-3 py-2.5">
                           <Badge variant={e.storageDuration > 90 ? "danger" : "success"}>
                             {e.storageDuration} Hari
                           </Badge>
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-emerald-700">{e.manifestNo || "—"}</td>
-                        <td className="px-3 py-2.5 text-neutral-600">{e.disposalCompany || e.recycler || "—"}</td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-emerald-700">{e.manifestNo || "â€”"}</td>
+                        <td className="px-3 py-2.5 text-neutral-600">{e.disposalCompany || e.recycler || "â€”"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -192,5 +194,6 @@ export default function WasteManagement() {
         </>
       )}
     </div>
+    </ModuleGate>
   )
 }

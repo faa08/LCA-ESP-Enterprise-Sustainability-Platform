@@ -10,6 +10,7 @@ import { useSiteId } from "@/lib/use-site-id"
 import {
   getSDGProgress, saveSDGProgress,
 } from "@/lib/supabase/data-service"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 
 interface SDGTemplate {
   id: number
@@ -107,6 +108,7 @@ export default function SDGsPage() {
   const sdgsWithAny = sdgs.filter(g => g.indicators.some(i => i.achieved)).length
 
   return (
+    <ModuleGate moduleName="M12 · SDGs Dashboard">
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
@@ -224,5 +226,6 @@ export default function SDGsPage() {
         </>
       )}
     </div>
+    </ModuleGate>
   )
 }

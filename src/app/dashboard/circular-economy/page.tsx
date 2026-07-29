@@ -12,6 +12,7 @@ import {
   getCircularFlows, upsertCircularFlow, deleteCircularFlow,
   type CircularFlowRecord,
 } from "@/lib/supabase/data-service"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 
 interface MaterialFlow {
   id: string
@@ -119,6 +120,7 @@ export default function CircularEconomyPage() {
     : { label: "Rendah", color: "text-red-700", bg: "bg-red-50 border-red-200" }
 
   return (
+    <ModuleGate moduleName="M8 · Circular Economy">
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
@@ -258,5 +260,6 @@ export default function CircularEconomyPage() {
         </div>
       )}
     </div>
+    </ModuleGate>
   )
 }

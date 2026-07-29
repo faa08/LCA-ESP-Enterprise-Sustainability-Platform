@@ -18,6 +18,7 @@ import { useSiteId } from "@/lib/use-site-id"
 import { calcEngineAsync, type CalculatedKPIs } from "@/lib/calc-engine"
 import { getHubEntries, type LabEntry, type StackEntry, type B3Entry, type WaterEntry } from "@/lib/supabase/data-service"
 import { EMISSION_PROFILES } from "@/lib/proper"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 
 const FUEL_CO2_FACTOR: Record<string, number> = {
   batubara: 94.6,
@@ -177,6 +178,7 @@ export default function ESGDashboardPage() {
   }
 
   return (
+    <ModuleGate moduleName="M11 · ESG & Net Zero Roadmap">
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
@@ -510,5 +512,6 @@ export default function ESGDashboardPage() {
         ]}
       />
     </div>
+    </ModuleGate>
   )
 }

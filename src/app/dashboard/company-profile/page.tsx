@@ -13,6 +13,7 @@ import {
   getCompanyProfile, saveCompanyProfile, saveSiteIndustry,
   type EntityRecord,
 } from "@/lib/supabase/data-service"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 
 type EntityLevel = "korporat" | "subholding" | "site"
 
@@ -227,6 +228,7 @@ export default function CompanyProfilePage() {
   }
 
   return (
+    <ModuleGate moduleName="M1 · Company Profile">
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
@@ -322,5 +324,6 @@ export default function CompanyProfilePage() {
         </>
       )}
     </div>
+    </ModuleGate>
   )
 }

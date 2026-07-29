@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
@@ -16,10 +16,11 @@ import { useSiteId } from "@/lib/use-site-id"
 import { calcEngineAsync, type CalculatedKPIs } from "@/lib/calc-engine"
 import { getHubEntries, type EnergyEntry, type TransportEntry } from "@/lib/supabase/data-service"
 import { useBoundary, getBoundaryLabel, getActiveScopes, isScopeActive } from "@/lib/boundary-context"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
-const fmt = (v: number | null, unit = "", dec = 2) => (v === null || v === 0 ? "—" : `${v.toLocaleString("id-ID", { maximumFractionDigits: dec })}${unit}`)
+const fmt = (v: number | null, unit = "", dec = 2) => (v === null || v === 0 ? "â€”" : `${v.toLocaleString("id-ID", { maximumFractionDigits: dec })}${unit}`)
 
 function buildCarbonTraceGroups(kpis: CalculatedKPIs | null, energyEntries: EnergyEntry[], transportEntries: TransportEntry[]): TraceGroup[] {
   const totalElecKwh = energyEntries.reduce((s, e) => s + e.electricity, 0)
@@ -30,62 +31,62 @@ function buildCarbonTraceGroups(kpis: CalculatedKPIs | null, energyEntries: Ener
 
   return [
     {
-      title: "Scope 1 — Emisi Langsung (Pembakaran Bahan Bakar)",
-      description: "Sumber: Data Hub › Konsumsi Energi Bulanan. Bahan bakar yang dibakar langsung di fasilitas pabrik.",
+      title: "Scope 1 â€” Emisi Langsung (Pembakaran Bahan Bakar)",
+      description: "Sumber: Data Hub â€º Konsumsi Energi Bulanan. Bahan bakar yang dibakar langsung di fasilitas pabrik.",
       icon: <Flame className="h-3.5 w-3.5" />,
       steps: [
         {
           source: "Diesel (Solar)",
           sourceValue: `${totalDieselL.toLocaleString("id-ID")} Liter`,
           sourceColor: "orange",
-          formula: "× Faktor Emisi Diesel 2,68 kg CO₂e/L ÷ 1000",
-          result: `${((totalDieselL * 2.68) / 1000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} tCO₂e`,
+          formula: "Ã— Faktor Emisi Diesel 2,68 kg COâ‚‚e/L Ã· 1000",
+          result: `${((totalDieselL * 2.68) / 1000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} tCOâ‚‚e`,
           status: totalDieselL > 0 ? "ok" : "empty",
         },
         {
           source: "Gas Bumi (Boiler)",
-          sourceValue: `${totalGasNm3.toLocaleString("id-ID")} Nm³`,
+          sourceValue: `${totalGasNm3.toLocaleString("id-ID")} NmÂ³`,
           sourceColor: "blue",
-          formula: "× Faktor Emisi Gas 2,02 kg CO₂e/Nm³ ÷ 1000",
-          result: `${((totalGasNm3 * 2.02) / 1000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} tCO₂e`,
+          formula: "Ã— Faktor Emisi Gas 2,02 kg COâ‚‚e/NmÂ³ Ã· 1000",
+          result: `${((totalGasNm3 * 2.02) / 1000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} tCOâ‚‚e`,
           status: totalGasNm3 > 0 ? "ok" : "empty",
         },
         {
           source: "Batubara",
           sourceValue: `${totalCoalTon.toLocaleString("id-ID")} Ton`,
           sourceColor: "purple",
-          formula: "× Faktor Emisi Batubara 2.420 kg CO₂e/ton ÷ 1000",
-          result: `${((totalCoalTon * 1000 * 2.42) / 1000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} tCO₂e`,
+          formula: "Ã— Faktor Emisi Batubara 2.420 kg COâ‚‚e/ton Ã· 1000",
+          result: `${((totalCoalTon * 1000 * 2.42) / 1000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} tCOâ‚‚e`,
           status: totalCoalTon > 0 ? "ok" : "empty",
         },
       ],
     },
     {
-      title: "Scope 2 — Emisi Tidak Langsung (Listrik PLN)",
-      description: "Sumber: Data Hub › Konsumsi Energi Bulanan › Kolom Listrik.",
+      title: "Scope 2 â€” Emisi Tidak Langsung (Listrik PLN)",
+      description: "Sumber: Data Hub â€º Konsumsi Energi Bulanan â€º Kolom Listrik.",
       icon: <Zap className="h-3.5 w-3.5" />,
       steps: [
         {
           source: "Listrik PLN",
           sourceValue: `${totalElecKwh.toLocaleString("id-ID")} kWh`,
           sourceColor: "teal",
-          formula: "× Faktor Emisi Grid Nasional KLHK 0,87 kg CO₂e/kWh ÷ 1000",
-          result: `${((totalElecKwh * 0.87) / 1000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} tCO₂e`,
+          formula: "Ã— Faktor Emisi Grid Nasional KLHK 0,87 kg COâ‚‚e/kWh Ã· 1000",
+          result: `${((totalElecKwh * 0.87) / 1000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} tCOâ‚‚e`,
           status: totalElecKwh > 0 ? "ok" : "empty",
         },
       ],
     },
     {
-      title: "Scope 3 — Emisi Rantai Nilai (Transportasi Hilir)",
-      description: "Sumber: Data Hub › Data Transportasi Bulanan › Jarak & Muatan.",
+      title: "Scope 3 â€” Emisi Rantai Nilai (Transportasi Hilir)",
+      description: "Sumber: Data Hub â€º Data Transportasi Bulanan â€º Jarak & Muatan.",
       icon: <Truck className="h-3.5 w-3.5" />,
       steps: [
         {
           source: "Distribusi Produk",
-          sourceValue: `${totalDistKm.toLocaleString("id-ID")} Ton·km`,
+          sourceValue: `${totalDistKm.toLocaleString("id-ID")} TonÂ·km`,
           sourceColor: "orange",
-          formula: "Jarak (km) × Muatan (Ton) × Faktor Emisi Truk Diesel 0,000096 tCO₂e/ton·km",
-          result: `${(totalDistKm * 0.000096).toLocaleString("id-ID", { maximumFractionDigits: 4 })} tCO₂e`,
+          formula: "Jarak (km) Ã— Muatan (Ton) Ã— Faktor Emisi Truk Diesel 0,000096 tCOâ‚‚e/tonÂ·km",
+          result: `${(totalDistKm * 0.000096).toLocaleString("id-ID", { maximumFractionDigits: 4 })} tCOâ‚‚e`,
           status: totalDistKm > 0 ? "ok" : "empty",
         },
       ],
@@ -165,6 +166,7 @@ export default function CarbonAccounting() {
   }) : []
 
   return (
+  <ModuleGate moduleName="M7 · Carbon Accounting">
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 pb-4">
         <div>
@@ -191,14 +193,14 @@ export default function CarbonAccounting() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard title={t(dict, "carbon.scope1")} value={fmt(scope1, " tCO₂e")} description={t(dict, "carbon.scope1_desc")} icon={Flame} />
+            <StatCard title={t(dict, "carbon.scope1")} value={fmt(scope1, " tCOâ‚‚e")} description={t(dict, "carbon.scope1_desc")} icon={Flame} />
             <div className={!isScopeActive(boundary, "scope2") ? "opacity-40 pointer-events-none" : ""}>
-              <StatCard title={t(dict, "carbon.scope2")} value={isScopeActive(boundary, "scope2") ? fmt(scope2, " tCO₂e") : "N/A"} description={isScopeActive(boundary, "scope2") ? t(dict, "carbon.scope2_desc") : `Di luar batas ${getBoundaryLabel(boundary)}`} icon={Zap} />
+              <StatCard title={t(dict, "carbon.scope2")} value={isScopeActive(boundary, "scope2") ? fmt(scope2, " tCOâ‚‚e") : "N/A"} description={isScopeActive(boundary, "scope2") ? t(dict, "carbon.scope2_desc") : `Di luar batas ${getBoundaryLabel(boundary)}`} icon={Zap} />
             </div>
             <div className={!isScopeActive(boundary, "scope3") ? "opacity-40 pointer-events-none" : ""}>
-              <StatCard title={t(dict, "carbon.scope3")} value={isScopeActive(boundary, "scope3") ? fmt(scope3, " tCO₂e") : "N/A"} description={isScopeActive(boundary, "scope3") ? t(dict, "carbon.scope3_desc") : `Di luar batas ${getBoundaryLabel(boundary)}`} icon={Truck} />
+              <StatCard title={t(dict, "carbon.scope3")} value={isScopeActive(boundary, "scope3") ? fmt(scope3, " tCOâ‚‚e") : "N/A"} description={isScopeActive(boundary, "scope3") ? t(dict, "carbon.scope3_desc") : `Di luar batas ${getBoundaryLabel(boundary)}`} icon={Truck} />
             </div>
-            <StatCard title={t(dict, "carbon.total_emissions")} value={fmt(totalEmissions, " tCO₂e")} description={getActiveScopes(boundary)} icon={Cloud} />
+            <StatCard title={t(dict, "carbon.total_emissions")} value={fmt(totalEmissions, " tCOâ‚‚e")} description={getActiveScopes(boundary)} icon={Cloud} />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
@@ -241,7 +243,7 @@ export default function CarbonAccounting() {
                       <YAxis tick={{ fontSize: 11 }} stroke="#a3a3a3" />
                       <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "12px" }} />
                       <Legend wrapperStyle={{ fontSize: "11px" }} />
-                      <Line type="monotone" dataKey="actual" stroke="#059669" strokeWidth={2.5} name="Aktual Terdaftar (tCO₂e)" dot={{ r: 5 }} connectNulls />
+                      <Line type="monotone" dataKey="actual" stroke="#059669" strokeWidth={2.5} name="Aktual Terdaftar (tCOâ‚‚e)" dot={{ r: 5 }} connectNulls />
                       <Line type="monotone" dataKey="target" stroke="#d97706" strokeWidth={2} strokeDasharray="6 3" name="Jalur Target Reduksi Net-Zero" dot={{ r: 4 }} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -259,9 +261,10 @@ export default function CarbonAccounting() {
         isOpen={traceOpen}
         onClose={() => setTraceOpen(false)}
         title="Rincian Kalkulasi Emisi Karbon (GHG Protocol)"
-        subtitle="Modul 7 — Carbon Accounting · Scope 1 + 2 + 3"
+        subtitle="Modul 7 â€” Carbon Accounting Â· Scope 1 + 2 + 3"
         groups={buildCarbonTraceGroups(kpis, energyEntries, transportEntries)}
       />
     </div>
+    </ModuleGate>
   )
 }

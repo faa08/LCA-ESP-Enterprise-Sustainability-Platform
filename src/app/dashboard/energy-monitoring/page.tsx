@@ -12,6 +12,7 @@ import { useIndustryId } from "@/lib/use-industry-id"
 import { useSiteId } from "@/lib/use-site-id"
 import { calcEngineAsync, type CalculatedKPIs } from "@/lib/calc-engine"
 import { getHubEntries, type EnergyEntry } from "@/lib/supabase/data-service"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
@@ -61,6 +62,7 @@ export default function EnergyMonitoring() {
   const fossilMWh = kpis?.energy_fossil_MWh ?? 0
 
   return (
+    <ModuleGate moduleName="M3 · Energy & Water Assessment">
     <div className="space-y-6">
       <div>
         <h1 className="text-lg font-semibold text-neutral-900">{t(dict, "energy.page_title")}</h1>
@@ -134,5 +136,7 @@ export default function EnergyMonitoring() {
         </>
       )}
     </div>
+    </ModuleGate>
   )
 }
+

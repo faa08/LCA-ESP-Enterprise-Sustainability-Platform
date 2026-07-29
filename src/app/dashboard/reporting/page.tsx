@@ -18,6 +18,7 @@ import {
   type TransportEntry,
   type B3Entry,
 } from "@/lib/supabase/data-service"
+import { ModuleGate } from "@/components/dashboard/module-gate"
 
 /* ── Types ── */
 interface DataStatus {
@@ -338,6 +339,7 @@ export default function ReportingPage() {
   const readyCount = TEMPLATES.filter((t) => templateCompleteness(t, dataStatus) >= 80).length
 
   return (
+    <ModuleGate moduleName="M14 · Reporting & Export">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
@@ -506,5 +508,6 @@ export default function ReportingPage() {
         Klik <b>Export PDF</b> untuk mengunduh laporan beserta nilai KPI aktual.
       </div>
     </div>
+    </ModuleGate>
   )
 }
