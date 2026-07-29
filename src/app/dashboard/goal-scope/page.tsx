@@ -39,7 +39,7 @@ const IMPACT_CATEGORIES = [
 export default function GoalScopePage() {
   const industryId = useIndustryId()
   const siteId = useSiteId()
-  const { refreshBoundary } = useBoundary()
+  const { refreshBoundary, setBoundary: setContextBoundary } = useBoundary()
 
   const [dbId, setDbId] = useState<string | undefined>(undefined)
   const [studyGoal, setStudyGoal] = useState("")
@@ -226,7 +226,7 @@ export default function GoalScopePage() {
             </CardHeader>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {BOUNDARY_OPTIONS.map(opt => (
-                <button key={opt.value} onClick={() => setBoundary(opt.value)}
+                <button key={opt.value} onClick={() => { setBoundary(opt.value); setContextBoundary(opt.value) }}
                   className={`rounded-xl border p-4 text-left transition-all ${boundary === opt.value ? "border-emerald-400 bg-emerald-50 shadow-sm" : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className={`text-sm font-bold ${boundary === opt.value ? "text-emerald-800" : "text-neutral-800"}`}>{opt.label}</span>

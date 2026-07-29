@@ -61,12 +61,14 @@ export function getActiveScopes(boundary: SystemBoundary): string {
 interface BoundaryContextType {
   boundary: SystemBoundary
   isLoading: boolean
+  setBoundary: (b: SystemBoundary) => void
   refreshBoundary: () => Promise<void>
 }
 
 const BoundaryContext = createContext<BoundaryContextType>({
   boundary: "cradle-to-gate",
   isLoading: true,
+  setBoundary: () => {},
   refreshBoundary: async () => {},
 })
 
@@ -89,19 +91,37 @@ export function BoundaryProvider({ children }: { children: ReactNode }) {
       const data = await getGoalScope(siteId, industryId)
       if (data?.boundary) {
         setBoundary(data.boundary as SystemBoundary)
+      } else if (typeof window !== "undefined") {
+        // fallback: read from localStorage if DB not yet saved
+        const stored = localStorage.getItem("enspr_goal_scope")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (parsed?.boundary) setBoundary(parsed.boundary as SystemBoundary)
+        }
       }
     } catch (err) {
       console.warn("[BoundaryContext] Failed to fetch boundary:", err)
+      // fallback to localStorage on error
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("enspr_goal_scope")
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored)
+            if (parsed?.boundary) setBoundary(parsed.boundary as SystemBoundary)
+          } catch {}
+        }
+      }
     }
     setIsLoading(false)
   }, [siteId, industryId])
+
 
   useEffect(() => {
     refreshBoundary()
   }, [refreshBoundary])
 
   return (
-    <BoundaryContext.Provider value={{ boundary, isLoading, refreshBoundary }}>
+    <BoundaryContext.Provider value={{ boundary, isLoading, setBoundary, refreshBoundary }}>
       {children}
     </BoundaryContext.Provider>
   )
