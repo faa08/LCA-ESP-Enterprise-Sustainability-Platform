@@ -18,18 +18,9 @@ import { ModuleGate } from "@/components/dashboard/module-gate"
 type EntityLevel = "korporat" | "subholding" | "site"
 
 const INDUSTRY_OPTIONS = [
-  { id: "migas", label: "Minyak & Gas" },
-  { id: "tambang", label: "Pertambangan" },
-  { id: "pltu", label: "Pembangkitan Listrik" },
-  { id: "semen", label: "Manufaktur Semen" },
-  { id: "baja", label: "Manufaktur Baja" },
   { id: "kimia", label: "Manufaktur Kimia" },
-  { id: "sawit", label: "Perkebunan Kelapa Sawit" },
-  { id: "fmcg", label: "Pengolahan Makanan & Minuman" },
-  { id: "tekstil", label: "Tekstil" },
-  { id: "pulp", label: "Pulp & Kertas" },
-  { id: "transportasi", label: "Transportasi" },
-  { id: "lainnya", label: "Lainnya" },
+  { id: "pltu", label: "Pembangkit Listrik" },
+  { id: "migas", label: "Minyak dan Gas" },
 ]
 
 const levelColor: Record<EntityLevel, string> = {
