@@ -84,7 +84,7 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
   const industryId = useIndustryId()
   const siteId = useSiteId()
   const [viewMode] = useViewMode()
-  const { boundary, setBoundary } = useBoundary()
+  const { boundary, setBoundary, refreshBoundary } = useBoundary()
 
   const [kpis, setKpis] = useState<CalculatedKPIs | null>(null)
   const [energyCount, setEnergyCount] = useState(0)
@@ -152,8 +152,9 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
     setBoundary(selectedBoundary)
     setShowDemoModal(false)
     setSeeding(true)
-    await seedLautanOtsukaData(siteId)
-    await refresh()
+    await seedLautanOtsukaData(siteId, selectedBoundary)
+    await refreshBoundary() // this will also set isConfigured = true since seed data wrote Goal & Scope
+    await refresh() // this refreshes the KPI data
     setSeeding(false)
   }
 

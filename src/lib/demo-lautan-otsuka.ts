@@ -42,7 +42,9 @@ function getLast12Months() {
   return dates
 }
 
-export async function seedLautanOtsukaData(siteId: string) {
+import { SystemBoundary } from "@/lib/boundary-context"
+
+export async function seedLautanOtsukaData(siteId: string, boundary: SystemBoundary = "cradle-to-grave") {
   const industryId = "kimia" // Manufaktur Kimia
 
   // 1. Reset all existing data for the site
@@ -90,7 +92,7 @@ export async function seedLautanOtsukaData(siteId: string) {
   await saveGoalScope(siteId, industryId, {
     studyGoal: "Menghitung jejak lingkungan (LCA) dan emisi karbon dari produksi Azodicarbonamide (Blowing Agent) untuk kepatuhan PROPER dan pelaporan ESG.",
     functionalUnit: "1 Ton Azodicarbonamide (ADCA)",
-    boundary: "cradle-to-grave",
+    boundary,
     allocation: "mass",
     impactCategories: [
       "Global Warming Potential (GWP)",
