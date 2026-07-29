@@ -523,6 +523,7 @@ export const en: Record<string, string> = {
   "proper.snapshot_title": "PROPER Snapshot",
   "proper.snapshot_desc": "Real-time compliance against national standards (PermenLHK). Auto-predicted rank.",
   "proper.predicted_rank": "Predicted Rank",
+  "proper.violation": "Violation(s)",
   "proper.air_limbah": "Wastewater (SP PL)",
   "proper.emisi": "Emissions (SP Parmen)",
   "proper.limbah_b3": "Hazardous Waste (SP LB3)",

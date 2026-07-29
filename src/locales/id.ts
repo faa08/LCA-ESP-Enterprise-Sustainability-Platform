@@ -523,6 +523,7 @@ export const id = {
   "proper.snapshot_title": "Snapshot PROPER",
   "proper.snapshot_desc": "Kepatuhan waktu nyata terhadap baku mutu nasional (PermenLHK). Peringkat otomatis.",
   "proper.predicted_rank": "Peringkat Prediksi",
+  "proper.violation": "Pelanggaran",
   "proper.air_limbah": "Air Limbah (SP PL)",
   "proper.emisi": "Emisi (SP Parmen)",
   "proper.limbah_b3": "Limbah B3 (SP LB3)",
