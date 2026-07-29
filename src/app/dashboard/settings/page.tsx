@@ -40,10 +40,18 @@ export default function Settings() {
     if (error) {
       setResetError(error)
     } else {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("enspr_goal_scope")
+        localStorage.removeItem("enspr_company_profile")
+        localStorage.removeItem("enspr_product_assessment")
+      }
       setResetDone(true)
       setShowResetModal(false)
       setResetConfirm("")
-      setTimeout(() => setResetDone(false), 4000)
+      setTimeout(() => {
+        setResetDone(false)
+        window.location.reload()
+      }, 2000)
     }
   }
 

@@ -94,26 +94,17 @@ export function BoundaryProvider({ children }: { children: ReactNode }) {
     let configured = false
     try {
       const data = await getGoalScope(siteId, industryId)
-      if (data?.boundary) {
-        setBoundary(data.boundary as SystemBoundary)
-      } else if (typeof window !== "undefined") {
-        const stored = localStorage.getItem("enspr_goal_scope")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (parsed?.boundary) setBoundary(parsed.boundary as SystemBoundary)
+      
+      // Jika fetch berhasil tapi tidak ada data (misal setelah reset)
+      if (!data) {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("enspr_goal_scope")
+          localStorage.removeItem("enspr_company_profile")
+          localStorage.removeItem("enspr_product_assessment")
         }
-      }
-      // isConfigured: true jika studyGoal atau functionalUnit sudah diisi
-      if (data?.studyGoal || data?.functionalUnit) {
-        configured = true
-      } else if (typeof window !== "undefined") {
-        const stored = localStorage.getItem("enspr_goal_scope")
-        if (stored) {
-          try {
-            const parsed = JSON.parse(stored)
-            if (parsed?.studyGoal || parsed?.functionalUnit) configured = true
-          } catch {}
-        }
+      } else {
+        if (data.boundary) setBoundary(data.boundary as SystemBoundary)
+        if (data.studyGoal || data.functionalUnit) configured = true
       }
     } catch (err) {
       console.warn("[BoundaryContext] Failed to fetch boundary:", err)
