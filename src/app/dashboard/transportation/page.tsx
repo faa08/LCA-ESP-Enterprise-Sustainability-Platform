@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
@@ -18,7 +18,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend,
 } from "recharts"
 
-// ─── Constants ───
+// â”€â”€â”€ Constants â”€â”€â”€
 
 const DIRECTIONS: {
   value: "upstream" | "downstream" | "internal"
@@ -43,7 +43,7 @@ function calcEmission(e: SbTransportEntry): number {
   return (ef * (e.distance || 0) * (e.frequencyPerYear || 1) * (e.cargoWeight || 0)) / 1000
 }
 
-// ─── Page ───
+// â”€â”€â”€ Page â”€â”€â”€
 
 export default function TransportationPage() {
   const industryId = useIndustryId()
@@ -63,7 +63,7 @@ export default function TransportationPage() {
 
   useEffect(() => { refresh() }, [refresh])
 
-  // ── Derived stats ──
+  // â”€â”€ Derived stats â”€â”€
   const totalByScope = DIRECTIONS.map((dir) => ({
     ...dir,
     total: entries
@@ -74,7 +74,7 @@ export default function TransportationPage() {
 
   const grandTotal = entries.reduce((s, e) => s + calcEmission(e), 0)
 
-  // ── Chart data ──
+  // â”€â”€ Chart data â”€â”€
   const barData = totalByScope.map((d) => ({
     name: d.label.split(" ")[0],
     emisi: +d.total.toFixed(3),
@@ -88,7 +88,7 @@ export default function TransportationPage() {
   const scope3Active = isScopeActive(boundary, "scope3")
 
   return (
-    <ModuleGate moduleName="M5 · Transportation & Logistik" requiredScope="scope3">
+    <ModuleGate moduleName="M5 Â· Transportation & Logistik" requiredScope="scope3">
     <div className="space-y-6">
 
       {/* Boundary Warning */}
@@ -120,8 +120,7 @@ export default function TransportationPage() {
         </div>
         <Link href="/dashboard/data-hub">
           <Button variant="secondary" className="gap-2">
-            <Database className="h-4 w-4" />
-            Input Data di Data Hub
+            <Database className="mr-1.5 h-4 w-4" /> Input Data di Data Hub
             <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </Link>
@@ -131,7 +130,7 @@ export default function TransportationPage() {
       <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
         <div className="text-xs text-blue-800 leading-relaxed">
-          <b>Single Source of Truth:</b> Semua input data transportasi dilakukan di <Link href="/dashboard/data-hub" className="underline font-semibold">Data Hub → Tab Transportasi</Link>.
+          <b>Single Source of Truth:</b> Semua input data transportasi dilakukan di <Link href="/dashboard/data-hub" className="underline font-semibold">Data Hub â†’ Tab Transportasi</Link>.
           Halaman ini menampilkan analitik dan ringkasan emisi secara otomatis dari data tersebut.
           Faktor emisi mengacu pada standar <b>IPCC 2006 &amp; KLHK</b> untuk moda transportasi domestik Indonesia.
         </div>
@@ -150,8 +149,8 @@ export default function TransportationPage() {
             <div>
               <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">{s.label}</p>
               <p className="mt-1.5 text-2xl font-extrabold tracking-tight text-neutral-900">
-                {s.total > 0 ? s.total.toFixed(2) : "—"}
-                {s.total > 0 && <span className="text-xs font-normal text-neutral-500"> tCO₂e/thn</span>}
+                {s.total > 0 ? s.total.toFixed(2) : "â€”"}
+                {s.total > 0 && <span className="text-xs font-normal text-neutral-500"> tCOâ‚‚e/thn</span>}
               </p>
             </div>
             <p className="mt-2 text-[11px] text-neutral-400 truncate" title={s.scope}>{s.scope}</p>
@@ -175,8 +174,7 @@ export default function TransportationPage() {
           </p>
           <Link href="/dashboard/data-hub" className="mt-4">
             <Button className="gap-2" size="sm">
-              <Database className="h-4 w-4" />
-              Buka Data Hub
+              <Database className="mr-1.5 h-4 w-4" /> Buka Data Hub
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </Link>
@@ -190,14 +188,14 @@ export default function TransportationPage() {
               <Card className="p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <TrendingUp className="h-4 w-4 text-neutral-500" />
-                  <h3 className="text-sm font-bold text-neutral-800">Emisi per Kategori (tCO₂e/thn)</h3>
+                  <h3 className="text-sm font-bold text-neutral-800">Emisi per Kategori (tCOâ‚‚e/thn)</h3>
                 </div>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={barData} margin={{ top: 0, right: 8, left: -16, bottom: 0 }}>
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip
-                      formatter={(v: any) => [`${Number(v).toFixed(3)} tCO₂e/thn`, "Emisi"]}
+                      formatter={(v: any) => [`${Number(v).toFixed(3)} tCOâ‚‚e/thn`, "Emisi"]}
                       contentStyle={{ fontSize: 11, borderRadius: 8 }}
                     />
                     <Bar dataKey="emisi" radius={[4, 4, 0, 0]}>
@@ -218,7 +216,7 @@ export default function TransportationPage() {
                     <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }) => percent ? `${name} ${(percent * 100).toFixed(0)}%` : name} labelLine={false} fontSize={10}>
                       {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                     </Pie>
-                    <Tooltip formatter={(v: any) => [`${Number(v).toFixed(3)} tCO₂e/thn`, "Emisi"]} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                    <Tooltip formatter={(v: any) => [`${Number(v).toFixed(3)} tCOâ‚‚e/thn`, "Emisi"]} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
                     <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -232,7 +230,7 @@ export default function TransportationPage() {
               <h3 className="text-sm font-bold text-neutral-800">Detail Rute ({entries.length} entri)</h3>
               <Link href="/dashboard/data-hub">
                 <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
-                  <Database className="h-3.5 w-3.5" /> Kelola di Data Hub
+                  <Database className="mr-1.5 h-3.5 w-3.5" /> Kelola di Data Hub
                 </Button>
               </Link>
             </div>
@@ -240,7 +238,7 @@ export default function TransportationPage() {
               <table className="w-full text-xs">
                 <thead className="border-b border-neutral-100 bg-neutral-50">
                   <tr>
-                    {["#", "Moda / Kendaraan", "Bahan Bakar", "Arah", "Jarak (km)", "Muatan (ton)", "Frekuensi/thn", "Emisi (tCO₂e/thn)", "Scope"].map((h) => (
+                    {["#", "Moda / Kendaraan", "Bahan Bakar", "Arah", "Jarak (km)", "Muatan (ton)", "Frekuensi/thn", "Emisi (tCOâ‚‚e/thn)", "Scope"].map((h) => (
                       <th key={h} className="px-4 py-2.5 text-left font-semibold text-neutral-500 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -255,10 +253,10 @@ export default function TransportationPage() {
                         <td className="px-4 py-2.5 font-medium text-neutral-800 whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             <Truck className="h-3.5 w-3.5 text-neutral-400" />
-                            {e.vehicleType || "—"}
+                            {e.vehicleType || "â€”"}
                           </div>
                         </td>
-                        <td className="px-4 py-2.5 text-neutral-600">{e.fuelType || "—"}</td>
+                        <td className="px-4 py-2.5 text-neutral-600">{e.fuelType || "â€”"}</td>
                         <td className="px-4 py-2.5">
                           <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${dir.badgeStyle}`}>{dir.label}</span>
                         </td>
@@ -267,7 +265,7 @@ export default function TransportationPage() {
                         <td className="px-4 py-2.5 text-neutral-700 tabular-nums text-right">{(e.frequencyPerYear || 1).toLocaleString("id-ID")}</td>
                         <td className="px-4 py-2.5 font-bold text-right">
                           <span className={emisi > 0 ? "text-emerald-700" : "text-neutral-300"}>
-                            {emisi > 0 ? emisi.toFixed(3) : "—"}
+                            {emisi > 0 ? emisi.toFixed(3) : "â€”"}
                           </span>
                         </td>
                         <td className="px-4 py-2.5">
@@ -289,11 +287,11 @@ export default function TransportationPage() {
                 <p className="text-xs text-emerald-700 mt-0.5">
                   {scope3Active
                     ? "Otomatis terhubung ke kalkulasi Carbon Accounting Scope 1 / Scope 3 & Modul LCIA."
-                    : `⚠️ Scope 3 tidak aktif pada batas sistem ${getBoundaryLabel(boundary)} — tidak dihitung dalam total GHG.`}
+                    : `âš ï¸ Scope 3 tidak aktif pada batas sistem ${getBoundaryLabel(boundary)} â€” tidak dihitung dalam total GHG.`}
                 </p>
               </div>
               <p className="text-2xl font-black text-emerald-800">
-                {grandTotal.toFixed(2)} <span className="text-sm font-normal">tCO₂e/thn</span>
+                {grandTotal.toFixed(2)} <span className="text-sm font-normal">tCOâ‚‚e/thn</span>
               </p>
             </div>
           )}
@@ -303,4 +301,5 @@ export default function TransportationPage() {
     </ModuleGate>
   )
 }
+
 

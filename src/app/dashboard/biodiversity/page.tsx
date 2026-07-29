@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback } from "react"
 import { Card } from "@/components/ui/card"
@@ -89,7 +89,7 @@ export default function BiodiversityPage() {
   }))
 
   return (
-    <ModuleGate moduleName="M9 · Keanekaragaman Hayati">
+    <ModuleGate moduleName="M9 Â· Keanekaragaman Hayati">
     <div className="space-y-6">
       {/* Top Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
@@ -155,7 +155,7 @@ export default function BiodiversityPage() {
                 </p>
               </div>
               <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-emerald-600">
-                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> Kriteria PROPER Emas ≥50 Ha
+                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 shrink-0" /> Kriteria PROPER Emas â‰¥50 Ha
               </p>
             </Card>
 
@@ -319,3 +319,4 @@ export default function BiodiversityPage() {
     </ModuleGate>
   )
 }
+

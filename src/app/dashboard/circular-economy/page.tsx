@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
@@ -120,7 +120,7 @@ export default function CircularEconomyPage() {
     : { label: "Rendah", color: "text-red-700", bg: "bg-red-50 border-red-200" }
 
   return (
-    <ModuleGate moduleName="M8 · Circular Economy">
+    <ModuleGate moduleName="M8 Â· Circular Economy">
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
@@ -130,7 +130,7 @@ export default function CircularEconomyPage() {
           </div>
           <h1 className="text-xl font-bold text-neutral-900">Circular Economy</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            Mengukur seberapa sirkular material yang digunakan — dari daur ulang, penggunaan kembali, hingga pemulihan energi.
+            Mengukur seberapa sirkular material yang digunakan â€” dari daur ulang, penggunaan kembali, hingga pemulihan energi.
           </p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
@@ -178,8 +178,8 @@ export default function CircularEconomyPage() {
       <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
         <p className="text-xs text-blue-700">
-          <b>Indeks Sirkularitas (CI)</b> dihitung berdasarkan bobot: Daur Ulang (1.0×) + Penggunaan Kembali (1.2×) + Pemulihan Energi (0.5×).
-          Target ideal: CI ≥ 75 (Sirkularitas Tinggi).
+          <b>Indeks Sirkularitas (CI)</b> dihitung berdasarkan bobot: Daur Ulang (1.0Ã—) + Penggunaan Kembali (1.2Ã—) + Pemulihan Energi (0.5Ã—).
+          Target ideal: CI â‰¥ 75 (Sirkularitas Tinggi).
         </p>
       </div>
 
@@ -250,10 +250,10 @@ export default function CircularEconomyPage() {
         <div className="flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
           <div>
             <p className="text-sm font-semibold text-emerald-900 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" /> Rekomendasi Peningkatan
+              <TrendingUp className="mr-1.5 h-4 w-4" /> Rekomendasi Peningkatan
             </p>
             <p className="text-xs text-emerald-700 mt-0.5">
-              {weightedCI < 75 ? `Tingkatkan persentase daur ulang dan penggunaan kembali untuk mencapai CI ≥ 75. Gap saat ini: ${(75 - weightedCI).toFixed(1)} poin.` : "Sirkularitas material sudah baik. Pertahankan dan dokumentasikan untuk laporan ESG."}
+              {weightedCI < 75 ? `Tingkatkan persentase daur ulang dan penggunaan kembali untuk mencapai CI â‰¥ 75. Gap saat ini: ${(75 - weightedCI).toFixed(1)} poin.` : "Sirkularitas material sudah baik. Pertahankan dan dokumentasikan untuk laporan ESG."}
             </p>
           </div>
           <Badge variant={weightedCI >= 75 ? "success" : "warning"}>{ciLevel.label}</Badge>
@@ -263,3 +263,4 @@ export default function CircularEconomyPage() {
     </ModuleGate>
   )
 }
+

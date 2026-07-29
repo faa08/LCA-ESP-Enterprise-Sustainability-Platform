@@ -108,7 +108,7 @@ export function Header({ locale, role: propRole }: { locale: Locale; role?: Role
 
       <div className="flex flex-1 items-center justify-end gap-2.5">
         {/* Role View Mode Switcher */}
-        <div className="hidden items-center rounded-lg border border-neutral-200 bg-neutral-100 p-0.5 sm:flex">
+        <div className="hidden items-center gap-0.5 rounded-lg border border-neutral-200 bg-neutral-100 p-0.5 sm:flex">
           <button
             onClick={() => setViewMode("executive")}
             className={cn(
