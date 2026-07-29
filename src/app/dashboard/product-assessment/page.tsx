@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Package, Plus, Trash2, CheckCircle2, Weight, Factory, Loader2, AlertCircle } from "lucide-react"
+import { Package, Plus, Trash2, CheckCircle2, Weight, Factory, Loader2, AlertCircle, Lock } from "lucide-react"
 import { useIndustryId } from "@/lib/use-industry-id"
 import { useSiteId } from "@/lib/use-site-id"
 import {
@@ -39,6 +39,7 @@ export default function ProductAssessmentPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isLocked, setIsLocked] = useState(false)
 
   const refresh = useCallback(async () => {
     if (!siteId) return
@@ -47,6 +48,7 @@ export default function ProductAssessmentPage() {
     if (data.length > 0) {
       setProducts(data)
       setActiveId((prev) => data.find(p => p.id === prev) ? prev : data[0].id)
+      setIsLocked(true) // Lock if data exists
     } else {
       const initial = emptyProduct()
       setProducts([initial])
@@ -113,9 +115,12 @@ export default function ProductAssessmentPage() {
     setSaving(false)
     if (!hasError) {
       setSaved(true)
+      setIsLocked(true) // Lock after save
       setTimeout(() => setSaved(false), 3000)
     }
   }
+
+  const handleEdit = () => setIsLocked(false)
 
   if (loading) {
     return (
@@ -143,14 +148,20 @@ export default function ProductAssessmentPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={addProduct}><Plus className="mr-1.5 h-4 w-4" />Produk Baru</Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving
-              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menyimpan...</>
-              : saved
-                ? <><CheckCircle2 className="mr-2 h-4 w-4" />Tersimpan</>
-                : "Simpan Inventori"}
-          </Button>
+          {!isLocked && <Button variant="secondary" onClick={addProduct}><Plus className="mr-1.5 h-4 w-4" />Produk Baru</Button>}
+          {isLocked ? (
+            <Button onClick={handleEdit} variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50">
+              <Lock className="mr-2 h-4 w-4" /> Buka Kunci (Edit)
+            </Button>
+          ) : (
+            <Button onClick={handleSave} disabled={saving}>
+              {saving
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menyimpan...</>
+                : saved
+                  ? <><CheckCircle2 className="mr-2 h-4 w-4" />Tersimpan</>
+                  : "Simpan & Terapkan"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -168,7 +179,8 @@ export default function ProductAssessmentPage() {
             className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${activeId === p.id ? "border-emerald-400 bg-emerald-50 text-emerald-800" : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"}`}>
             <Package className="h-3.5 w-3.5" />
             {p.name || "Produk Baru"}
-            {products.length > 1 && (
+            {p.name || "Produk Baru"}
+            {products.length > 1 && !isLocked && (
               <span onClick={e => { e.stopPropagation(); removeProduct(p.id) }} className="ml-1 text-neutral-300 hover:text-red-500">×</span>
             )}
           </button>
@@ -188,24 +200,24 @@ export default function ProductAssessmentPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="lg:col-span-2">
                 <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Nama Produk <span className="text-red-500">*</span></label>
-                <input type="text" value={active.name} onChange={e => updateProduct(active.id, "name", e.target.value)}
+                <input type="text" value={active.name} onChange={e => updateProduct(active.id, "name", e.target.value)} disabled={isLocked}
                   placeholder="Semen OPC Type I, Pupuk Urea, dll."
-                  className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+                  className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:opacity-50 disabled:bg-neutral-100" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Kategori Produk</label>
-                <input type="text" value={active.category} onChange={e => updateProduct(active.id, "category", e.target.value)}
+                <input type="text" value={active.category} onChange={e => updateProduct(active.id, "category", e.target.value)} disabled={isLocked}
                   placeholder="Bahan konstruksi, Pupuk, dll."
-                  className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+                  className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:opacity-50 disabled:bg-neutral-100" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Massa Produk Jadi</label>
                 <div className="flex gap-2">
-                  <input type="number" value={active.massKg || ""} onChange={e => updateProduct(active.id, "massKg", e.target.value)}
+                  <input type="number" value={active.massKg || ""} onChange={e => updateProduct(active.id, "massKg", e.target.value)} disabled={isLocked}
                     placeholder="1000"
-                    className="flex-1 rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
-                  <select value={active.unit} onChange={e => updateProduct(active.id, "unit", e.target.value)}
-                    className="rounded-lg border border-neutral-200 px-2 py-2 text-sm bg-white focus:border-emerald-400 focus:outline-none">
+                    className="flex-1 rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:opacity-50 disabled:bg-neutral-100" />
+                  <select value={active.unit} onChange={e => updateProduct(active.id, "unit", e.target.value)} disabled={isLocked}
+                    className="rounded-lg border border-neutral-200 px-2 py-2 text-sm bg-white focus:border-emerald-400 focus:outline-none disabled:opacity-50 disabled:bg-neutral-100">
                     <option value="unit">unit</option>
                     <option value="kg">kg</option>
                     <option value="ton">ton</option>
@@ -227,9 +239,11 @@ export default function ProductAssessmentPage() {
                     <p className="text-xs text-neutral-500 mt-0.5">Daftar bahan baku &amp; komponen penyusun produk — dasar Life Cycle Inventory (LCI)</p>
                   </div>
                 </div>
-                <Button variant="secondary" size="sm" onClick={() => addBOM(active.id)} className="w-full sm:w-auto shrink-0">
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />Tambah Material
-                </Button>
+                {!isLocked && (
+                  <Button variant="secondary" size="sm" onClick={() => addBOM(active.id)} className="w-full sm:w-auto shrink-0">
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />Tambah Material
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <div className="overflow-x-auto">
@@ -251,37 +265,37 @@ export default function ProductAssessmentPage() {
                     return (
                       <tr key={b.id} className="border-b border-neutral-100">
                         <td className="px-3 py-2">
-                          <input type="text" value={b.material}
+                          <input type="text" value={b.material} disabled={isLocked}
                             onChange={e => updateBOM(active.id, b.id, "material", e.target.value)}
                             placeholder="Batu kapur, Besi, Plastik PET..."
-                            className="w-full rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none" />
+                            className="w-full rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none disabled:bg-neutral-50 disabled:opacity-50" />
                         </td>
                         <td className="px-3 py-2">
-                          <input type="text" value={b.supplier}
+                          <input type="text" value={b.supplier} disabled={isLocked}
                             onChange={e => updateBOM(active.id, b.id, "supplier", e.target.value)}
                             placeholder="PT Supplier"
-                            className="w-full rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none" />
+                            className="w-full rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none disabled:bg-neutral-50 disabled:opacity-50" />
                         </td>
                         <td className="px-3 py-2">
-                          <input type="number" value={b.massKg || ""}
+                          <input type="number" value={b.massKg || ""} disabled={isLocked}
                             onChange={e => updateBOM(active.id, b.id, "massKg", e.target.value)}
                             placeholder="0"
-                            className="w-24 rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none" />
+                            className="w-24 rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none disabled:bg-neutral-50 disabled:opacity-50" />
                         </td>
                         <td className="px-3 py-2">
-                          <input type="number" min={0} max={100} value={b.recycledPct || ""}
+                          <input type="number" min={0} max={100} value={b.recycledPct || ""} disabled={isLocked}
                             onChange={e => updateBOM(active.id, b.id, "recycledPct", e.target.value)}
-                            className="w-20 rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none" />
+                            className="w-20 rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none disabled:bg-neutral-50 disabled:opacity-50" />
                         </td>
                         <td className="px-3 py-2">
-                          <input type="text" value={b.origin}
+                          <input type="text" value={b.origin} disabled={isLocked}
                             onChange={e => updateBOM(active.id, b.id, "origin", e.target.value)}
                             placeholder="Lokal / Impor"
-                            className="w-24 rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none" />
+                            className="w-24 rounded border border-neutral-200 px-2 py-1 text-sm focus:border-emerald-400 focus:outline-none disabled:bg-neutral-50 disabled:opacity-50" />
                         </td>
                         <td className="px-3 py-2 font-mono text-xs text-neutral-500">{massPct}%</td>
                         <td className="px-3 py-2">
-                          {active.bom.length > 1 && (
+                          {active.bom.length > 1 && !isLocked && (
                             <button onClick={() => removeBOM(active.id, b.id)} className="text-neutral-300 hover:text-red-500 transition-colors">
                               <Trash2 className="h-4 w-4" />
                             </button>

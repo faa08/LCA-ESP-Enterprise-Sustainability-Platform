@@ -108,18 +108,25 @@ export default function GoalScopePage() {
       impactCategories: selectedImpacts,
       dataQualityReqs,
       comparativeStudy,
-      isLocked: true,
+      isLocked: true, // Auto lock on save
     }
     await saveGoalScope(siteId, industryId, record)
     if (typeof window !== "undefined") {
       localStorage.setItem(LOCAL_KEY, JSON.stringify(record))
     }
-    setIsLocked(true)
+    setIsLocked(true) // Update local state
     setSaving(false)
     setSaved(true)
+
     // Refresh boundary context so all other modules update
     await refreshBoundary()
     setTimeout(() => setSaved(false), 3000)
+  }
+
+  const handleEdit = () => {
+    if (confirm("Membuka kunci konfigurasi akan memengaruhi ketersediaan form di Data Hub (contoh: menyembunyikan form Transportasi). Lanjutkan?")) {
+      setIsLocked(false)
+    }
   }
 
   return (
@@ -137,10 +144,16 @@ export default function GoalScopePage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : saved ? <CheckCircle2 className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
-            {saving ? "Menyimpan..." : saved ? "Tersimpan!" : "Simpan Scope"}
-          </Button>
+          {isLocked ? (
+            <Button onClick={handleEdit} variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50">
+              <Lock className="mr-2 h-4 w-4" /> Buka Kunci (Edit)
+            </Button>
+          ) : (
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : saved ? <CheckCircle2 className="mr-2 h-4 w-4" /> : null}
+              {saving ? "Menyimpan..." : saved ? "Tersimpan!" : "Simpan & Terapkan"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -174,13 +187,13 @@ export default function GoalScopePage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Tujuan Studi LCA <span className="text-red-500">*</span></label>
-                  <textarea value={studyGoal} onChange={e => setStudyGoal(e.target.value)} rows={3}
+                  <textarea value={studyGoal} onChange={e => setStudyGoal(e.target.value)} rows={3} disabled={isLocked}
                     placeholder="Contoh: Menghitung dampak lingkungan produksi semen OPC per ton untuk mendukung laporan PROPER EMAS dan pengurangan emisi Scope 1 sebesar 20% pada 2030..."
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 resize-none" />
+                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 resize-none disabled:opacity-50 disabled:bg-neutral-100" />
                   <p className="mt-1 text-[11px] text-neutral-400">{studyGoal.length} karakter</p>
                 </div>
-                <label className="flex items-center gap-3 rounded-lg border border-neutral-100 p-3 cursor-pointer hover:bg-neutral-50">
-                  <input type="checkbox" id="comparative" checked={comparativeStudy} onChange={e => setComparativeStudy(e.target.checked)} className="h-4 w-4 accent-emerald-600" />
+                <label className={`flex items-center gap-3 rounded-lg border border-neutral-100 p-3 ${isLocked ? 'opacity-50 bg-neutral-50 cursor-not-allowed' : 'cursor-pointer hover:bg-neutral-50'}`}>
+                  <input type="checkbox" id="comparative" checked={comparativeStudy} onChange={e => setComparativeStudy(e.target.checked)} disabled={isLocked} className="h-4 w-4 accent-emerald-600" />
                   <span className="text-sm text-neutral-700">Studi Komparatif (≥2 sistem produk) <span className="text-[11px] text-neutral-400">→ Wajib review eksternal (ISO 14044 §6)</span></span>
                 </label>
               </div>
@@ -196,9 +209,9 @@ export default function GoalScopePage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Definisi Unit Fungsional <span className="text-red-500">*</span></label>
-                  <input type="text" value={functionalUnit} onChange={e => setFunctionalUnit(e.target.value)}
+                  <input type="text" value={functionalUnit} onChange={e => setFunctionalUnit(e.target.value)} disabled={isLocked}
                     placeholder="Contoh: 1 ton semen OPC diproduksi, atau 1 kWh listrik dihasilkan"
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:opacity-50 disabled:bg-neutral-100" />
                 </div>
                 <div className="rounded-lg bg-neutral-50 px-3 py-2.5 text-xs text-neutral-500 border border-neutral-100">
                   <p className="font-semibold text-neutral-700 mb-1">Contoh per Sektor</p>
@@ -226,8 +239,8 @@ export default function GoalScopePage() {
             </CardHeader>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {BOUNDARY_OPTIONS.map(opt => (
-                <button key={opt.value} onClick={() => { setBoundary(opt.value); setContextBoundary(opt.value) }}
-                  className={`rounded-xl border p-4 text-left transition-all ${boundary === opt.value ? "border-emerald-400 bg-emerald-50 shadow-sm" : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"}`}>
+                <button key={opt.value} disabled={isLocked} onClick={() => { setBoundary(opt.value); setContextBoundary(opt.value) }}
+                  className={`rounded-xl border p-4 text-left transition-all ${boundary === opt.value ? "border-emerald-400 bg-emerald-50 shadow-sm" : isLocked ? "border-neutral-200 bg-neutral-50 opacity-50" : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className={`text-sm font-bold ${boundary === opt.value ? "text-emerald-800" : "text-neutral-800"}`}>{opt.label}</span>
                     {boundary === opt.value && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
@@ -281,9 +294,9 @@ export default function GoalScopePage() {
               <CardHeader><CardTitle>4. Metode Alokasi</CardTitle><p className="text-xs text-neutral-500 mt-0.5">ISO 14044 §4.3.4</p></CardHeader>
               <div className="space-y-2">
                 {ALLOCATION_OPTIONS.map(opt => (
-                  <label key={opt.value} className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors ${allocation === opt.value ? "border-emerald-300 bg-emerald-50" : "border-neutral-100 hover:bg-neutral-50"}`}>
+                  <label key={opt.value} className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-colors ${allocation === opt.value ? "border-emerald-300 bg-emerald-50" : "border-neutral-100"} ${isLocked ? 'opacity-50 cursor-not-allowed bg-neutral-50' : 'cursor-pointer hover:bg-neutral-50'}`}>
                     <div className="flex items-center gap-3">
-                      <input type="radio" name="allocation" value={opt.value} checked={allocation === opt.value} onChange={() => setAllocation(opt.value)} className="h-4 w-4 accent-emerald-600" />
+                      <input type="radio" name="allocation" value={opt.value} checked={allocation === opt.value} onChange={() => setAllocation(opt.value)} disabled={isLocked} className="h-4 w-4 accent-emerald-600" />
                       <span className={`text-sm font-medium ${allocation === opt.value ? "text-emerald-900" : "text-neutral-700"}`}>{opt.label}</span>
                     </div>
                     <span className="text-[10px] font-mono text-neutral-400">{opt.ref}</span>
@@ -296,8 +309,8 @@ export default function GoalScopePage() {
               <CardHeader><CardTitle>5. Kategori Dampak Lingkungan</CardTitle><p className="text-xs text-neutral-500 mt-0.5">ISO 14044 §4.4.1 — GWP wajib untuk PROPER</p></CardHeader>
               <div className="space-y-1.5 max-h-72 overflow-y-auto">
                 {IMPACT_CATEGORIES.map(cat => (
-                  <label key={cat} className={`flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${selectedImpacts.includes(cat) ? "border-emerald-200 bg-emerald-50" : "border-neutral-100 hover:bg-neutral-50"}`}>
-                    <input type="checkbox" checked={selectedImpacts.includes(cat)} onChange={() => toggleImpact(cat)} className="h-4 w-4 accent-emerald-600" />
+                  <label key={cat} className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${selectedImpacts.includes(cat) ? "border-emerald-200 bg-emerald-50" : "border-neutral-100"} ${isLocked ? 'opacity-50 cursor-not-allowed bg-neutral-50' : 'cursor-pointer hover:bg-neutral-50'}`}>
+                    <input type="checkbox" checked={selectedImpacts.includes(cat)} onChange={() => toggleImpact(cat)} disabled={isLocked} className="h-4 w-4 accent-emerald-600" />
                     <span className={`text-xs ${selectedImpacts.includes(cat) ? "font-medium text-emerald-900" : "text-neutral-700"}`}>{cat}</span>
                   </label>
                 ))}
@@ -308,21 +321,23 @@ export default function GoalScopePage() {
 
           <Card>
             <CardHeader><CardTitle>6. Persyaratan Kualitas Data</CardTitle><p className="text-xs text-neutral-500 mt-0.5">ISO 14044 §4.2.3.5</p></CardHeader>
-            <textarea value={dataQualityReqs} onChange={e => setDataQualityReqs(e.target.value)} rows={3}
+            <textarea value={dataQualityReqs} onChange={e => setDataQualityReqs(e.target.value)} rows={3} disabled={isLocked}
               placeholder="Contoh: Data primer dari pengukuran langsung diutamakan. Data sekunder dari database ecoinvent v3.9 dapat digunakan untuk bahan baku dengan kontribusi < 1% terhadap total dampak GWP..."
-              className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 resize-none" />
+              className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 resize-none disabled:opacity-50 disabled:bg-neutral-100" />
           </Card>
 
-          <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-4 border border-emerald-200">
-            <div>
-              <p className="text-sm font-semibold text-emerald-900">Simpan Konfigurasi Scope</p>
-              <p className="text-xs text-emerald-700 mt-0.5">Batas sistem: <b>{BOUNDARY_OPTIONS.find(b => b.value === boundary)?.label}</b> · Alokasi: <b>{ALLOCATION_OPTIONS.find(a => a.value === allocation)?.label}</b> · {selectedImpacts.length} kategori dampak</p>
+          {!isLocked && (
+            <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-4 border border-emerald-200">
+              <div>
+                <p className="text-sm font-semibold text-emerald-900">Simpan Konfigurasi Scope</p>
+                <p className="text-xs text-emerald-700 mt-0.5">Batas sistem: <b>{BOUNDARY_OPTIONS.find(b => b.value === boundary)?.label}</b> · Alokasi: <b>{ALLOCATION_OPTIONS.find(a => a.value === allocation)?.label}</b> · {selectedImpacts.length} kategori dampak</p>
+              </div>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Simpan & Terapkan <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Simpan ke Database <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
+          )}
         </>
       )}
     </div>
