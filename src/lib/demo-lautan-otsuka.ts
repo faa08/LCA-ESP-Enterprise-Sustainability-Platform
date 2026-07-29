@@ -90,7 +90,7 @@ export async function seedLautanOtsukaData(siteId: string) {
   await saveGoalScope(siteId, industryId, {
     studyGoal: "Menghitung jejak lingkungan (LCA) dan emisi karbon dari produksi Azodicarbonamide (Blowing Agent) untuk kepatuhan PROPER dan pelaporan ESG.",
     functionalUnit: "1 Ton Azodicarbonamide (ADCA)",
-    boundary: "cradle-to-gate",
+    boundary: "cradle-to-grave",
     allocation: "mass",
     impactCategories: [
       "Global Warming Potential (GWP)",
