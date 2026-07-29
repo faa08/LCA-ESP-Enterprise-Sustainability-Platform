@@ -197,7 +197,7 @@ export default function TransportationPage() {
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip
-                      formatter={(v: number) => [`${v.toFixed(3)} tCO₂e/thn`, "Emisi"]}
+                      formatter={(v: any) => [`${Number(v).toFixed(3)} tCO₂e/thn`, "Emisi"]}
                       contentStyle={{ fontSize: 11, borderRadius: 8 }}
                     />
                     <Bar dataKey="emisi" radius={[4, 4, 0, 0]}>
