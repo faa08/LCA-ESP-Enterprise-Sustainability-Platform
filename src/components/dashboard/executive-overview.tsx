@@ -49,10 +49,12 @@ import {
   ArrowRight,
   Loader2,
   Info,
+  X,
+  ChevronRight,
 } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts"
 import { useViewMode } from "@/lib/use-view-mode"
-import { useBoundary, getBoundaryLabel, getActiveScopes, isScopeActive } from "@/lib/boundary-context"
+import { useBoundary, getBoundaryLabel, getActiveScopes, isScopeActive, type SystemBoundary } from "@/lib/boundary-context"
 
 const dicts: Record<Locale, Record<string, string>> = { id, en }
 
@@ -82,7 +84,7 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
   const industryId = useIndustryId()
   const siteId = useSiteId()
   const [viewMode] = useViewMode()
-  const { boundary } = useBoundary()
+  const { boundary, setBoundary } = useBoundary()
 
   const [kpis, setKpis] = useState<CalculatedKPIs | null>(null)
   const [energyCount, setEnergyCount] = useState(0)
@@ -144,9 +146,11 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
   // Audit readiness: needs at least energy + one of lab/stack to be verifiable
   const auditReady = energyCount > 0 && (labCount > 0 || stackCount > 0)
 
-  const handleSeedData = async () => {
-    if (!siteId) return
-    if (!confirm("Tindakan ini akan menghapus data saat ini dan mengisinya dengan mock data PT. Lautan Otsuka Chemical. Lanjutkan?")) return
+  const [showDemoModal, setShowDemoModal] = useState(false)
+
+  const handleSeedDataWithBoundary = async (selectedBoundary: SystemBoundary) => {
+    setBoundary(selectedBoundary)
+    setShowDemoModal(false)
     setSeeding(true)
     await seedLautanOtsukaData(siteId)
     await refresh()
@@ -155,6 +159,43 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
 
   return (
     <div className="space-y-6">
+      {/* Demo Boundary Selection Modal */}
+      {showDemoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-neutral-900">Pilih Batas Sistem</h3>
+              <button onClick={() => setShowDemoModal(false)} className="text-neutral-400 hover:text-neutral-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-6 text-sm text-neutral-600">
+              Sebelum memuat data demo PT. Lautan Otsuka, pilih batas sistem (System Boundary) LCA yang ingin Anda gunakan.
+            </p>
+            <div className="space-y-3">
+              {(["gate-to-gate", "cradle-to-gate", "cradle-to-grave", "cradle-to-cradle"] as const).map((b) => (
+                <button
+                  key={b}
+                  onClick={() => handleSeedDataWithBoundary(b)}
+                  className="flex w-full items-center justify-between rounded-xl border border-neutral-200 p-4 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50"
+                >
+                  <div>
+                    <div className="font-semibold text-neutral-900">{getBoundaryLabel(b)}</div>
+                    <div className="mt-0.5 text-xs text-neutral-500">
+                      {b === "gate-to-gate" && "Hanya operasional internal pabrik (Scope 1)"}
+                      {b === "cradle-to-gate" && "Termasuk bahan baku hulu (Scope 1+2)"}
+                      {b === "cradle-to-grave" && "Termasuk transportasi ke konsumen (Scope 1-3)"}
+                      {b === "cradle-to-cradle" && "Termasuk pemulihan/daur ulang sirkular"}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-neutral-400" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mode Indicator Banner */}
       <div className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs">
         <div className="flex items-center gap-2.5">
@@ -174,7 +215,7 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-3 sm:mt-0">
           <button 
-            onClick={handleSeedData}
+            onClick={() => setShowDemoModal(true)}
             disabled={seeding}
             className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50"
           >
