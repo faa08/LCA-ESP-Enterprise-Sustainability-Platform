@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { Bell, Search, ChevronRight, ChevronDown, User, Settings as SettingsIcon, LogOut, Printer, Briefcase, Wrench } from "lucide-react"
+import { Bell, Search, ChevronRight, ChevronDown, User, Settings as SettingsIcon, LogOut, Printer, Briefcase, Wrench, BookOpen } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
 import { id } from "@/locales/id"
 import { en } from "@/locales/en"
@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { PrintableProperReportModal } from "@/components/dashboard/printable-proper-report"
 import { useViewMode } from "@/lib/use-view-mode"
+import { useHelp } from "@/lib/help-context"
 
 import type { Role } from "@/lib/role"
 
@@ -66,6 +67,7 @@ export function Header({ locale, role: propRole }: { locale: Locale; role?: Role
   const [userOpen, setUserOpen] = useState(false)
   const [isReportOpen, setIsReportOpen] = useState(false)
   const [viewMode, setViewMode] = useViewMode()
+  const { toggleHelp } = useHelp()
   const notifRef = useRef<HTMLDivElement>(null)
   const userRef = useRef<HTMLDivElement>(null)
 
@@ -161,6 +163,16 @@ export function Header({ locale, role: propRole }: { locale: Locale; role?: Role
             EN
           </button>
         </div>
+
+        {/* Help / Tutorial Button */}
+        <button
+          onClick={toggleHelp}
+          className="flex h-9 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-emerald-700 transition-colors hover:bg-emerald-100 hover:text-emerald-800"
+          title="Panduan Pengisian"
+        >
+          <BookOpen className="h-4 w-4" />
+          <span className="text-xs font-semibold hidden sm:inline">Panduan</span>
+        </button>
 
         <div className="relative" ref={notifRef}>
           <button

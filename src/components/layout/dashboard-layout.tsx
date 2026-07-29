@@ -4,6 +4,8 @@ import { useState } from "react"
 import { Sidebar } from "./sidebar"
 import { Header } from "./header"
 import { BoundaryProvider } from "@/lib/boundary-context"
+import { HelpProvider } from "@/lib/help-context"
+import { HelpDrawer } from "@/components/layout/help-drawer"
 import type { ReactNode } from "react"
 import type { Role } from "@/lib/role"
 import type { Locale } from "@/lib/i18n"
@@ -18,7 +20,8 @@ export function DashboardLayout({ children, role, locale }: DashboardLayoutProps
   const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <BoundaryProvider>
+    <HelpProvider>
+      <BoundaryProvider>
       <div className="flex min-h-screen bg-app">
         <Sidebar role={role} locale={locale} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
         <div className="flex min-w-0 flex-1 flex-col">
@@ -38,7 +41,9 @@ export function DashboardLayout({ children, role, locale }: DashboardLayoutProps
             {children}
           </main>
         </div>
+        <HelpDrawer />
       </div>
     </BoundaryProvider>
+    </HelpProvider>
   )
 }
