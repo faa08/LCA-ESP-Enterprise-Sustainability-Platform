@@ -8,6 +8,7 @@ import { Truck, Plus, Trash2, CheckCircle2, Info, Loader2 } from "lucide-react"
 import { useIndustryId } from "@/lib/use-industry-id"
 import { useSiteId } from "@/lib/use-site-id"
 import { getHubEntries, saveHubEntry, deleteHubEntry, type TransportEntry as SbTransportEntry } from "@/lib/supabase/data-service"
+import { useBoundary, isScopeActive, getBoundaryLabel } from "@/lib/boundary-context"
 
 interface LocalTransportEntry {
   id: string
@@ -49,6 +50,7 @@ const emptyEntry = (): LocalTransportEntry => ({
 export default function TransportationPage() {
   const industryId = useIndustryId()
   const siteId = useSiteId()
+  const { boundary } = useBoundary()
 
   const [entries, setEntries] = useState<LocalTransportEntry[]>([emptyEntry()])
   const [loading, setLoading] = useState(true)
@@ -133,6 +135,17 @@ export default function TransportationPage() {
 
   return (
     <div className="space-y-6">
+      {!isScopeActive(boundary, "scope3") && (
+        <div className="flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs text-orange-900">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
+          <div>
+            <p className="font-bold">Batas Sistem Aktif: {getBoundaryLabel(boundary)}</p>
+            <p className="mt-0.5 text-orange-700">
+              Scope 3 (Transportasi Rantai Pasok Hulu &amp; Hilir) berada di luar batas sistem saat ini. Data transportasi di bawah ini tidak dihitung dalam total emisi karbon dan laporan LCA.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Page Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>

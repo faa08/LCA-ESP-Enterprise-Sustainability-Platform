@@ -2,8 +2,10 @@
 // ensPR Calculation Engine
 // Derives Scope 1/2/3, LCA categories, and Energy KPIs automatically from raw operational data.
 // All emission factors are Indonesia-specific defaults (can be refined per industry).
+// Respects System Boundary from Goal & Scope (Modul 0) to filter active scopes.
 
 import { getHubEntries, type EnergyEntry, type TransportEntry, type StackEntry, type WaterEntry, type LabEntry } from "@/lib/supabase/data-service"
+import { type SystemBoundary, isScopeActive } from "@/lib/boundary-context"
 
 /* ─────────────── Emission Factors ─────────────── */
 
@@ -82,6 +84,7 @@ export function calcEngineFromEntries(
   stackEntries: StackEntry[] = [],
   waterEntries: WaterEntry[] = [],
   labEntries: LabEntry[] = [],
+  boundary: SystemBoundary = "cradle-to-grave",
 ): CalculatedKPIs {
   const safeEnergy = Array.isArray(energyEntries) ? energyEntries : []
   const safeTransport = Array.isArray(transportEntries) ? transportEntries : []
@@ -174,10 +177,10 @@ export function calcEngineFromEntries(
   // ── Abiotic Depletion Fossil (in MJ) ──
   const adpf_MJ = fossilMWh * 3600
 
-  // ── Assemble totals ──
+  // ── Assemble totals (filtered by boundary) ──
   const scope1_t = scope1_kg / 1000
-  const scope2_t = scope2_kg / 1000
-  const scope3_t = scope3_kg / 1000
+  const scope2_t = isScopeActive(boundary, "scope2") ? scope2_kg / 1000 : 0
+  const scope3_t = isScopeActive(boundary, "scope3") ? scope3_kg / 1000 : 0
   const total_t = scope1_t + scope2_t + scope3_t
 
   return {
@@ -211,14 +214,14 @@ export function calcEngineFromEntries(
 }
 
 // Async wrapper that fetches entries from Supabase
-export async function calcEngineAsync(siteId: string, industryId: string): Promise<CalculatedKPIs> {
+export async function calcEngineAsync(siteId: string, industryId: string, boundary: SystemBoundary = "cradle-to-grave"): Promise<CalculatedKPIs> {
   const energyEntries = await getHubEntries<EnergyEntry>("energy", siteId, industryId)
   const transportEntries = await getHubEntries<TransportEntry>("transport", siteId, industryId)
   const stackEntries = await getHubEntries<StackEntry>("stack", siteId, industryId)
   const waterEntries = await getHubEntries<WaterEntry>("water", siteId, industryId)
   const labEntries = await getHubEntries<LabEntry>("laboratory", siteId, industryId)
 
-  return calcEngineFromEntries(energyEntries, transportEntries, stackEntries, waterEntries, labEntries)
+  return calcEngineFromEntries(energyEntries, transportEntries, stackEntries, waterEntries, labEntries, boundary)
 }
 
 // Backward-compatible export: returns zero if called synchronously without entries

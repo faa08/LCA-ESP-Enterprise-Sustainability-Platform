@@ -25,6 +25,7 @@ import {
 } from "@/lib/supabase/data-service"
 import { calcEngineAsync, type CalculatedKPIs } from "@/lib/calc-engine"
 import { getRoleClient, isReadOnly } from "@/lib/role"
+import { useBoundary, isCategoryVisible, getBoundaryLabel, getActiveScopes } from "@/lib/boundary-context"
 
 /* ─── audit helpers ─── */
 function auditSave(category: HubCategory, siteId: string, industryId: string, role: string, summary: string) {
@@ -906,13 +907,14 @@ export default function DataHubPage() {
   const industry = INDUSTRIES.find((i) => i.id === industryId)
   const [kpis, setKpis] = useState<CalculatedKPIs | null>(null)
   const [showKpi, setShowKpi] = useState(false)
+  const { boundary } = useBoundary()
 
   const refreshKpis = useCallback(async () => {
     if (siteId && industryId) {
-      const res = await calcEngineAsync(siteId, industryId)
+      const res = await calcEngineAsync(siteId, industryId, boundary)
       setKpis(res)
     }
-  }, [siteId, industryId])
+  }, [siteId, industryId, boundary])
 
   useEffect(() => { refreshKpis() }, [refreshKpis])
 
@@ -976,7 +978,10 @@ export default function DataHubPage() {
               <div>
                 <p className="text-sm font-bold text-emerald-900">{industry.name}</p>
                 <p className="text-xs text-emerald-700">
-                  Scope 1, 2, 3 · GWP · AP · EP · Total Energi → dihitung otomatis dari data di bawah ini
+                  {getActiveScopes(boundary)} · GWP · AP · EP · Total Energi → dihitung otomatis dari data di bawah ini
+                  <span className="ml-1 inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 border border-emerald-200">
+                    {getBoundaryLabel(boundary)}
+                  </span>
                 </p>
               </div>
             </div>
@@ -999,15 +1004,31 @@ export default function DataHubPage() {
       {/* ── Category Forms ── */}
       {industry && (
         <div className="space-y-4">
+          {/* Boundary filter info banner */}
+          {(boundary === "gate-to-gate" || boundary === "cradle-to-gate") && (
+            <div className="flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+              <Settings2 className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
+              <div>
+                <p className="text-xs font-bold text-orange-900">Batas Sistem: {getBoundaryLabel(boundary)}</p>
+                <p className="text-[11px] text-orange-700 mt-0.5">
+                  Beberapa kategori disembunyikan karena di luar batas sistem yang dipilih di Goal &amp; Scope.
+                  {!isCategoryVisible(boundary, "materials") && " Materials (Bahan Baku) tersembunyi."}
+                  {!isCategoryVisible(boundary, "transport") && " Transport (Transportasi) tersembunyi."}
+                  {!isCategoryVisible(boundary, "supplier") && " Supplier (Pemasok) tersembunyi."}
+                  {" "}Ubah di <a href="/dashboard/goal-scope" className="underline font-semibold">Goal &amp; Scope</a>.
+                </p>
+              </div>
+            </div>
+          )}
           <ProductionForm siteId={siteId} industryId={industryId} role={role} />
-          <MaterialForm siteId={siteId} industryId={industryId} role={role} />
+          {isCategoryVisible(boundary, "materials") && <MaterialForm siteId={siteId} industryId={industryId} role={role} />}
           <EnergyForm siteId={siteId} industryId={industryId} role={role} onCalcUpdate={refreshKpis} />
           <WaterForm siteId={siteId} industryId={industryId} role={role} />
           <LabForm siteId={siteId} industryId={industryId} role={role} />
           <StackForm siteId={siteId} industryId={industryId} role={role} onCalcUpdate={refreshKpis} />
           <B3Form siteId={siteId} industryId={industryId} role={role} />
-          <TransportForm siteId={siteId} industryId={industryId} role={role} onCalcUpdate={refreshKpis} />
-          <SupplierForm siteId={siteId} industryId={industryId} role={role} />
+          {isCategoryVisible(boundary, "transport") && <TransportForm siteId={siteId} industryId={industryId} role={role} onCalcUpdate={refreshKpis} />}
+          {isCategoryVisible(boundary, "supplier") && <SupplierForm siteId={siteId} industryId={industryId} role={role} />}
           <DocumentsForm siteId={siteId} industryId={industryId} role={role} />
         </div>
       )}

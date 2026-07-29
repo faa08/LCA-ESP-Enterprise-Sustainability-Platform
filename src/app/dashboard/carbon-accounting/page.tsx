@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardTitle, CardHeader } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Cloud, Flame, Zap, Truck, Coins, ArrowUpRight, Loader2 } from "lucide-react"
 import { CalcTraceModal, TraceCalcButton, type TraceGroup } from "@/components/dashboard/calc-trace-modal"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from "recharts"
@@ -14,6 +15,7 @@ import { useIndustryId } from "@/lib/use-industry-id"
 import { useSiteId } from "@/lib/use-site-id"
 import { calcEngineAsync, type CalculatedKPIs } from "@/lib/calc-engine"
 import { getHubEntries, type EnergyEntry, type TransportEntry } from "@/lib/supabase/data-service"
+import { useBoundary, getBoundaryLabel, getActiveScopes, isScopeActive } from "@/lib/boundary-context"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
@@ -99,6 +101,7 @@ export default function CarbonAccounting() {
   const dict = dicts[locale]
   const industryId = useIndustryId()
   const siteId = useSiteId()
+  const { boundary } = useBoundary()
 
   const [kpis, setKpis] = useState<CalculatedKPIs | null>(null)
   const [energyEntries, setEnergyEntries] = useState<EnergyEntry[]>([])
@@ -109,14 +112,14 @@ export default function CarbonAccounting() {
   const refresh = useCallback(async () => {
     if (!siteId) return
     setLoading(true)
-    const kpiData = await calcEngineAsync(siteId, industryId)
+    const kpiData = await calcEngineAsync(siteId, industryId, boundary)
     setKpis(kpiData)
     const eData = await getHubEntries<EnergyEntry>("energy", siteId, industryId)
     const tData = await getHubEntries<TransportEntry>("transport", siteId, industryId)
     setEnergyEntries(eData)
     setTransportEntries(tData)
     setLoading(false)
-  }, [siteId, industryId])
+  }, [siteId, industryId, boundary])
 
   useEffect(() => { refresh() }, [refresh])
 
@@ -167,7 +170,8 @@ export default function CarbonAccounting() {
         <div>
           <h1 className="text-lg font-semibold text-neutral-900">{t(dict, "carbon.page_title")}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <p className="text-sm text-neutral-500">Inventarisasi Emisi GHG Scope 1, 2, &amp; 3 terintegrasi dengan Data Hub.</p>
+            <p className="text-sm text-neutral-500">Inventarisasi Emisi GHG {getActiveScopes(boundary)} terintegrasi dengan Data Hub.</p>
+            <Badge variant="neutral" className="text-[10px]">{getBoundaryLabel(boundary)}</Badge>
             <TraceCalcButton onClick={() => setTraceOpen(true)} />
           </div>
         </div>
@@ -188,9 +192,13 @@ export default function CarbonAccounting() {
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard title={t(dict, "carbon.scope1")} value={fmt(scope1, " tCO₂e")} description={t(dict, "carbon.scope1_desc")} icon={Flame} />
-            <StatCard title={t(dict, "carbon.scope2")} value={fmt(scope2, " tCO₂e")} description={t(dict, "carbon.scope2_desc")} icon={Zap} />
-            <StatCard title={t(dict, "carbon.scope3")} value={fmt(scope3, " tCO₂e")} description={t(dict, "carbon.scope3_desc")} icon={Truck} />
-            <StatCard title={t(dict, "carbon.total_emissions")} value={fmt(totalEmissions, " tCO₂e")} description={t(dict, "carbon.all_scopes")} icon={Cloud} />
+            <div className={!isScopeActive(boundary, "scope2") ? "opacity-40 pointer-events-none" : ""}>
+              <StatCard title={t(dict, "carbon.scope2")} value={isScopeActive(boundary, "scope2") ? fmt(scope2, " tCO₂e") : "N/A"} description={isScopeActive(boundary, "scope2") ? t(dict, "carbon.scope2_desc") : `Di luar batas ${getBoundaryLabel(boundary)}`} icon={Zap} />
+            </div>
+            <div className={!isScopeActive(boundary, "scope3") ? "opacity-40 pointer-events-none" : ""}>
+              <StatCard title={t(dict, "carbon.scope3")} value={isScopeActive(boundary, "scope3") ? fmt(scope3, " tCO₂e") : "N/A"} description={isScopeActive(boundary, "scope3") ? t(dict, "carbon.scope3_desc") : `Di luar batas ${getBoundaryLabel(boundary)}`} icon={Truck} />
+            </div>
+            <StatCard title={t(dict, "carbon.total_emissions")} value={fmt(totalEmissions, " tCO₂e")} description={getActiveScopes(boundary)} icon={Cloud} />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">

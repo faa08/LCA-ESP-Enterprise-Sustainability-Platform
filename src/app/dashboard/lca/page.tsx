@@ -16,6 +16,7 @@ import { useSiteId } from "@/lib/use-site-id"
 import { calcEngineAsync, type CalculatedKPIs } from "@/lib/calc-engine"
 import { getGoalScope, type GoalScopeRecord } from "@/lib/supabase/data-service"
 import { LCA_PARAMS } from "@/lib/proper"
+import { useBoundary, getBoundaryLabel } from "@/lib/boundary-context"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
@@ -103,6 +104,7 @@ export default function LCAPage() {
   const dict = dicts[locale]
   const industryId = useIndustryId()
   const siteId = useSiteId()
+  const { boundary } = useBoundary()
 
   const [kpis, setKpis] = useState<CalculatedKPIs | null>(null)
   const [goalScope, setGoalScope] = useState<GoalScopeRecord | null>(null)
@@ -112,12 +114,12 @@ export default function LCAPage() {
   const refresh = useCallback(async () => {
     if (!siteId) return
     setLoading(true)
-    const kpiData = await calcEngineAsync(siteId, industryId)
+    const kpiData = await calcEngineAsync(siteId, industryId, boundary)
     setKpis(kpiData)
     const scopeData = await getGoalScope(siteId, industryId)
     setGoalScope(scopeData)
     setLoading(false)
-  }, [siteId, industryId])
+  }, [siteId, industryId, boundary])
 
   useEffect(() => { refresh() }, [refresh])
 

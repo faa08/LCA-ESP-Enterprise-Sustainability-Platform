@@ -11,6 +11,7 @@ import {
 import { useIndustryId } from "@/lib/use-industry-id"
 import { useSiteId } from "@/lib/use-site-id"
 import { getGoalScope, saveGoalScope } from "@/lib/supabase/data-service"
+import { useBoundary, getActiveScopes, BOUNDARY_SCOPE_MAP, BOUNDARY_CATEGORY_MAP, type SystemBoundary as SBType } from "@/lib/boundary-context"
 
 type SystemBoundary = "cradle-to-gate" | "cradle-to-grave" | "gate-to-gate" | "cradle-to-cradle"
 type AllocationMethod = "mass" | "economic" | "system-expansion" | "physical"
@@ -38,6 +39,7 @@ const IMPACT_CATEGORIES = [
 export default function GoalScopePage() {
   const industryId = useIndustryId()
   const siteId = useSiteId()
+  const { refreshBoundary } = useBoundary()
 
   const [dbId, setDbId] = useState<string | undefined>(undefined)
   const [studyGoal, setStudyGoal] = useState("")
@@ -115,6 +117,8 @@ export default function GoalScopePage() {
     setIsLocked(true)
     setSaving(false)
     setSaved(true)
+    // Refresh boundary context so all other modules update
+    await refreshBoundary()
     setTimeout(() => setSaved(false), 3000)
   }
 
@@ -240,6 +244,37 @@ export default function GoalScopePage() {
               </div>
             )}
           </Card>
+
+          {/* Boundary Impact Preview */}
+          <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+            <p className="text-sm font-semibold text-orange-900 mb-2">Dampak Batas Sistem: {BOUNDARY_OPTIONS.find(b => b.value === boundary)?.label}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-semibold text-orange-800 mb-1">Scope GHG yang aktif:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {BOUNDARY_SCOPE_MAP[boundary as SBType].map(scope => (
+                    <span key={scope} className="inline-flex items-center rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
+                      ✅ {scope.replace("scope", "Scope ")}
+                    </span>
+                  ))}
+                  {["scope1", "scope2", "scope3"].filter(s => !BOUNDARY_SCOPE_MAP[boundary as SBType].includes(s as "scope1" | "scope2" | "scope3")).map(scope => (
+                    <span key={scope} className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-400 border border-neutral-200 line-through">
+                      {scope.replace("scope", "Scope ")}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-orange-800 mb-1">Kategori Data Hub yang tersedia:</p>
+                <p className="text-[11px] text-orange-700">
+                  {BOUNDARY_CATEGORY_MAP[boundary as SBType].length} dari 10 kategori aktif.
+                  {!BOUNDARY_CATEGORY_MAP[boundary as SBType].includes("transport") && <span className="ml-1">❌ Transport disembunyikan.</span>}
+                  {!BOUNDARY_CATEGORY_MAP[boundary as SBType].includes("materials") && <span className="ml-1">❌ Materials disembunyikan.</span>}
+                  {!BOUNDARY_CATEGORY_MAP[boundary as SBType].includes("supplier") && <span className="ml-1">❌ Supplier disembunyikan.</span>}
+                </p>
+              </div>
+            </div>
+          </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>

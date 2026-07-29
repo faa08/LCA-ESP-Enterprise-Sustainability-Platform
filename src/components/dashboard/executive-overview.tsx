@@ -52,6 +52,7 @@ import {
 } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts"
 import { useViewMode } from "@/lib/use-view-mode"
+import { useBoundary, getBoundaryLabel, getActiveScopes, isScopeActive } from "@/lib/boundary-context"
 
 const dicts: Record<Locale, Record<string, string>> = { id, en }
 
@@ -81,6 +82,7 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
   const industryId = useIndustryId()
   const siteId = useSiteId()
   const [viewMode] = useViewMode()
+  const { boundary } = useBoundary()
 
   const [kpis, setKpis] = useState<CalculatedKPIs | null>(null)
   const [energyCount, setEnergyCount] = useState(0)
@@ -96,7 +98,7 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
     if (!siteId) return
     setLoading(true)
     const [kpiData, energyData, waterData, labData, stackData, transportData, b3Data] = await Promise.all([
-      calcEngineAsync(siteId, industryId),
+      calcEngineAsync(siteId, industryId, boundary),
       getHubEntries<EnergyEntry>("energy", siteId, industryId),
       getHubEntries<WaterEntry>("water", siteId, industryId),
       getHubEntries<LabEntry>("laboratory", siteId, industryId),
@@ -112,7 +114,7 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
     setTransportCount(transportData.length)
     setB3Count(b3Data.length)
     setLoading(false)
-  }, [siteId, industryId])
+  }, [siteId, industryId, boundary])
 
   useEffect(() => { refresh() }, [refresh])
 
@@ -120,8 +122,8 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
   const hasEnergyData = hasEmissionData
 
   const scope1 = kpis?.scope1_tCO2e ?? 0
-  const scope2 = kpis?.scope2_tCO2e ?? 0
-  const scope3 = kpis?.scope3_tCO2e ?? 0
+  const scope2 = isScopeActive(boundary, "scope2") ? (kpis?.scope2_tCO2e ?? 0) : 0
+  const scope3 = isScopeActive(boundary, "scope3") ? (kpis?.scope3_tCO2e ?? 0) : 0
   const carbonTotal = kpis?.total_ghg_tCO2e ?? 0
   const energyTotal = kpis?.energy_total_MWh ?? 0
   const renewablePct = kpis?.renewable_pct ?? 0
@@ -207,7 +209,7 @@ export function ExecutiveOverview({ locale }: { locale: Locale }) {
             <StatCard
               title={t(dict, "dashboard.kpi.carbon")}
               value={hasEmissionData ? `${fmt(carbonTotal)} tCO₂e` : "—"}
-              description="Scope 1 + 2 + 3 (GHG Protocol)"
+              description={`${getActiveScopes(boundary)} (${getBoundaryLabel(boundary)})`}
               icon={Cloud}
             />
             <StatCard
