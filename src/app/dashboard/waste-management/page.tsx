@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect, useCallback } from "react"
 import { StatCard } from "@/components/ui/stat-card"
@@ -83,10 +83,34 @@ export default function WasteManagement() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard title="Total Limbah Terdaftar" value={noData ? "â€”" : `${fmt(totalQtyKg)} kg`} description={noData ? "Belum ada entri" : `${entries.length} catatan TPS B3`} icon={Trash2} />
-            <StatCard title="Total Tonase" value={noData ? "â€”" : `${fmt(totalQtyTon)} Ton`} description="Terdaftar di Festronik" icon={Recycle} />
-            <StatCard title="Peringatan Masa Simpan" value={noData ? "0" : String(over90Days)} description="Melebihi 90 hari izin TPS" icon={AlertTriangle} />
-            <StatCard title="Kepatuhan TPS B3" value={noData ? "â€”" : over90Days === 0 ? "100%" : "Perlu Tindakan"} description="Permen LHK No. 6/2021" icon={ShieldCheck} />
+            <StatCard title="Total Limbah Terdaftar" value={noData ? "—" : `${fmt(totalQtyKg)} kg`} description={noData ? "Belum ada entri" : `${entries.length} catatan TPS B3`} icon={Trash2}
+              detail={{
+                formula: "Σ Berat (kg) dari seluruh entri limbah B3 yang diinput ke Data Hub.",
+                source: "Dihitung dari kolom 'Berat' di entri Limbah B3 di Data Hub.",
+                suggestion: "Minimalisasi limbah B3 melalui substitusi bahan baku. Implementasikan 3R (Reduce, Reuse, Recycle) pada proses produksi.",
+              }}
+            />
+            <StatCard title="Total Tonase" value={noData ? "—" : `${fmt(totalQtyTon)} Ton`} description="Terdaftar di Festronik" icon={Recycle}
+              detail={{
+                formula: "Total Limbah (kg) ÷ 1.000 = Tonase.",
+                source: "Konversi dari total limbah B3 dalam kilogram ke ton.",
+                suggestion: "Pastikan semua limbah B3 terdaftar di Festronik KLHK. Lakukan manifest digital untuk setiap pengiriman ke pihak ketiga.",
+              }}
+            />
+            <StatCard title="Peringatan Masa Simpan" value={noData ? "0" : String(over90Days)} description="Melebihi 90 hari izin TPS" icon={AlertTriangle}
+              detail={{
+                formula: "Jumlah entri limbah B3 dengan (tanggal hari ini − tanggal masuk TPS) > 90 hari.",
+                source: "Dihitung dari kolom 'Tanggal' di entri Limbah B3 dibandingkan dengan hari ini.",
+                suggestion: "Segera atur pengangkutan oleh pihak ketiga berlisensi sebelum batas 90 hari (Permen LHK No. 6/2021). Buat jadwal rutin pengangkutan.",
+              }}
+            />
+            <StatCard title="Kepatuhan TPS B3" value={noData ? "—" : over90Days === 0 ? "100%" : "Perlu Tindakan"} description="Permen LHK No. 6/2021" icon={ShieldCheck}
+              detail={{
+                formula: "Jika jumlah limbah melebihi 90 hari = 0, maka 100% Patuh. Jika > 0, maka 'Perlu Tindakan'.",
+                source: "Status berdasarkan jumlah peringatan masa simpan di atas.",
+                suggestion: "Target kepatuhan 100%. Buat SOP pengelolaan TPS B3 dengan kontrol waktu otomatis dan notifikasi sebelum batas 90 hari.",
+              }}
+            />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
@@ -175,15 +199,15 @@ export default function WasteManagement() {
                       <tr key={e.id} className="border-b border-neutral-100">
                         <td className="px-3 py-2.5 font-medium text-neutral-900">{e.date}</td>
                         <td className="px-3 py-2.5 text-neutral-800">{e.wasteType}</td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-neutral-600">{e.wasteCode || "â€”"}</td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-neutral-600">{e.wasteCode || "—"}</td>
                         <td className="px-3 py-2.5 font-bold text-neutral-900">{fmt(e.qty)} kg</td>
                         <td className="px-3 py-2.5">
                           <Badge variant={e.storageDuration > 90 ? "danger" : "success"}>
                             {e.storageDuration} Hari
                           </Badge>
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-emerald-700">{e.manifestNo || "â€”"}</td>
-                        <td className="px-3 py-2.5 text-neutral-600">{e.disposalCompany || e.recycler || "â€”"}</td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-emerald-700">{e.manifestNo || "—"}</td>
+                        <td className="px-3 py-2.5 text-neutral-600">{e.disposalCompany || e.recycler || "—"}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -81,10 +81,10 @@ function StatusBadge({
 }
 
 function limitText(p: ProperParam): string {
-  if (p.kind === "checklist") return "â€”"
-  if (p.kind === "range") return `${p.min} â€“ ${p.max}`
-  if (p.max !== undefined) return `â‰¤ ${p.max}`
-  return "â€”"
+  if (p.kind === "checklist") return "—"
+  if (p.kind === "range") return `${p.min} – ${p.max}`
+  if (p.max !== undefined) return `≤ ${p.max}`
+  return "—"
 }
 
 function ParamRow({
@@ -104,7 +104,7 @@ function ParamRow({
       <div className="flex items-center justify-between gap-4 border-b border-neutral-100 py-3 last:border-0">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-neutral-800">{param.name}</p>
-          <p className="text-xs text-neutral-400">{t(dict, "input.param.limit")}: â€”</p>
+          <p className="text-xs text-neutral-400">{t(dict, "input.param.limit")}: —</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex overflow-hidden rounded-lg border border-neutral-200 text-xs font-medium">
@@ -142,7 +142,7 @@ function ParamRow({
           inputMode="decimal"
           value={value}
           onChange={(e) => onChange(param.code, e.target.value)}
-          placeholder="â€”"
+          placeholder="—"
           className="w-28 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-right text-sm text-neutral-800 focus:border-emerald-500 focus:outline-none"
         />
         <span className="w-14 text-xs text-neutral-400">{param.unit}</span>
@@ -180,7 +180,7 @@ function Section({
       </CardHeader>
       <div className="px-5 pb-2">
         {params.length === 0 ? (
-          <p className="py-4 text-sm text-neutral-400">â€”</p>
+          <p className="py-4 text-sm text-neutral-400">—</p>
         ) : (
           params.map((p) => (
             <ParamRow key={p.code} dict={dict} param={p} value={values[p.code] ?? ""} onChange={onChange} />
@@ -363,7 +363,7 @@ export default function InputPage() {
             <Zap className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-sm font-bold text-emerald-900">Scope 1, 2, 3 Â· LCA Â· Energi â€” Dihitung Otomatis</p>
+            <p className="text-sm font-bold text-emerald-900">Scope 1, 2, 3 · LCA · Energi — Dihitung Otomatis</p>
             <p className="mt-1 text-xs text-emerald-700">
               Parameter berikut tidak perlu diinput manual karena dihitung otomatis oleh ensPR dari data operasional di Data Hub:
             </p>
@@ -373,7 +373,7 @@ export default function InputPage() {
               ))}
             </div>
             <Link href="/dashboard/data-hub" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline">
-              Buka Data Hub untuk input data operasional â†’
+              Buka Data Hub untuk input data operasional →
             </Link>
           </div>
         </div>

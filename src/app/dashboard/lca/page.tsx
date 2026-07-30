@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
@@ -21,7 +21,7 @@ import { ModuleGate } from "@/components/dashboard/module-gate"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
-const fmt = (v: number | null, unit = "", dec = 2) => (v === null || v === 0 ? "â€”" : `${v.toLocaleString("id-ID", { maximumFractionDigits: dec })}${unit}`)
+const fmt = (v: number | null, unit = "", dec = 2) => (v === null || v === 0 ? "—" : `${v.toLocaleString("id-ID", { maximumFractionDigits: dec })}${unit}`)
 
 function buildLcaTraceGroups(kpis: CalculatedKPIs | null): TraceGroup[] {
   const gwp    = kpis?.gwp_kgCO2e ?? 0
@@ -33,7 +33,7 @@ function buildLcaTraceGroups(kpis: CalculatedKPIs | null): TraceGroup[] {
 
   return [
     {
-      title: "Kategori Dampak Lingkungan â€” Inventori Energi",
+      title: "Kategori Dampak Lingkungan — Inventori Energi",
       description: "Sumber: Data Hub â€º Konsumsi Energi Bulanan. Setiap jenis energi mengandung beberapa faktor karakterisasi LCIA.",
       icon: <Zap className="h-3.5 w-3.5" />,
       steps: [
@@ -41,38 +41,38 @@ function buildLcaTraceGroups(kpis: CalculatedKPIs | null): TraceGroup[] {
           source: "Listrik + Gas + Diesel",
           sourceValue: "Semua entri energi bulanan",
           sourceColor: "blue",
-          formula: "Ã— Faktor GWP (Global Warming Potential) â€” ISO 14044 / IPCC AR6",
-          result: gwp > 0 ? `${gwp.toLocaleString("id-ID", { maximumFractionDigits: 2 })} kg COâ‚‚e` : "Belum ada data",
+          formula: "× Faktor GWP (Global Warming Potential) — ISO 14044 / IPCC AR6",
+          result: gwp > 0 ? `${gwp.toLocaleString("id-ID", { maximumFractionDigits: 2 })} kg CO₂e` : "Belum ada data",
           status: gwp > 0 ? "ok" : "empty",
         },
         {
           source: "Gas Bumi + Batubara",
-          sourceValue: "Emisi SOâ‚‚ dari pembakaran",
+          sourceValue: "Emisi SO₂ dari pembakaran",
           sourceColor: "orange",
-          formula: "Ã— Faktor Karakterisasi AP (Acidification) kg SOâ‚‚e/unit",
-          result: ap > 0 ? `${ap.toLocaleString("id-ID", { maximumFractionDigits: 4 })} kg SOâ‚‚e` : "Belum ada data",
+          formula: "× Faktor Karakterisasi AP (Acidification) kg SO₂e/unit",
+          result: ap > 0 ? `${ap.toLocaleString("id-ID", { maximumFractionDigits: 4 })} kg SO₂e` : "Belum ada data",
           status: ap > 0 ? "ok" : "empty",
         },
         {
           source: "Gas Bumi + Diesel",
           sourceValue: "Emisi NOx & Fosfor",
           sourceColor: "purple",
-          formula: "Ã— Faktor Eutrophication Potential (EP) kg POâ‚„e/unit",
-          result: ep > 0 ? `${ep.toLocaleString("id-ID", { maximumFractionDigits: 4 })} kg POâ‚„e` : "Belum ada data",
+          formula: "× Faktor Eutrophication Potential (EP) kg PO₄e/unit",
+          result: ep > 0 ? `${ep.toLocaleString("id-ID", { maximumFractionDigits: 4 })} kg PO₄e` : "Belum ada data",
           status: ep > 0 ? "ok" : "empty",
         },
         {
           source: "Diesel (partikulat halus)",
           sourceValue: "PM2.5 dari exhaust",
           sourceColor: "orange",
-          formula: "Ã— Faktor PM (Particulate Matter) kg PM2.5e/unit",
+          formula: "× Faktor PM (Particulate Matter) kg PM2.5e/unit",
           result: pm > 0 ? `${pm.toLocaleString("id-ID", { maximumFractionDigits: 4 })} kg PM2.5e` : "Belum ada data",
           status: pm > 0 ? "ok" : "empty",
         },
       ],
     },
     {
-      title: "Kategori Dampak â€” Sumber Daya Alam",
+      title: "Kategori Dampak — Sumber Daya Alam",
       description: "Sumber: Data Hub â€º Konsumsi Air & Energi. Jejak penggunaan sumber daya terbatas.",
       icon: <Beaker className="h-3.5 w-3.5" />,
       steps: [
@@ -80,15 +80,15 @@ function buildLcaTraceGroups(kpis: CalculatedKPIs | null): TraceGroup[] {
           source: "Pemakaian Air Proses",
           sourceValue: "Dari Data Hub â€º Air",
           sourceColor: "teal",
-          formula: "Volume air proses yang diambil (mÂ³) dikurangi volume yang di-recycle / reuse",
-          result: wud > 0 ? `${wud.toLocaleString("id-ID", { maximumFractionDigits: 2 })} mÂ³` : "Belum ada data",
+          formula: "Volume air proses yang diambil (m³) dikurangi volume yang di-recycle / reuse",
+          result: wud > 0 ? `${wud.toLocaleString("id-ID", { maximumFractionDigits: 2 })} m³` : "Belum ada data",
           status: wud > 0 ? "ok" : "empty",
         },
         {
           source: "Bahan Bakar Fosil",
           sourceValue: "Gas + Diesel + Batubara",
           sourceColor: "orange",
-          formula: "Konversi energi ke MJ (Megajoule) Ã— Faktor ADP-Fosil (Abiotic Depletion)",
+          formula: "Konversi energi ke MJ (Megajoule) × Faktor ADP-Fosil (Abiotic Depletion)",
           result: adpf > 0 ? `${adpf.toLocaleString("id-ID", { maximumFractionDigits: 2 })} MJ` : "Belum ada data",
           status: adpf > 0 ? "ok" : "empty",
         },
@@ -132,7 +132,7 @@ export default function LCAPage() {
     { name: "AP (Asam)", value: kpis?.ap_kgSO2e ?? 0 },
     { name: "EP (Eutro)", value: kpis?.ep_kgPO4e ?? 0 },
     { name: "PM (Debu)", value: kpis?.pm_kgPM25e ?? 0 },
-    { name: "Air (mÂ³)", value: kpis?.wud_m3 ?? 0 },
+    { name: "Air (m³)", value: kpis?.wud_m3 ?? 0 },
     { name: "Fosil (MJ)", value: kpis?.adpf_MJ ?? 0 },
   ]
 
@@ -146,7 +146,7 @@ export default function LCAPage() {
       <div className="flex items-center justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-blue-900">Modul 6 â€” LCIA Multi-Impact</p>
+            <p className="text-sm font-semibold text-blue-900">Modul 6 — LCIA Multi-Impact</p>
             {goalScope?.isLocked ? (
               <Badge variant="success">Goal &amp; Scope Terkunci (ISO 14040/44 Valid)</Badge>
             ) : (
@@ -156,7 +156,7 @@ export default function LCAPage() {
           </div>
           <p className="text-xs text-blue-700 mt-0.5">
             {goalScope?.isLocked
-              ? `Batas Sistem: ${goalScope.boundary} Â· Alokasi: ${goalScope.allocation} Â· Unit: ${goalScope.functionalUnit || "â€”"}`
+              ? `Batas Sistem: ${goalScope.boundary} · Alokasi: ${goalScope.allocation} · Unit: ${goalScope.functionalUnit || "—"}`
               : "Prasyarat: Modul 0 (Goal & Scope) harus dikunci di database sebelum hasil LCIA dapat diklaim sebagai studi LCA yang sah."}
           </p>
         </div>
@@ -173,10 +173,34 @@ export default function LCAPage() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard title="GWP (Global Warming)" value={fmt(gwp, " kg COâ‚‚e")} description="Total Potensi Pemanasan Global" icon={BarChart3} />
-            <StatCard title="Water Depletion" value={fmt(water, " mÂ³")} description="Penggunaan Air Terkalkulasi" icon={Beaker} />
-            <StatCard title="Indikator LCIA Terisi" value={`${lcaFilledCount}/11`} description="Kategori Dampak Lingkungan" icon={Package} />
-            <StatCard title="Status PROPER LCA" value={lcaFilledCount >= 6 ? "EMAS" : lcaFilledCount >= 3 ? "HIJAU" : "BIRU"} description={lcaFilledCount >= 6 ? "LCIA Terpenuhi" : `Butuh ${Math.max(0, 3 - lcaFilledCount)} data lagi â†’ Hijau`} icon={Cpu} />
+            <StatCard title="GWP (Global Warming)" value={fmt(gwp, " kg CO₂e")} description="Total Potensi Pemanasan Global" icon={BarChart3}
+              detail={{
+                formula: "Total GHG (tCO₂e) × 1000 = GWP dalam kg CO₂-equivalent. Mengikuti karakterisasi CML/ReCiPe sesuai ISO 14044.",
+                source: "Dihitung otomatis dari Scope 1 + 2 + 3 (data Energi, Transportasi, Cerobong di Data Hub).",
+                suggestion: "Kurangi emisi Scope 1 (bahan bakar fosil) dan Scope 2 (listrik PLN). Ini adalah indikator utama PROPER EMAS.",
+              }}
+            />
+            <StatCard title="Water Depletion" value={fmt(water, " m³")} description="Penggunaan Air Terkalkulasi" icon={Beaker}
+              detail={{
+                formula: "Σ (Air Baku m³ + Air Tanah m³) dari seluruh entri Air di Data Hub.",
+                source: "Dihitung dari entri Air (air baku dan air tanah) yang diinput ke Data Hub.",
+                suggestion: "Implementasikan zero liquid discharge (ZLD). Tingkatkan reuse air proses. Target pengurangan 10% per tahun.",
+              }}
+            />
+            <StatCard title="Indikator LCIA Terisi" value={`${lcaFilledCount}/11`} description="Kategori Dampak Lingkungan" icon={Package}
+              detail={{
+                formula: "Jumlah indikator LCIA yang memiliki nilai > 0 dari total 11 kategori dampak (GWP, AP, EP, WUD, PM, ADPF, dll).",
+                source: "Status otomatis berdasarkan kelengkapan data di Data Hub (Energi, Cerobong, Air, Lab, Transportasi).",
+                suggestion: "Untuk PROPER HIJAU: minimal 3 indikator. PROPER EMAS: minimal 6 indikator. Lengkapi data Cerobong dan Lab untuk menambah indikator.",
+              }}
+            />
+            <StatCard title="Status PROPER LCA" value={lcaFilledCount >= 6 ? "EMAS" : lcaFilledCount >= 3 ? "HIJAU" : "BIRU"} description={lcaFilledCount >= 6 ? "LCIA Terpenuhi" : `Butuh ${Math.max(0, 3 - lcaFilledCount)} data lagi → Hijau`} icon={Cpu}
+              detail={{
+                formula: "BIRU: <3 indikator LCIA. HIJAU: 3-5 indikator. EMAS: ≥6 indikator LCIA terisi.",
+                source: "Penilaian otomatis berdasarkan jumlah indikator LCIA yang sudah terisi di atas.",
+                suggestion: "Untuk naik peringkat, lengkapi data di Data Hub (tambah data Lab, Cerobong, Transportasi). Setiap sumber data baru menambah indikator.",
+              }}
+            />
           </div>
 
           {/* 11 Indikator LCA */}
@@ -220,7 +244,7 @@ export default function LCAPage() {
                     <div key={p.code} className="flex items-center gap-3 rounded-lg border border-neutral-100 px-3 py-2 text-xs">
                       <span className={`h-2 w-2 shrink-0 rounded-full ${filled ? "bg-emerald-500" : "bg-neutral-200"}`} />
                       <p className="min-w-0 flex-1 truncate font-medium text-neutral-700">{p.name}</p>
-                      <span className="font-bold text-neutral-800">{filled ? val.toLocaleString("id-ID") : "â€”"}</span>
+                      <span className="font-bold text-neutral-800">{filled ? val.toLocaleString("id-ID") : "—"}</span>
                     </div>
                   )
                 })}
@@ -233,7 +257,7 @@ export default function LCAPage() {
         isOpen={traceOpen}
         onClose={() => setTraceOpen(false)}
         title="Rincian Kalkulasi LCIA Multi-Impact (ISO 14044)"
-        subtitle="Modul 6 â€” LCIA Â· 11 Kategori Dampak Lingkungan"
+        subtitle="Modul 6 — LCIA · 11 Kategori Dampak Lingkungan"
         groups={buildLcaTraceGroups(kpis)}
       />
     </div>

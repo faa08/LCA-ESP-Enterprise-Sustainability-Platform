@@ -99,6 +99,8 @@ export default function ProductAssessmentPage() {
     })
   }
 
+  const isComplete = products.length > 0 && products.every(p => p.name.trim().length > 0)
+
   const handleSave = async () => {
     if (!siteId) return
     setSaving(true)
@@ -154,7 +156,7 @@ export default function ProductAssessmentPage() {
               <Lock className="mr-2 h-4 w-4" /> Buka Kunci (Edit)
             </Button>
           ) : (
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving || !isComplete} className={!isComplete ? "opacity-50 cursor-not-allowed" : ""}>
               {saving
                 ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menyimpan...</>
                 : saved

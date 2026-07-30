@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  Target, CheckCircle2, Lock, Info,
+  Target, CheckCircle2, Lock, Info, AlertTriangle,
   Beaker, Globe2, ArrowRight, ChevronDown, ChevronUp, Loader2,
 } from "lucide-react"
 import { useIndustryId } from "@/lib/use-industry-id"
@@ -54,6 +54,7 @@ export default function GoalScopePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [showUnlockConfirm, setShowUnlockConfirm] = useState(false)
 
   const LOCAL_KEY = "enspr_goal_scope"
 
@@ -95,7 +96,7 @@ export default function GoalScopePage() {
   const toggleImpact = (cat: string) =>
     setSelectedImpacts(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat])
 
-  const isComplete = studyGoal.trim().length > 0 || functionalUnit.trim().length > 0
+  const isComplete = studyGoal.trim().length > 0 && functionalUnit.trim().length > 0
 
   const handleSave = async () => {
     setSaving(true)
@@ -124,9 +125,7 @@ export default function GoalScopePage() {
   }
 
   const handleEdit = () => {
-    if (confirm("Membuka kunci konfigurasi akan memengaruhi ketersediaan form di Data Hub (contoh: menyembunyikan form Transportasi). Lanjutkan?")) {
-      setIsLocked(false)
-    }
+    setShowUnlockConfirm(true)
   }
 
   return (
@@ -149,7 +148,7 @@ export default function GoalScopePage() {
               <Lock className="mr-2 h-4 w-4" /> Buka Kunci (Edit)
             </Button>
           ) : (
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving || !isComplete} className={!isComplete ? "opacity-50 cursor-not-allowed" : ""}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : saved ? <CheckCircle2 className="mr-2 h-4 w-4" /> : null}
               {saving ? "Menyimpan..." : saved ? "Tersimpan!" : "Simpan & Terapkan"}
             </Button>
@@ -332,13 +331,43 @@ export default function GoalScopePage() {
                 <p className="text-sm font-semibold text-emerald-900">Simpan Konfigurasi Scope</p>
                 <p className="text-xs text-emerald-700 mt-0.5">Batas sistem: <b>{BOUNDARY_OPTIONS.find(b => b.value === boundary)?.label}</b> · Alokasi: <b>{ALLOCATION_OPTIONS.find(a => a.value === allocation)?.label}</b> · {selectedImpacts.length} kategori dampak</p>
               </div>
-              <Button onClick={handleSave} disabled={saving}>
+              <Button onClick={handleSave} disabled={saving || !isComplete} className={!isComplete ? "opacity-50 cursor-not-allowed" : ""}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Simpan & Terapkan <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           )}
         </>
+      )}
+
+      {/* ── Custom Confirm Modal ── */}
+      {showUnlockConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-neutral-900">Buka Kunci Konfigurasi?</h3>
+                  <p className="mt-2 text-sm text-neutral-600">
+                    Membuka kunci konfigurasi akan memengaruhi ketersediaan form di Data Hub (contoh: menyembunyikan form Transportasi). Lanjutkan?
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-neutral-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-neutral-100">
+              <Button variant="outline" onClick={() => setShowUnlockConfirm(false)}>Batal</Button>
+              <Button onClick={() => {
+                setIsLocked(false)
+                setShowUnlockConfirm(false)
+              }} className="bg-amber-600 hover:bg-amber-700 text-white">
+                Ya, Lanjutkan
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

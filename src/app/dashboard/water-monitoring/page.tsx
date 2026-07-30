@@ -75,10 +75,34 @@ export default function WaterMonitoring() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard title="Total Air Baku (PDAM/Sungai)" value={fmt(totalRawWater)} description="Pengambilan Air Baku" icon={ArrowDownToLine} />
-            <StatCard title="Air Tanah" value={fmt(totalGroundwater)} description="Sumur Dalam / Air Tanah" icon={Droplets} />
-            <StatCard title="Air Proses Operasional" value={fmt(totalProcessWater)} description="Konsumsi Unit Proses" icon={Recycle} />
-            <StatCard title="Air Limbah Keluar (Outlet)" value={fmt(totalWastewater)} description="Debit Limbah Cair" icon={ArrowUpFromLine} />
+            <StatCard title="Total Air Baku (PDAM/Sungai)" value={fmt(totalRawWater)} description="Pengambilan Air Baku" icon={ArrowDownToLine}
+              detail={{
+                formula: "Σ Air Baku (m³) dari seluruh entri bulanan di Data Hub.",
+                source: "Dihitung dari kolom 'Air Baku' di entri Air di Data Hub.",
+                suggestion: "Implementasikan sistem recycle/reuse untuk mengurangi pengambilan air baku. Pasang rainwater harvesting.",
+              }}
+            />
+            <StatCard title="Air Tanah" value={fmt(totalGroundwater)} description="Sumur Dalam / Air Tanah" icon={Droplets}
+              detail={{
+                formula: "Σ Air Tanah (m³) dari seluruh entri bulanan di Data Hub.",
+                source: "Dihitung dari kolom 'Air Tanah' di entri Air di Data Hub.",
+                suggestion: "Kurangi ketergantungan pada air tanah. Gunakan sumber air permukaan (PDAM/sungai) sebagai prioritas. Patuhi izin SIPA.",
+              }}
+            />
+            <StatCard title="Air Proses Operasional" value={fmt(totalProcessWater)} description="Konsumsi Unit Proses" icon={Recycle}
+              detail={{
+                formula: "Σ Air Proses (m³) dari seluruh entri bulanan di Data Hub.",
+                source: "Dihitung dari kolom 'Air Proses' di entri Air di Data Hub.",
+                suggestion: "Optimasi proses untuk mengurangi konsumsi air. Pasang cooling tower closed-loop. Target efisiensi air 10% per tahun.",
+              }}
+            />
+            <StatCard title="Air Limbah Keluar (Outlet)" value={fmt(totalWastewater)} description="Debit Limbah Cair" icon={ArrowUpFromLine}
+              detail={{
+                formula: "Σ Air Limbah (m³) dari seluruh entri bulanan di Data Hub.",
+                source: "Dihitung dari kolom 'Air Limbah' di entri Air di Data Hub.",
+                suggestion: "Tingkatkan efisiensi IPAL untuk menghasilkan air olahan yang bisa di-reuse. Target zero liquid discharge (ZLD).",
+              }}
+            />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">

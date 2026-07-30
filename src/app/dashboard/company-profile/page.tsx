@@ -113,6 +113,8 @@ export default function CompanyProfilePage() {
   const updateEntity = (id: string, field: keyof EntityRecord, value: string | number) =>
     setEntities(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e))
 
+  const isComplete = entities.length > 0 && entities.every(e => e.name.trim().length > 0) && entities.some(e => (e.level === "site" || e.level === "korporat") && e.industry)
+
   const handleSave = async () => {
     if (!siteId) return
     setSaving(true)
@@ -244,7 +246,7 @@ export default function CompanyProfilePage() {
             <Lock className="mr-2 h-4 w-4" /> Buka Kunci (Edit)
           </Button>
         ) : (
-          <Button onClick={handleSave} disabled={saving || loading}>
+          <Button onClick={handleSave} disabled={saving || loading || !isComplete} className={!isComplete ? "opacity-50 cursor-not-allowed" : ""}>
             {saving
               ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menyimpan...</>
               : saved

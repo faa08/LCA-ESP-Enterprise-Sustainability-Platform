@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { Bell, Search, ChevronRight, ChevronDown, User, Settings as SettingsIcon, LogOut, Printer, Briefcase, Wrench, BookOpen } from "lucide-react"
+import { Bell, Search, ChevronRight, ChevronDown, User, Settings as SettingsIcon, LogOut, Printer, Briefcase, Wrench, BookOpen, Trash2 } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
 import { id } from "@/locales/id"
 import { en } from "@/locales/en"
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import { PrintableProperReportModal } from "@/components/dashboard/printable-proper-report"
 import { useViewMode } from "@/lib/use-view-mode"
 import { useHelp } from "@/lib/help-context"
+import { useNotifications } from "@/lib/notification-context"
 
 import type { Role } from "@/lib/role"
 
@@ -40,8 +41,6 @@ const groupFor: Record<string, string> = {
   "/dashboard/data-hub": "sidebar.data_management",
 }
 
-const notifications: { id: number; title: string; desc: string; tone: string }[] = []
-
 export function Header({ locale, role: propRole }: { locale: Locale; role?: Role | null }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -49,6 +48,10 @@ export function Header({ locale, role: propRole }: { locale: Locale; role?: Role
   const titleKey = moduleTitles[pathname]
   const title = titleKey ? t(dict, titleKey) : "ensPR"
   const groupKey = groupFor[pathname]
+
+  const { notifications, markAllAsRead, clearAll } = useNotifications()
+  const unreadCount = notifications.filter(n => !n.read).length
+
 
   const [activeRole, setActiveRole] = useState<Role | null>(propRole ?? null)
 
@@ -176,38 +179,50 @@ export function Header({ locale, role: propRole }: { locale: Locale; role?: Role
 
         <div className="relative" ref={notifRef}>
           <button
-            onClick={() => setNotifOpen((v) => !v)}
+            onClick={() => {
+              setNotifOpen((v) => !v)
+              if (!notifOpen) markAllAsRead()
+            }}
             className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-token bg-surface text-secondary transition-colors hover:border-[color:var(--brand-soft-border)] hover:text-[color:var(--brand)]"
           >
             <Bell className="h-4 w-4" />
-            {notifications.length > 0 && (
+            {unreadCount > 0 && (
               <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-surface" />
             )}
           </button>
           {notifOpen && (
-            <div className="absolute right-0 mt-2 w-72 overflow-hidden rounded-xl border border-token bg-surface shadow-lg">
-              <div className="border-b border-token px-4 py-3 text-sm font-semibold text-primary">
-                {t(dict, "datahub.notifications.title")}
+            <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-xl border border-token bg-surface shadow-lg">
+              <div className="flex items-center justify-between border-b border-token px-4 py-3">
+                <span className="text-sm font-semibold text-primary">{t(dict, "datahub.notifications.title")}</span>
+                {notifications.length > 0 && (
+                  <button
+                    onClick={clearAll}
+                    className="rounded-md p-1 text-muted transition-colors hover:bg-red-50 hover:text-red-600"
+                    title="Hapus Semua"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               {notifications.length === 0 ? (
                 <div className="px-4 py-6 text-center text-xs text-muted">
                   Tidak ada notifikasi baru
                 </div>
               ) : (
-                <ul className="max-h-72 divide-y divide-[color:var(--border-subtle)] overflow-y-auto">
+                <ul className="max-h-80 divide-y divide-[color:var(--border-subtle)] overflow-y-auto">
                   {notifications.map((n) => (
-                    <li key={n.id} className="flex gap-3 px-4 py-3">
+                    <li key={n.id} className={cn("flex gap-3 px-4 py-3", !n.read && "bg-blue-50/50")}>
                       <span
                         className={cn(
-                          "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-                          n.tone === "success" && "bg-emerald-500",
-                          n.tone === "danger" && "bg-red-500",
-                          n.tone === "info" && "bg-sky-500",
+                          "mt-0.5 flex h-2 w-2 shrink-0 rounded-full",
+                          n.tone === "warning" ? "bg-amber-500" :
+                          n.tone === "danger" ? "bg-red-500" :
+                          n.tone === "success" ? "bg-emerald-500" : "bg-blue-500"
                         )}
                       />
-                      <div className="min-w-0">
+                      <div>
                         <p className="text-sm font-medium text-primary">{n.title}</p>
-                        <p className="truncate text-xs text-muted">{n.desc}</p>
+                        <p className="mt-0.5 text-xs text-muted">{n.desc}</p>
                       </div>
                     </li>
                   ))}

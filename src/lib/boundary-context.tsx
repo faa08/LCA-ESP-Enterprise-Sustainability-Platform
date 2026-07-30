@@ -63,16 +63,21 @@ interface BoundaryContextType {
   isLoading: boolean
   /** true setelah Goal & Scope (M0) tersimpan — digunakan untuk progressive sidebar disclosure */
   isConfigured: boolean
+  /** true setelah pengguna menekan Hitung di Data Hub — membuka kunci modul 3-14 */
+  isCalculated: boolean
   setBoundary: (b: SystemBoundary) => void
   refreshBoundary: () => Promise<void>
+  unlockCalculation: () => void
 }
 
 const BoundaryContext = createContext<BoundaryContextType>({
   boundary: "cradle-to-gate",
   isLoading: true,
   isConfigured: false,
+  isCalculated: false,
   setBoundary: () => {},
   refreshBoundary: async () => {},
+  unlockCalculation: () => {},
 })
 
 export function useBoundary() {
@@ -87,6 +92,7 @@ export function BoundaryProvider({ children }: { children: ReactNode }) {
   const [boundary, setBoundary] = useState<SystemBoundary>("cradle-to-gate")
   const [isLoading, setIsLoading] = useState(true)
   const [isConfigured, setIsConfigured] = useState(false)
+  const [isCalculated, setIsCalculated] = useState(false)
 
   const refreshBoundary = useCallback(async () => {
     if (!siteId) return
@@ -101,7 +107,9 @@ export function BoundaryProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem("enspr_goal_scope")
           localStorage.removeItem("enspr_company_profile")
           localStorage.removeItem("enspr_product_assessment")
+          localStorage.removeItem("enspr_is_calculated")
         }
+        setIsCalculated(false)
       } else {
         if (data.boundary) setBoundary(data.boundary as SystemBoundary)
         if (data.studyGoal || data.functionalUnit) configured = true
@@ -119,6 +127,14 @@ export function BoundaryProvider({ children }: { children: ReactNode }) {
         }
       }
     }
+    
+    // Check if previously calculated
+    if (typeof window !== "undefined") {
+      if (localStorage.getItem("enspr_is_calculated") === "true") {
+        setIsCalculated(true)
+      }
+    }
+
     setIsConfigured(configured)
     setIsLoading(false)
   }, [siteId, industryId])
@@ -128,8 +144,15 @@ export function BoundaryProvider({ children }: { children: ReactNode }) {
     refreshBoundary()
   }, [refreshBoundary])
 
+  const unlockCalculation = useCallback(() => {
+    setIsCalculated(true)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("enspr_is_calculated", "true")
+    }
+  }, [])
+
   return (
-    <BoundaryContext.Provider value={{ boundary, isLoading, isConfigured, setBoundary, refreshBoundary }}>
+    <BoundaryContext.Provider value={{ boundary, isLoading, isConfigured, isCalculated, setBoundary, refreshBoundary, unlockCalculation }}>
       {children}
     </BoundaryContext.Provider>
   )

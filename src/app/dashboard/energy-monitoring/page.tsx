@@ -76,10 +76,34 @@ export default function EnergyMonitoring() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard title="Total Energi" value={fmt(totalMWh, " MWh")} description="PLN, Bahan Bakar & Biomassa" icon={Zap} />
-            <StatCard title="Energi Fosil" value={fmt(fossilMWh, " MWh")} description="Batu bara, Solar, Gas Alam" icon={Flame} />
-            <StatCard title="Energi Terbarukan" value={fmt(renewableMWh, " MWh")} description="Biomassa & Terbarukan" icon={Thermometer} />
-            <StatCard title="Porsi Terbarukan" value={renewablePct > 0 ? `${renewablePct}%` : "—"} description="Share Renewable MWh" icon={Fuel} />
+            <StatCard title="Total Energi" value={fmt(totalMWh, " MWh")} description="PLN, Bahan Bakar & Biomassa" icon={Zap}
+              detail={{
+                formula: "Σ konversi semua sumber energi ke MWh. PLN: kWh/1000 · Diesel: L×0,01017 · Gas: Nm³×0,01077 · Batubara: ton×7,0 · Biomassa: ton×4,9.",
+                source: "Dihitung dari seluruh entri Energi di Data Hub (listrik PLN + bahan bakar fosil + biomassa).",
+                suggestion: "Lakukan audit energi untuk identifikasi inefisiensi. Pasang VSD pada motor listrik besar. Optimasi jadwal operasi peralatan.",
+              }}
+            />
+            <StatCard title="Energi Fosil" value={fmt(fossilMWh, " MWh")} description="Batu bara, Solar, Gas Alam" icon={Flame}
+              detail={{
+                formula: "Σ (Diesel L×0,01017 + Gas Nm³×0,01077 + Batubara ton×7,0 + LPG kg×0,01386 + Steam ton×0,698) + PLN kWh × 87% × 0,001 MWh.",
+                source: "Dihitung dari komponen bahan bakar fosil di entri Energi + porsi fosil listrik PLN (87% grid nasional).",
+                suggestion: "Ganti batubara/diesel dengan gas alam (emisi ~25% lebih rendah). Pertimbangkan co-firing biomassa di boiler.",
+              }}
+            />
+            <StatCard title="Energi Terbarukan" value={fmt(renewableMWh, " MWh")} description="Biomassa & Terbarukan" icon={Thermometer}
+              detail={{
+                formula: "PLN kWh × 13% (porsi EBT grid nasional) × 0,001 + Biomassa ton × 4,9 MWh/ton.",
+                source: "Dihitung dari komponen biomassa di entri Energi + porsi EBT listrik PLN (13% mix nasional, ESDM).",
+                suggestion: "Tambah kapasitas biomassa atau biogas dari limbah proses. Pasang solar PV (rooftop). Target porsi EBT ≥23% (RUEN 2025).",
+              }}
+            />
+            <StatCard title="Porsi Terbarukan" value={renewablePct > 0 ? `${renewablePct}%` : "—"} description="Share Renewable MWh" icon={Fuel}
+              detail={{
+                formula: "(Energi Terbarukan MWh / Total Energi MWh) × 100%.",
+                source: "Rasio dari Total Energi Terbarukan dibagi Total Energi keseluruhan.",
+                suggestion: "Target PROPER Beyond Compliance: porsi EBT >20%. Evaluasi kelayakan turbin angin atau panas bumi jika lokasi mendukung.",
+              }}
+            />
           </div>
 
           {!kpis?.hasData && (

@@ -21,18 +21,18 @@ interface SDGTemplate {
 }
 
 const ALL_SDGS: SDGTemplate[] = [
-  { id: 3, title: "Kehidupan Sehat & Sejahtera", color: "#4C9F38", relevantModules: ["Waste", "Air Limbah"], indicatorTexts: ["Penurunan limbah B3 berbahaya â‰¥ 10% YoY", "Baku mutu air limbah terpenuhi 100%"] },
-  { id: 6, title: "Air Bersih & Sanitasi", color: "#26BDE2", relevantModules: ["Water Monitoring", "Waste Assessment"], indicatorTexts: ["Efisiensi penggunaan air â‰¥ 5% per tahun", "Zero discharge limbah cair tanpa pengolahan"] },
-  { id: 7, title: "Energi Bersih & Terjangkau", color: "#FCC30B", relevantModules: ["Energy Assessment", "Carbon Accounting"], indicatorTexts: ["Bauran energi terbarukan â‰¥ 10%", "Intensitas energi turun â‰¥ 3% per tahun"] },
-  { id: 8, title: "Pekerjaan Layak & Pertumbuhan", color: "#A21942", relevantModules: ["ESG Dashboard", "Company Profile"], indicatorTexts: ["Tingkat kecelakaan kerja (LTIFR) < 0.5", "Pelatihan K3 â‰¥ 20 jam/karyawan/tahun"] },
-  { id: 9, title: "Industri, Inovasi & Infrastruktur", color: "#FD6925", relevantModules: ["LCA", "Circular Economy"], indicatorTexts: ["Investasi R&D lingkungan â‰¥ 1% pendapatan", "Sertifikasi ISO 14001 aktif"] },
+  { id: 3, title: "Kehidupan Sehat & Sejahtera", color: "#4C9F38", relevantModules: ["Waste", "Air Limbah"], indicatorTexts: ["Penurunan limbah B3 berbahaya ≥ 10% YoY", "Baku mutu air limbah terpenuhi 100%"] },
+  { id: 6, title: "Air Bersih & Sanitasi", color: "#26BDE2", relevantModules: ["Water Monitoring", "Waste Assessment"], indicatorTexts: ["Efisiensi penggunaan air ≥ 5% per tahun", "Zero discharge limbah cair tanpa pengolahan"] },
+  { id: 7, title: "Energi Bersih & Terjangkau", color: "#FCC30B", relevantModules: ["Energy Assessment", "Carbon Accounting"], indicatorTexts: ["Bauran energi terbarukan ≥ 10%", "Intensitas energi turun ≥ 3% per tahun"] },
+  { id: 8, title: "Pekerjaan Layak & Pertumbuhan", color: "#A21942", relevantModules: ["ESG Dashboard", "Company Profile"], indicatorTexts: ["Tingkat kecelakaan kerja (LTIFR) < 0.5", "Pelatihan K3 ≥ 20 jam/karyawan/tahun"] },
+  { id: 9, title: "Industri, Inovasi & Infrastruktur", color: "#FD6925", relevantModules: ["LCA", "Circular Economy"], indicatorTexts: ["Investasi R&D lingkungan ≥ 1% pendapatan", "Sertifikasi ISO 14001 aktif"] },
   { id: 11, title: "Kota & Komunitas Berkelanjutan", color: "#FD9D24", relevantModules: ["Transportation", "ESG Dashboard"], indicatorTexts: ["Program CSR lingkungan di komunitas sekitar", "Emisi kendaraan dinas sesuai standar Euro 4"] },
-  { id: 12, title: "Konsumsi & Produksi Bertanggung Jawab", color: "#BF8B2E", relevantModules: ["Circular Economy", "Waste Assessment", "Product Assessment"], indicatorTexts: ["Limbah produksi ke TPA â‰¤ 20% total limbah", "Produk dengan eco-label â‰¥ 1 sertifikasi"] },
-  { id: 13, title: "Penanganan Perubahan Iklim", color: "#3F7E44", relevantModules: ["Carbon Accounting", "LCA", "Goal & Scope"], indicatorTexts: ["Target reduksi emisi GRK â‰¥ 30% di 2030", "Laporan iklim sesuai TCFD / ISSB IFRS S2"] },
+  { id: 12, title: "Konsumsi & Produksi Bertanggung Jawab", color: "#BF8B2E", relevantModules: ["Circular Economy", "Waste Assessment", "Product Assessment"], indicatorTexts: ["Limbah produksi ke TPA ≤ 20% total limbah", "Produk dengan eco-label ≥ 1 sertifikasi"] },
+  { id: 13, title: "Penanganan Perubahan Iklim", color: "#3F7E44", relevantModules: ["Carbon Accounting", "LCA", "Goal & Scope"], indicatorTexts: ["Target reduksi emisi GRK ≥ 30% di 2030", "Laporan iklim sesuai TCFD / ISSB IFRS S2"] },
   { id: 14, title: "Ekosistem Lautan", color: "#0A97D9", relevantModules: ["Waste Assessment", "Transportation"], indicatorTexts: ["Zero plastic waste ke badan air terbuka", "Program adopsi/rehabilitasi ekosistem pesisir"] },
-  { id: 15, title: "Ekosistem Daratan", color: "#56C02B", relevantModules: ["LCA", "Circular Economy"], indicatorTexts: ["Zero deforestasi dalam rantai pasok", "Program revegetasi â‰¥ 1 Ha/tahun"] },
+  { id: 15, title: "Ekosistem Daratan", color: "#56C02B", relevantModules: ["LCA", "Circular Economy"], indicatorTexts: ["Zero deforestasi dalam rantai pasok", "Program revegetasi ≥ 1 Ha/tahun"] },
   { id: 16, title: "Perdamaian, Keadilan & Institusi", color: "#00689D", relevantModules: ["Audit Trail", "Compliance"], indicatorTexts: ["Zero kasus korupsi / suap lingkungan", "Mekanisme pengaduan lingkungan tersedia"] },
-  { id: 17, title: "Kemitraan untuk Tujuan", color: "#19486A", relevantModules: ["ESG Reporting", "Audit Trail"], indicatorTexts: ["Laporan keberlanjutan terverifikasi pihak ketiga", "Kemitraan dengan lembaga lingkungan â‰¥ 1"] },
+  { id: 17, title: "Kemitraan untuk Tujuan", color: "#19486A", relevantModules: ["ESG Reporting", "Audit Trail"], indicatorTexts: ["Laporan keberlanjutan terverifikasi pihak ketiga", "Kemitraan dengan lembaga lingkungan ≥ 1"] },
 ]
 
 interface SDGItem {
@@ -108,17 +108,17 @@ export default function SDGsPage() {
   const sdgsWithAny = sdgs.filter(g => g.indicators.some(i => i.achieved)).length
 
   return (
-    <ModuleGate moduleName="M12 Â· SDGs Dashboard">
+    <ModuleGate moduleName="M12 · SDGs Dashboard">
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="neutral" className="text-[10px]">Modul 12</Badge>
-            <Badge variant="neutral" className="text-[10px] font-bold">UN SDGs Â· TPB Nasional</Badge>
+            <Badge variant="neutral" className="text-[10px] font-bold">UN SDGs · TPB Nasional</Badge>
           </div>
           <h1 className="text-xl font-bold text-neutral-900">SDGs Dashboard</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            Kontribusi perusahaan terhadap 17 Tujuan Pembangunan Berkelanjutan (SDGs) â€” dipetakan dari data lintas modul. Progress tersimpan di database.
+            Kontribusi perusahaan terhadap 17 Tujuan Pembangunan Berkelanjutan (SDGs) — dipetakan dari data lintas modul. Progress tersimpan di database.
           </p>
         </div>
         <Button onClick={handleSave} disabled={saving || loading}>

@@ -49,6 +49,8 @@ type NavItem = {
   allowedRoles?: Role[]
   /** Jika true, item hanya muncul setelah Goal & Scope dikonfigurasi */
   requiresConfigured?: boolean
+  /** Jika true, item hanya muncul setelah Hitung diklik di Data Hub */
+  requiresCalculated?: boolean
   /** Jika diisi, item hanya muncul saat scope ini aktif */
   requiredScope?: GHGScope
 }
@@ -58,6 +60,8 @@ type NavGroup = {
   allowedRoles?: Role[]
   /** Jika true, seluruh grup hanya muncul setelah Goal & Scope dikonfigurasi */
   requiresConfigured?: boolean
+  /** Jika true, seluruh grup hanya muncul setelah Hitung diklik di Data Hub */
+  requiresCalculated?: boolean
   items: NavItem[]
 }
 
@@ -79,7 +83,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "INVENTORI & DAMPAK",
-    requiresConfigured: true,
+    requiresCalculated: true,
     items: [
       { labelKey: "sidebar.energy", href: "/dashboard/energy-monitoring", icon: Zap },
       { labelKey: "sidebar.waste", href: "/dashboard/waste-management", icon: Recycle },
@@ -90,7 +94,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "PELAPORAN & KEPATUHAN",
-    requiresConfigured: true,
+    requiresCalculated: true,
     items: [
       { labelKey: "sidebar.circular_economy", href: "/dashboard/circular-economy", icon: RefreshCcw },
       { labelKey: "sidebar.biodiversity", href: "/dashboard/biodiversity", icon: Leaf },
@@ -144,12 +148,15 @@ export function Sidebar({
   const dict = dicts[locale]
   const [hovered, setHovered] = useState(false)
   const isCollapsed = collapsed && !hovered
-  const { isConfigured, boundary } = useBoundary()
+  const { isConfigured, boundary, isCalculated } = useBoundary()
 
   const visibleGroups = navGroups
     .map((g) => {
       // Sembunyikan seluruh grup jika requiresConfigured & belum dikonfigurasi
       if (g.requiresConfigured && !isConfigured) {
+        return { ...g, items: [] }
+      }
+      if (g.requiresCalculated && !isCalculated) {
         return { ...g, items: [] }
       }
       // Filter per role
@@ -161,6 +168,7 @@ export function Sidebar({
         if (item.allowedRoles && role && !item.allowedRoles.includes(role)) return false
         // Sembunyikan item yang butuh Goal & Scope jika belum dikonfigurasi
         if (item.requiresConfigured && !isConfigured) return false
+        if (item.requiresCalculated && !isCalculated) return false
         // Sembunyikan item yang butuh scope tertentu jika scope tidak aktif
         if (item.requiredScope && !isScopeActive(boundary, item.requiredScope)) return false
         return true
@@ -216,6 +224,15 @@ export function Sidebar({
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[11px] text-emerald-800 hover:border-emerald-300 transition-colors">
               <p className="font-bold text-emerald-900 mb-0.5">⚡ Mulai di sini</p>
               <p className="leading-snug text-emerald-700">Lengkapi <b>Goal &amp; Scope</b> untuk membuka semua modul LCA</p>
+            </div>
+          </Link>
+        )}
+        {/* Calc Hint Banner — muncul jika sudah dikonfigurasi tapi belum dihitung */}
+        {isConfigured && !isCalculated && !isCollapsed && (
+          <Link href="/dashboard/data-hub" className="block mb-4">
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-[11px] text-blue-800 hover:border-blue-300 transition-colors">
+              <p className="font-bold text-blue-900 mb-0.5">🚀 Hitung Data</p>
+              <p className="leading-snug text-blue-700">Masukkan data operasional di <b>Data Hub</b> lalu tekan Hitung untuk membuka modul analitik M3-M14.</p>
             </div>
           </Link>
         )}

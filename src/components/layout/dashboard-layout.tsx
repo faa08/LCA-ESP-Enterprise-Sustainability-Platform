@@ -5,6 +5,7 @@ import { Sidebar } from "./sidebar"
 import { Header } from "./header"
 import { BoundaryProvider } from "@/lib/boundary-context"
 import { HelpProvider } from "@/lib/help-context"
+import { NotificationProvider } from "@/lib/notification-context"
 import { HelpDrawer } from "@/components/layout/help-drawer"
 import type { ReactNode } from "react"
 import type { Role } from "@/lib/role"
@@ -20,12 +21,13 @@ export function DashboardLayout({ children, role, locale }: DashboardLayoutProps
   const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <HelpProvider>
-      <BoundaryProvider>
-      <div className="flex min-h-screen bg-app">
-        <Sidebar role={role} locale={locale} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Header locale={locale} role={role} />
+    <NotificationProvider>
+      <HelpProvider>
+        <BoundaryProvider>
+        <div className="flex min-h-screen bg-app">
+          <Sidebar role={role} locale={locale} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Header locale={locale} role={role} />
           <main className="flex-1 space-y-6 p-6">
             {role === "viewer" && (
               <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3.5 shadow-2xs">
@@ -43,7 +45,9 @@ export function DashboardLayout({ children, role, locale }: DashboardLayoutProps
         </div>
         <HelpDrawer />
       </div>
-    </BoundaryProvider>
-    </HelpProvider>
+      </BoundaryProvider>
+      </HelpProvider>
+    </NotificationProvider>
   )
 }
+

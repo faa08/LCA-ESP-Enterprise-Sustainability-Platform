@@ -20,7 +20,7 @@ import {
 } from "@/lib/supabase/data-service"
 import { ModuleGate } from "@/components/dashboard/module-gate"
 
-/* â”€â”€ Types â”€â”€ */
+/* ── Types ── */
 interface DataStatus {
   energy: number
   water: number
@@ -52,8 +52,8 @@ const TEMPLATES: ReportTemplate[] = [
     regulatoryBasis: "ISO 14040:2006 & ISO 14044:2006", lastUpdated: "Jul 2026",
     sections: [
       { label: "Goal & Scope Definition", dataKey: "kpi" },
-      { label: "Life Cycle Inventory (LCI) â€” Data Energi", dataKey: "energy" },
-      { label: "Life Cycle Inventory (LCI) â€” Data Emisi Cerobong", dataKey: "stack" },
+      { label: "Life Cycle Inventory (LCI) — Data Energi", dataKey: "energy" },
+      { label: "Life Cycle Inventory (LCI) — Data Emisi Cerobong", dataKey: "stack" },
       { label: "Life Cycle Impact Assessment (LCIA)", dataKey: "kpi" },
       { label: "Interpretasi & Kesimpulan", dataKey: "kpi" },
     ],
@@ -65,15 +65,15 @@ const TEMPLATES: ReportTemplate[] = [
     framework: "GHG Protocol / ISO 14064", frameworkColor: "bg-blue-100 text-blue-700",
     regulatoryBasis: "GHG Protocol Corporate Standard, ISO 14064-1:2018", lastUpdated: "Jul 2026",
     sections: [
-      { label: "Inventaris Emisi Scope 1 â€” Pembakaran Langsung", dataKey: "energy" },
-      { label: "Inventaris Emisi Scope 2 â€” Listrik Dibeli", dataKey: "energy" },
-      { label: "Inventaris Emisi Scope 3 â€” Transportasi", dataKey: "transport" },
+      { label: "Inventaris Emisi Scope 1 — Pembakaran Langsung", dataKey: "energy" },
+      { label: "Inventaris Emisi Scope 2 — Listrik Dibeli", dataKey: "energy" },
+      { label: "Inventaris Emisi Scope 3 — Transportasi", dataKey: "transport" },
       { label: "Jalur Reduksi & Target Net-Zero", dataKey: "kpi" },
     ],
   },
   {
     id: "esg_ojk",
-    title: "Laporan Keberlanjutan â€” Format POJK 51",
+    title: "Laporan Keberlanjutan — Format POJK 51",
     description: "Laporan ESG sesuai format yang diwajibkan OJK berdasarkan POJK 51/2017 & SEOJK 16/2021 untuk emiten dan lembaga jasa keuangan.",
     framework: "POJK 51/2017", frameworkColor: "bg-red-100 text-red-700",
     regulatoryBasis: "POJK No. 51/POJK.03/2017, SEOJK No. 16/SEOJK.04/2021", lastUpdated: "Jul 2026",
@@ -81,7 +81,7 @@ const TEMPLATES: ReportTemplate[] = [
       { label: "Profil Keberlanjutan", dataKey: "kpi" },
       { label: "Tata Kelola Keberlanjutan", dataKey: "kpi" },
       { label: "Kinerja Ekonomi Berkelanjutan", dataKey: "kpi" },
-      { label: "Kinerja Lingkungan Hidup â€” Emisi & Energi", dataKey: "energy" },
+      { label: "Kinerja Lingkungan Hidup — Emisi & Energi", dataKey: "energy" },
       { label: "Kinerja Sosial & Kepatuhan", dataKey: "lab" },
     ],
   },
@@ -120,15 +120,15 @@ const TEMPLATES: ReportTemplate[] = [
     framework: "UN SDGs", frameworkColor: "bg-orange-100 text-orange-700",
     regulatoryBasis: "UN 2030 Agenda, Perpres 111/2022 (RPJMN & SDGs Nasional)", lastUpdated: "Jul 2026",
     sections: [
-      { label: "SDGs Coverage â€” Energi Bersih (SDG 7)", dataKey: "energy" },
-      { label: "SDGs Coverage â€” Air Bersih & Sanitasi (SDG 6)", dataKey: "water" },
-      { label: "SDGs Coverage â€” Iklim (SDG 13)", dataKey: "kpi" },
-      { label: "SDGs Coverage â€” Ekosistem Darat (SDG 15)", dataKey: "kpi" },
+      { label: "SDGs Coverage — Energi Bersih (SDG 7)", dataKey: "energy" },
+      { label: "SDGs Coverage — Air Bersih & Sanitasi (SDG 6)", dataKey: "water" },
+      { label: "SDGs Coverage — Iklim (SDG 13)", dataKey: "kpi" },
+      { label: "SDGs Coverage — Ekosistem Darat (SDG 15)", dataKey: "kpi" },
     ],
   },
 ]
 
-/* â”€â”€ Helpers â”€â”€ */
+/* ── Helpers ── */
 function sectionStatus(dataKey: keyof DataStatus | "kpi", ds: DataStatus): { pct: number; label: string; color: string } {
   if (!ds.loaded) return { pct: 0, label: "Memuat...", color: "#94a3b8" }
 
@@ -185,23 +185,23 @@ export default function ReportingPage() {
 
   useEffect(() => { loadStatus() }, [loadStatus])
 
-  /* â”€â”€ PDF Generator â”€â”€ */
+  /* ── PDF Generator ── */
   const handleExportPdf = (template: ReportTemplate) => {
     const printWindow = window.open("", "_blank")
     if (!printWindow) return
     const kpis = dataStatus.kpis
     const completeness = templateCompleteness(template, dataStatus)
     const verificationStatus = completeness >= 80
-      ? `<span style="color:#10b981;">Data Tersedia â€” Siap Audit Eksternal (${completeness}% lengkap)</span>`
+      ? `<span style="color:#10b981;">Data Tersedia — Siap Audit Eksternal (${completeness}% lengkap)</span>`
       : completeness > 0
-      ? `<span style="color:#f59e0b;">Data Sebagian â€” Perlu Pelengkapan Data (${completeness}% lengkap)</span>`
-      : `<span style="color:#ef4444;">Data Kosong â€” Isi Data Hub terlebih dahulu (0% lengkap)</span>`
+      ? `<span style="color:#f59e0b;">Data Sebagian — Perlu Pelengkapan Data (${completeness}% lengkap)</span>`
+      : `<span style="color:#ef4444;">Data Kosong — Isi Data Hub terlebih dahulu (0% lengkap)</span>`
 
     const sectionRows = template.sections.map((sec, idx) => {
       const st = sectionStatus(sec.dataKey, dataStatus)
       const count = sec.dataKey !== "kpi" ? (dataStatus[sec.dataKey as keyof DataStatus] as number) : null
       const detail = sec.dataKey === "kpi"
-        ? (kpis?.hasData ? `GWP: ${kpis.gwp_kgCO2e?.toFixed(1) ?? "â€”"} kgCOâ‚‚e | Energi: ${kpis.energy_total_MWh?.toFixed(1) ?? "â€”"} MWh` : "Belum ada data operasional")
+        ? (kpis?.hasData ? `GWP: ${kpis.gwp_kgCO2e?.toFixed(1) ?? "—"} kgCO₂e | Energi: ${kpis.energy_total_MWh?.toFixed(1) ?? "—"} MWh` : "Belum ada data operasional")
         : (count !== null && count > 0 ? `${count} entri terdaftar` : "Belum ada data di Data Hub")
       return `
         <tr>
@@ -217,17 +217,17 @@ export default function ReportingPage() {
       <table class="table">
         <thead><tr><th>Indikator</th><th>Nilai</th><th>Satuan</th></tr></thead>
         <tbody>
-          <tr><td>Total GHG Emisi</td><td><strong>${kpis.total_ghg_tCO2e}</strong></td><td>tCOâ‚‚e</td></tr>
-          <tr><td>Emisi Scope 1</td><td>${kpis.scope1_tCO2e}</td><td>tCOâ‚‚e</td></tr>
-          <tr><td>Emisi Scope 2</td><td>${kpis.scope2_tCO2e}</td><td>tCOâ‚‚e</td></tr>
-          <tr><td>Emisi Scope 3</td><td>${kpis.scope3_tCO2e}</td><td>tCOâ‚‚e</td></tr>
+          <tr><td>Total GHG Emisi</td><td><strong>${kpis.total_ghg_tCO2e}</strong></td><td>tCO₂e</td></tr>
+          <tr><td>Emisi Scope 1</td><td>${kpis.scope1_tCO2e}</td><td>tCO₂e</td></tr>
+          <tr><td>Emisi Scope 2</td><td>${kpis.scope2_tCO2e}</td><td>tCO₂e</td></tr>
+          <tr><td>Emisi Scope 3</td><td>${kpis.scope3_tCO2e}</td><td>tCO₂e</td></tr>
           <tr><td>Total Energi</td><td>${kpis.energy_total_MWh}</td><td>MWh</td></tr>
           <tr><td>Energi Terbarukan</td><td>${kpis.energy_renewable_MWh}</td><td>MWh</td></tr>
           <tr><td>% Energi Terbarukan</td><td>${kpis.renewable_pct}</td><td>%</td></tr>
-          <tr><td>Global Warming Potential (GWP)</td><td>${kpis.gwp_kgCO2e}</td><td>kgCOâ‚‚e</td></tr>
-          <tr><td>Acidification Potential (AP)</td><td>${kpis.ap_kgSO2e}</td><td>kgSOâ‚‚e</td></tr>
-          <tr><td>Eutrophication Potential (EP)</td><td>${kpis.ep_kgPO4e}</td><td>kgPOâ‚„e</td></tr>
-          <tr><td>Water Use Depletion</td><td>${kpis.wud_m3}</td><td>mÂ³</td></tr>
+          <tr><td>Global Warming Potential (GWP)</td><td>${kpis.gwp_kgCO2e}</td><td>kgCO₂e</td></tr>
+          <tr><td>Acidification Potential (AP)</td><td>${kpis.ap_kgSO2e}</td><td>kgSO₂e</td></tr>
+          <tr><td>Eutrophication Potential (EP)</td><td>${kpis.ep_kgPO4e}</td><td>kgPO₄e</td></tr>
+          <tr><td>Water Use Depletion</td><td>${kpis.wud_m3}</td><td>m³</td></tr>
           <tr><td>Abiotic Depletion Fossil</td><td>${kpis.adpf_MJ}</td><td>MJ</td></tr>
         </tbody>
       </table>` : `
@@ -239,7 +239,7 @@ export default function ReportingPage() {
     const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
-  <title>${template.title} â€” GreenLCA Enterprise</title>
+  <title>${template.title} — GreenLCA Enterprise</title>
   <style>
     @page { size: A4; margin: 20mm; }
     body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b; line-height: 1.6; padding: 20px; }
@@ -307,14 +307,14 @@ export default function ReportingPage() {
   ${kpiSection}
 
   <div class="stamp">
-    ${completeness >= 80 ? "TERVERIFIKASI OLEH GREENLCA" : "DATA BELUM LENGKAP â€” ISI DATA HUB TERLEBIH DAHULU"}<br>
+    ${completeness >= 80 ? "TERVERIFIKASI OLEH GREENLCA" : "DATA BELUM LENGKAP — ISI DATA HUB TERLEBIH DAHULU"}<br>
     <span style="font-size:9px;font-weight:normal;color:#64748b;">
       Generated: ${new Date().toISOString()} | Completeness: ${completeness}%
     </span>
   </div>
 
   <div class="footer">
-    Laporan Resmi GreenLCA Enterprise System Â· Diterbitkan untuk Kepentingan Pelaporan OJK, KLHK &amp; Auditor Independen Â· Â© 2026 GreenLCA
+    Laporan Resmi GreenLCA Enterprise System · Diterbitkan untuk Kepentingan Pelaporan OJK, KLHK &amp; Auditor Independen · Â© 2026 GreenLCA
   </div>
 
   <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }</script>
@@ -339,14 +339,14 @@ export default function ReportingPage() {
   const readyCount = TEMPLATES.filter((t) => templateCompleteness(t, dataStatus) >= 80).length
 
   return (
-    <ModuleGate moduleName="M14 Â· Reporting & Export">
+    <ModuleGate moduleName="M14 · Reporting & Export">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="neutral" className="text-[10px]">Modul 14</Badge>
-            <Badge variant="neutral" className="text-[10px] font-bold">POJK 51 Â· GRI Standards Â· ISO 14040</Badge>
+            <Badge variant="neutral" className="text-[10px] font-bold">POJK 51 · GRI Standards · ISO 14040</Badge>
           </div>
           <h1 className="text-xl font-bold text-neutral-900">Reporting & Export PDF</h1>
           <p className="mt-1 text-sm text-neutral-500">
@@ -390,7 +390,7 @@ export default function ReportingPage() {
           <CardHeader>
             <div className="flex items-center gap-2"><Shield className="h-4 w-4 text-purple-600" /><CardTitle className="text-sm">Status Emisi GHG</CardTitle></div>
             <p className={`text-sm font-bold mt-1 ${dataStatus.kpis?.hasData ? "text-emerald-700" : "text-neutral-400"}`}>
-              {!dataStatus.loaded ? <Loader2 className="h-5 w-5 animate-spin" /> : dataStatus.kpis?.hasData ? `${dataStatus.kpis.total_ghg_tCO2e} tCOâ‚‚e` : "Belum Ada Data"}
+              {!dataStatus.loaded ? <Loader2 className="h-5 w-5 animate-spin" /> : dataStatus.kpis?.hasData ? `${dataStatus.kpis.total_ghg_tCO2e} tCO₂e` : "Belum Ada Data"}
             </p>
           </CardHeader>
         </Card>
@@ -445,7 +445,7 @@ export default function ReportingPage() {
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Kelengkapan Data</span>
                     <span className={`text-[11px] font-bold ${isReady ? "text-emerald-700" : completeness > 0 ? "text-amber-600" : "text-neutral-400"}`}>
-                      {dataStatus.loaded ? `${completeness}%` : "â€”"}
+                      {dataStatus.loaded ? `${completeness}%` : "—"}
                     </span>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-neutral-100">
@@ -466,7 +466,7 @@ export default function ReportingPage() {
                         <div key={s.label} className="flex items-center justify-between gap-2 rounded-md bg-neutral-50 border border-neutral-100 px-2.5 py-1.5">
                           <span className="text-[11px] text-neutral-600 truncate flex-1">{s.label}</span>
                           <span className="text-[10px] font-bold shrink-0" style={{ color: st.color }}>
-                            {dataStatus.loaded ? st.label : "â€”"}
+                            {dataStatus.loaded ? st.label : "—"}
                           </span>
                         </div>
                       )

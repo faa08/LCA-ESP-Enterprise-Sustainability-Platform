@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import Link from "next/link"
 import { useState, useEffect, useCallback } from "react"
@@ -28,7 +28,7 @@ import { getRoleClient, isReadOnly } from "@/lib/role"
 import { useBoundary, isCategoryVisible, getBoundaryLabel, getActiveScopes } from "@/lib/boundary-context"
 import { ModuleGate } from "@/components/dashboard/module-gate"
 
-/* â”€â”€â”€ audit helpers â”€â”€â”€ */
+/* ─── audit helpers ─── */
 function auditSave(category: HubCategory, siteId: string, industryId: string, role: string, summary: string) {
   writeAuditLogSb(siteId, industryId, { role, module: category, action: "CREATE", field: category, newValue: summary, source: "measured" })
 }
@@ -36,7 +36,7 @@ function auditDelete(category: HubCategory, siteId: string, industryId: string, 
   writeAuditLogSb(siteId, industryId, { role, module: category, action: "DELETE", field: category, newValue: summary, source: "measured" })
 }
 
-/* â”€â”€â”€ helpers â”€â”€â”€ */
+/* ─── helpers ─── */
 const today = () => new Date().toISOString().split("T")[0]
 
 function num(v: unknown): number {
@@ -45,11 +45,11 @@ function num(v: unknown): number {
 }
 
 function fmt(v: number, dec = 2): string {
-  if (v === 0) return "â€”"
+  if (v === 0) return "—"
   return v.toLocaleString("id-ID", { maximumFractionDigits: dec })
 }
 
-/* â”€â”€â”€ Field component â”€â”€â”€ */
+/* ─── Field component ─── */
 function Field({
   label, unit, required, tooltip, children, half,
 }: {
@@ -103,27 +103,132 @@ function Select({ value, onChange, options }: { value: string; onChange: (v: str
   )
 }
 
-/* â”€â”€â”€ KPI Panel â”€â”€â”€ */
+/* ——— KPI Detail Metadata ——— */
+const KPI_DETAIL: Record<string, { formula: string; source: string; suggestion: string }> = {
+  "Scope 1 (Pembakaran Langsung)": {
+    formula: "Σ (Volume Bahan Bakar × Faktor Emisi). Diesel: 2,68 kgCO₂e/L · Gas Alam: 2,02 kgCO₂e/Nm³ · Batubara: 2.420 kgCO₂e/ton · LPG: 2,98 kgCO₂e/kg.",
+    source: "Dihitung dari entri Energi (diesel, gas alam, batubara, LPG, steam) di Data Hub.",
+    suggestion: "Ganti bahan bakar fosil dengan gas alam (emisi ~25% lebih rendah vs diesel). Tingkatkan efisiensi boiler dan kiln. Pertimbangkan co-firing biomassa.",
+  },
+  "Scope 2 (Listrik PLN)": {
+    formula: "Σ (kWh Listrik PLN × 0,87 kgCO₂/kWh). Faktor emisi grid PLN Indonesia dari ESDM 2022.",
+    source: "Dihitung dari kolom 'Listrik PLN (kWh)' di entri Energi.",
+    suggestion: "Pasang solar panel (rooftop PV) untuk mengurangi ketergantungan pada grid PLN. Pertimbangkan PPA (Power Purchase Agreement) dengan penyedia energi terbarukan.",
+  },
+  "Scope 3 (Transportasi & Rantai Pasok)": {
+    formula: "Σ (Jarak km × Berat Kargo ton × EF ton-km). EF: Diesel 0,096 kgCO₂e/tkm · CNG 0,062 · EV 0,035.",
+    source: "Dihitung dari entri Transportasi (jarak, berat kargo, jenis bahan bakar).",
+    suggestion: "Optimalkan rute logistik. Gunakan kendaraan CNG/listrik. Konsolidasikan pengiriman untuk mengurangi frekuensi perjalanan kosong.",
+  },
+  "Total GHG": {
+    formula: "Scope 1 + Scope 2 + Scope 3 (difilter berdasarkan batas sistem yang dipilih di Goal & Scope).",
+    source: "Agregasi dari ketiga scope di atas.",
+    suggestion: "Fokus pada scope dengan kontribusi terbesar terlebih dahulu. Target PROPER EMAS: penurunan 2-5% per tahun.",
+  },
+  "Total Energi": {
+    formula: "Σ konversi semua sumber energi ke MWh. PLN: kWh/1000 · Diesel: L×0,01017 · Gas: Nm³×0,01077 · Batubara: ton×7,0 · Biomassa: ton×4,9.",
+    source: "Dihitung dari seluruh entri Energi (listrik + bahan bakar fosil + biomassa).",
+    suggestion: "Lakukan audit energi untuk identifikasi inefisiensi. Pasang VSD (Variable Speed Drive) pada motor listrik besar. Optimasi jadwal operasi peralatan.",
+  },
+  "Energi Terbarukan": {
+    formula: "PLN kWh × 13% (porsi EBT grid nasional) + Biomassa ton × 4,9 MWh/ton.",
+    source: "Dihitung dari komponen listrik PLN (mix EBT 13%) dan biomassa di entri Energi.",
+    suggestion: "Tambah kapasitas biomassa atau biogas dari limbah proses. Pasang solar PV. Target porsi EBT minimal 23% (sesuai target RUEN 2025).",
+  },
+  "Porsi Energi Terbarukan": {
+    formula: "(Energi Terbarukan MWh / Total Energi MWh) × 100%.",
+    source: "Rasio dari dua KPI energi di atas.",
+    suggestion: "Target PROPER Beyond Compliance: porsi EBT >20%. Evaluasi kelayakan turbin angin atau panas bumi jika lokasi mendukung.",
+  },
+  "GWP (Global Warming Potential)": {
+    formula: "Total GHG (tCO₂e) × 1000. Menghasilkan nilai dalam kilogram CO₂-equivalent sesuai standar ISO 14044.",
+    source: "Konversi unit dari Total GHG.",
+    suggestion: "Untuk PROPER EMAS, siapkan dokumen reduksi GWP tahunan dengan baseline tahun sebelumnya.",
+  },
+  "AP (Acidification Potential)": {
+    formula: "(SO₂ mg/Nm³ × 1,0 + NOx mg/Nm³ × 0,7) × Laju Alir × 8.760 jam/tahun ÷ 10⁹.",
+    source: "Dihitung dari data Emisi Cerobong (konsentrasi SO₂, NOx, dan laju alir gas buang).",
+    suggestion: "Pasang scrubber atau FGD (Flue Gas Desulfurization). Gunakan bahan bakar rendah sulfur. Optimalkan proses pembakaran untuk mengurangi NOx.",
+  },
+  "EP (Eutrophication)": {
+    formula: "NH₃ (mg/L) × 0,33 ÷ 1000 (estimasi dari data laboratorium air limbah).",
+    source: "Dihitung dari data Lab (konsentrasi NH₃ di air limbah).",
+    suggestion: "Tingkatkan sistem IPAL (nitrifikasi-denitrifikasi). Monitoring rutin parameter N dan P pada outlet.",
+  },
+  "Water Use Depletion": {
+    formula: "Σ (Air Baku m³ + Air Tanah m³) dari seluruh entri.",
+    source: "Dihitung dari entri Air (air baku dan air tanah).",
+    suggestion: "Implementasikan sistem daur ulang air (recycle/reuse). Pasang sistem rainwater harvesting. Target pengurangan konsumsi air 10% per tahun.",
+  },
+  "PM (Particulate Matter)": {
+    formula: "TSP mg/Nm³ × Laju Alir Nm³/jam × 8.760 jam/tahun ÷ 10⁹.",
+    source: "Dihitung dari data Emisi Cerobong (konsentrasi TSP dan laju alir).",
+    suggestion: "Pasang atau tingkatkan Electrostatic Precipitator (EP) atau Bag Filter. Lakukan maintenance rutin untuk mencegah kebocoran debu.",
+  },
+  "Abiotic Depletion (Fossil)": {
+    formula: "Energi Fosil (MWh) × 3.600 MJ/MWh. Menunjukkan total sumber daya fosil yang dikonsumsi.",
+    source: "Dihitung dari total energi fosil (tidak termasuk biomassa dan komponen EBT listrik).",
+    suggestion: "Ganti sumber energi fosil dengan alternatif terbarukan. Tingkatkan efisiensi energi proses untuk mengurangi konsumsi bahan bakar total.",
+  },
+}
+
+/* ——— KPI Row with expandable detail ——— */
+function KpiRow({ label, value, unit, color, kpis }: { label: string; value: string; unit: string; color: string; kpis: CalculatedKPIs }) {
+  const [open, setOpen] = useState(false)
+  const detail = KPI_DETAIL[label]
+  return (
+    <div className="rounded-lg border border-transparent hover:border-neutral-200 transition-colors">
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between px-3 py-2.5 text-left">
+        <div className="flex items-center gap-2 min-w-0">
+          <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-neutral-400 transition-transform", open && "rotate-180")} />
+          <span className="text-xs text-neutral-600">{label}</span>
+        </div>
+        <div className="text-right shrink-0 ml-2">
+          <span className={cn("text-sm font-bold", color)}>{value}</span>
+          {unit && <span className="ml-1 text-[10px] text-neutral-400">{unit}</span>}
+        </div>
+      </button>
+      {open && detail && (
+        <div className="px-3 pb-3 space-y-2">
+          <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600 mb-1">📐 Cara Perhitungan</p>
+            <p className="text-[11px] text-blue-800 leading-relaxed">{detail.formula}</p>
+          </div>
+          <div className="rounded-lg bg-purple-50 border border-purple-100 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-purple-600 mb-1">📊 Sumber Data</p>
+            <p className="text-[11px] text-purple-800 leading-relaxed">{detail.source}</p>
+          </div>
+          <div className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">💡 Saran Perbaikan</p>
+            <p className="text-[11px] text-amber-800 leading-relaxed">{detail.suggestion}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ——— KPI Panel ——— */
 function KpiPanel({ kpis, onClose }: { kpis: CalculatedKPIs; onClose: () => void }) {
   const kpiRows = [
-    { label: "Scope 1 (Pembakaran Langsung)", value: fmt(kpis.scope1_tCO2e, 3), unit: "tCOâ‚‚e", color: "text-red-700" },
-    { label: "Scope 2 (Listrik PLN)", value: fmt(kpis.scope2_tCO2e, 3), unit: "tCOâ‚‚e", color: "text-orange-700" },
-    { label: "Scope 3 (Transportasi & Rantai Pasok)", value: fmt(kpis.scope3_tCO2e, 3), unit: "tCOâ‚‚e", color: "text-amber-700" },
-    { label: "Total GHG", value: fmt(kpis.total_ghg_tCO2e, 3), unit: "tCOâ‚‚e", color: "text-emerald-700" },
+    { label: "Scope 1 (Pembakaran Langsung)", value: fmt(kpis.scope1_tCO2e, 3), unit: "tCO₂e", color: "text-red-700" },
+    { label: "Scope 2 (Listrik PLN)", value: fmt(kpis.scope2_tCO2e, 3), unit: "tCO₂e", color: "text-orange-700" },
+    { label: "Scope 3 (Transportasi & Rantai Pasok)", value: fmt(kpis.scope3_tCO2e, 3), unit: "tCO₂e", color: "text-amber-700" },
+    { label: "Total GHG", value: fmt(kpis.total_ghg_tCO2e, 3), unit: "tCO₂e", color: "text-emerald-700" },
     { label: "Total Energi", value: fmt(kpis.energy_total_MWh, 1), unit: "MWh", color: "text-blue-700" },
     { label: "Energi Terbarukan", value: fmt(kpis.energy_renewable_MWh, 1), unit: "MWh", color: "text-green-700" },
-    { label: "Porsi Energi Terbarukan", value: kpis.renewable_pct > 0 ? `${kpis.renewable_pct}%` : "â€”", unit: "", color: "text-green-700" },
-    { label: "GWP (Global Warming Potential)", value: fmt(kpis.gwp_kgCO2e, 1), unit: "kg COâ‚‚e", color: "text-neutral-700" },
-    { label: "AP (Acidification Potential)", value: fmt(kpis.ap_kgSO2e, 4), unit: "kg SOâ‚‚e", color: "text-neutral-700" },
-    { label: "EP (Eutrophication)", value: fmt(kpis.ep_kgPO4e, 4), unit: "kg POâ‚„e", color: "text-neutral-700" },
-    { label: "Water Use Depletion", value: fmt(kpis.wud_m3, 1), unit: "mÂ³", color: "text-neutral-700" },
-    { label: "PM (Particulate Matter)", value: fmt(kpis.pm_kgPM25e, 4), unit: "kg PMâ‚‚.â‚…e", color: "text-neutral-700" },
+    { label: "Porsi Energi Terbarukan", value: kpis.renewable_pct > 0 ? `${kpis.renewable_pct}%` : "—", unit: "", color: "text-green-700" },
+    { label: "GWP (Global Warming Potential)", value: fmt(kpis.gwp_kgCO2e, 1), unit: "kg CO₂e", color: "text-neutral-700" },
+    { label: "AP (Acidification Potential)", value: fmt(kpis.ap_kgSO2e, 4), unit: "kg SO₂e", color: "text-neutral-700" },
+    { label: "EP (Eutrophication)", value: fmt(kpis.ep_kgPO4e, 4), unit: "kg PO₄e", color: "text-neutral-700" },
+    { label: "Water Use Depletion", value: fmt(kpis.wud_m3, 1), unit: "m³", color: "text-neutral-700" },
+    { label: "PM (Particulate Matter)", value: fmt(kpis.pm_kgPM25e, 4), unit: "kg PM₂.â‚…e", color: "text-neutral-700" },
     { label: "Abiotic Depletion (Fossil)", value: fmt(kpis.adpf_MJ, 0), unit: "MJ", color: "text-neutral-700" },
   ]
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="h-full w-full max-w-md overflow-y-auto bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 flex items-center justify-between border-b border-neutral-100 bg-white px-5 py-4">
+      <div className="h-full w-full max-w-lg overflow-y-auto bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 flex items-center justify-between border-b border-neutral-100 bg-white px-5 py-4 z-10">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">KPI Terhitung Otomatis</p>
             <h2 className="text-base font-bold text-neutral-900">Ringkasan Emisi & Energi</h2>
@@ -133,7 +238,7 @@ function KpiPanel({ kpis, onClose }: { kpis: CalculatedKPIs; onClose: () => void
         <div className="p-5 space-y-3">
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
             <p className="font-semibold">Dihitung otomatis dari data operasional Anda</p>
-            <p className="mt-0.5 text-emerald-700">Nilai berikut tidak perlu diinput manual. Sistem menghitung berdasarkan data Energi, Transportasi, dan Emisi Cerobong yang telah Anda masukkan.</p>
+            <p className="mt-0.5 text-emerald-700">Klik setiap baris KPI untuk melihat penjelasan cara perhitungan, sumber data, dan saran perbaikan.</p>
           </div>
           {!kpis.hasData && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
@@ -142,17 +247,11 @@ function KpiPanel({ kpis, onClose }: { kpis: CalculatedKPIs; onClose: () => void
           )}
           <div className="space-y-1">
             {kpiRows.map((r) => (
-              <div key={r.label} className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-neutral-50">
-                <span className="text-xs text-neutral-600">{r.label}</span>
-                <div className="text-right">
-                  <span className={cn("text-sm font-bold", r.color)}>{r.value}</span>
-                  {r.unit && <span className="ml-1 text-[10px] text-neutral-400">{r.unit}</span>}
-                </div>
-              </div>
+              <KpiRow key={r.label} label={r.label} value={r.value} unit={r.unit} color={r.color} kpis={kpis} />
             ))}
           </div>
           <p className="text-[10px] text-neutral-400 pt-2 border-t border-neutral-100">
-            Faktor emisi: PLN grid 0.87 kgCOâ‚‚/kWh Â· Diesel 2.68 kgCOâ‚‚/L Â· Gas 2.02 kgCOâ‚‚/NmÂ³ Â· Batubara 2.42 kgCOâ‚‚/kg (ESDM 2022)
+            Faktor emisi: PLN grid 0.87 kgCO₂/kWh · Diesel 2.68 kgCO₂/L · Gas 2.02 kgCO₂/Nm³ · Batubara 2.42 kgCO₂/kg (ESDM 2022)
           </p>
         </div>
       </div>
@@ -160,7 +259,7 @@ function KpiPanel({ kpis, onClose }: { kpis: CalculatedKPIs; onClose: () => void
   )
 }
 
-/* â”€â”€â”€ Entry Table â”€â”€â”€ */
+/* ─── Entry Table ─── */
 function EntryTable({ entries, columns, onDelete, loading }: {
   entries: AnyEntry[]
   columns: { key: string; label: string; render?: (row: AnyEntry) => React.ReactNode }[]
@@ -192,7 +291,7 @@ function EntryTable({ entries, columns, onDelete, loading }: {
             <tr key={row.id} className="hover:bg-neutral-50">
               {columns.map((c) => (
                 <td key={c.key} className="px-3 py-2 text-neutral-700">
-                  {c.render ? c.render(row) : String((row as unknown as Record<string, unknown>)[c.key] ?? "â€”")}
+                  {c.render ? c.render(row) : String((row as unknown as Record<string, unknown>)[c.key] ?? "—")}
                 </td>
               ))}
               <td className="px-3 py-2 text-right">
@@ -208,7 +307,7 @@ function EntryTable({ entries, columns, onDelete, loading }: {
   )
 }
 
-/* â”€â”€â”€ Category Section wrapper â”€â”€â”€ */
+/* ─── Category Section wrapper ─── */
 function Section({ meta, children, entryCount }: {
   meta: typeof CATEGORY_META[number]; children: React.ReactNode; entryCount: number
 }) {
@@ -241,7 +340,7 @@ function Section({ meta, children, entryCount }: {
 }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   CATEGORY FORMS â€” semua async dengan database
+   CATEGORY FORMS — semua async dengan database
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 function ProductionForm({ siteId, industryId, role }: { siteId: string; industryId: string; role: string }) {
@@ -266,7 +365,7 @@ function ProductionForm({ siteId, industryId, role }: { siteId: string; industry
     setSaving(true)
     const entry = { ...form, id: newId() }
     await saveHubEntry("production", siteId, industryId, entry)
-    auditSave("production", siteId, industryId, role, `${form.product} â€” ${form.qty} ${form.qtyUnit} @ ${form.plant}`)
+    auditSave("production", siteId, industryId, role, `${form.product} — ${form.qty} ${form.qtyUnit} @ ${form.plant}`)
     await refresh(); setShowForm(false); setSaving(false)
     setForm({ date: today(), plant: "", line: "", product: "", qty: 0, qtyUnit: "Ton", hours: 0, rejectQty: 0 })
   }
@@ -285,7 +384,7 @@ function ProductionForm({ siteId, industryId, role }: { siteId: string; industry
           <Field label="Produk" required><Input value={form.product} onChange={f("product")} placeholder="Nama produk" /></Field>
           <Field label="Kuantitas Produksi" required><Input type="number" value={form.qty || ""} onChange={f("qty")} min="0" step="0.01" /></Field>
           <Field label="Satuan">
-            <Select value={form.qtyUnit} onChange={f("qtyUnit")} options={[{ value: "Ton", label: "Ton" }, { value: "Unit", label: "Unit" }, { value: "mÂ³", label: "mÂ³" }, { value: "L", label: "Liter" }]} />
+            <Select value={form.qtyUnit} onChange={f("qtyUnit")} options={[{ value: "Ton", label: "Ton" }, { value: "Unit", label: "Unit" }, { value: "m³", label: "m³" }, { value: "L", label: "Liter" }]} />
           </Field>
           <Field label="Jam Operasional" unit="jam/hari"><Input type="number" value={form.hours || ""} onChange={f("hours")} min="0" max="24" step="0.5" /></Field>
           <Field label="Kuantitas Reject" unit={form.qtyUnit}><Input type="number" value={form.rejectQty || ""} onChange={f("rejectQty")} min="0" step="0.01" /></Field>
@@ -305,7 +404,7 @@ function ProductionForm({ siteId, industryId, role }: { siteId: string; industry
         onDelete={async (id) => {
           const e = entries.find(x => x.id === id)
           await deleteHubEntry("production", id)
-          auditDelete("production", siteId, industryId, role, e ? `${e.product} â€” ${e.qty} ${e.qtyUnit}` : id)
+          auditDelete("production", siteId, industryId, role, e ? `${e.product} — ${e.qty} ${e.qtyUnit}` : id)
           refresh()
         }}
       />
@@ -333,7 +432,7 @@ function EnergyForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string
   const save = async () => {
     setSaving(true)
     await saveHubEntry("energy", siteId, industryId, { ...form, id: newId() })
-    auditSave("energy", siteId, industryId, role, `Listrik ${form.electricity} kWh Â· Diesel ${form.diesel} L Â· Batubara ${form.coal} T Â· Biomassa ${form.biomass} T`)
+    auditSave("energy", siteId, industryId, role, `Listrik ${form.electricity} kWh · Diesel ${form.diesel} L · Batubara ${form.coal} T · Biomassa ${form.biomass} T`)
     await refresh(); onCalcUpdate(); setShowForm(false); setForm(blank); setSaving(false)
   }
   return (
@@ -351,7 +450,7 @@ function EnergyForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string
           <Field label="Tanggal" required><Input type="date" value={form.date} onChange={f("date")} /></Field>
           <Field label="Listrik PLN" unit="kWh"><Input type="number" value={form.electricity || ""} onChange={f("electricity")} min="0" step="1" /></Field>
           <Field label="Solar / Diesel" unit="Liter"><Input type="number" value={form.diesel || ""} onChange={f("diesel")} min="0" step="1" /></Field>
-          <Field label="Gas Alam" unit="NmÂ³"><Input type="number" value={form.naturalGas || ""} onChange={f("naturalGas")} min="0" step="1" /></Field>
+          <Field label="Gas Alam" unit="Nm³"><Input type="number" value={form.naturalGas || ""} onChange={f("naturalGas")} min="0" step="1" /></Field>
           <Field label="Batubara" unit="Ton"><Input type="number" value={form.coal || ""} onChange={f("coal")} min="0" step="0.1" /></Field>
           <Field label="Biomassa" unit="Ton"><Input type="number" value={form.biomass || ""} onChange={f("biomass")} min="0" step="0.1" /></Field>
           <Field label="Uap (Steam)" unit="Ton"><Input type="number" value={form.steam || ""} onChange={f("steam")} min="0" step="0.1" /></Field>
@@ -366,13 +465,13 @@ function EnergyForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string
         { key: "date", label: "Tanggal" },
         { key: "electricity", label: "Listrik (kWh)", render: (r) => fmt((r as EnergyEntry).electricity) },
         { key: "diesel", label: "Diesel (L)", render: (r) => fmt((r as EnergyEntry).diesel) },
-        { key: "naturalGas", label: "Gas (NmÂ³)", render: (r) => fmt((r as EnergyEntry).naturalGas) },
+        { key: "naturalGas", label: "Gas (Nm³)", render: (r) => fmt((r as EnergyEntry).naturalGas) },
         { key: "coal", label: "Batubara (T)", render: (r) => fmt((r as EnergyEntry).coal) },
         { key: "biomass", label: "Biomassa (T)", render: (r) => fmt((r as EnergyEntry).biomass) },
       ]} onDelete={async (id) => {
         const e = entries.find(x => x.id === id)
         await deleteHubEntry("energy", id)
-        auditDelete("energy", siteId, industryId, role, e ? `Listrik ${e.electricity} kWh Â· ${e.date}` : id)
+        auditDelete("energy", siteId, industryId, role, e ? `Listrik ${e.electricity} kWh · ${e.date}` : id)
         refresh(); onCalcUpdate()
       }} />
     </Section>
@@ -399,7 +498,7 @@ function WaterForm({ siteId, industryId, role }: { siteId: string; industryId: s
   const save = async () => {
     setSaving(true)
     await saveHubEntry("water", siteId, industryId, { ...form, id: newId() })
-    auditSave("water", siteId, industryId, role, `Air Baku ${form.rawWater} mÂ³ Â· Air Tanah ${form.groundwater} mÂ³ Â· ${form.date}`)
+    auditSave("water", siteId, industryId, role, `Air Baku ${form.rawWater} m³ · Air Tanah ${form.groundwater} m³ · ${form.date}`)
     await refresh(); setShowForm(false); setForm(blank); setSaving(false)
   }
   return (
@@ -408,11 +507,11 @@ function WaterForm({ siteId, industryId, role }: { siteId: string; industryId: s
       {showForm && (
         <div className="mb-4 grid gap-3 rounded-lg border border-cyan-100 bg-cyan-50/40 p-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Tanggal" required><Input type="date" value={form.date} onChange={f("date")} /></Field>
-          <Field label="Air Baku (Sungai/PDAM)" unit="mÂ³"><Input type="number" value={form.rawWater || ""} onChange={f("rawWater")} min="0" /></Field>
-          <Field label="Air Tanah" unit="mÂ³"><Input type="number" value={form.groundwater || ""} onChange={f("groundwater")} min="0" /></Field>
-          <Field label="Air Proses" unit="mÂ³"><Input type="number" value={form.processWater || ""} onChange={f("processWater")} min="0" /></Field>
-          <Field label="Air Limbah Keluar" unit="mÂ³"><Input type="number" value={form.wastewater || ""} onChange={f("wastewater")} min="0" /></Field>
-          <Field label="Debit Aliran" unit="mÂ³/h"><Input type="number" value={form.flowRate || ""} onChange={f("flowRate")} min="0" step="0.1" /></Field>
+          <Field label="Air Baku (Sungai/PDAM)" unit="m³"><Input type="number" value={form.rawWater || ""} onChange={f("rawWater")} min="0" /></Field>
+          <Field label="Air Tanah" unit="m³"><Input type="number" value={form.groundwater || ""} onChange={f("groundwater")} min="0" /></Field>
+          <Field label="Air Proses" unit="m³"><Input type="number" value={form.processWater || ""} onChange={f("processWater")} min="0" /></Field>
+          <Field label="Air Limbah Keluar" unit="m³"><Input type="number" value={form.wastewater || ""} onChange={f("wastewater")} min="0" /></Field>
+          <Field label="Debit Aliran" unit="m³/h"><Input type="number" value={form.flowRate || ""} onChange={f("flowRate")} min="0" step="0.1" /></Field>
           <div className="col-span-full flex gap-2">
             <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Simpan</Button>
             <Button size="sm" variant="secondary" onClick={() => setShowForm(false)}><X className="mr-1.5 h-3.5 w-3.5" /> Batal</Button>
@@ -421,13 +520,13 @@ function WaterForm({ siteId, industryId, role }: { siteId: string; industryId: s
       )}
       <EntryTable loading={loading} entries={entries} columns={[
         { key: "date", label: "Tanggal" },
-        { key: "rawWater", label: "Air Baku (mÂ³)", render: (r) => fmt((r as WaterEntry).rawWater) },
-        { key: "groundwater", label: "Air Tanah (mÂ³)", render: (r) => fmt((r as WaterEntry).groundwater) },
-        { key: "wastewater", label: "Limbah Cair (mÂ³)", render: (r) => fmt((r as WaterEntry).wastewater) },
+        { key: "rawWater", label: "Air Baku (m³)", render: (r) => fmt((r as WaterEntry).rawWater) },
+        { key: "groundwater", label: "Air Tanah (m³)", render: (r) => fmt((r as WaterEntry).groundwater) },
+        { key: "wastewater", label: "Limbah Cair (m³)", render: (r) => fmt((r as WaterEntry).wastewater) },
       ]} onDelete={async (id) => {
         const e = entries.find(x => x.id === id)
         await deleteHubEntry("water", id)
-        auditDelete("water", siteId, industryId, role, e ? `Air Baku ${e.rawWater} mÂ³ Â· ${e.date}` : id)
+        auditDelete("water", siteId, industryId, role, e ? `Air Baku ${e.rawWater} m³ · ${e.date}` : id)
         refresh()
       }} />
     </Section>
@@ -455,7 +554,7 @@ function LabForm({ siteId, industryId, role }: { siteId: string; industryId: str
   const save = async () => {
     setSaving(true)
     await saveHubEntry("laboratory", siteId, industryId, { ...form, id: newId() })
-    auditSave("laboratory", siteId, industryId, role, `${form.samplePoint} â€” pH ${form.ph} Â· COD ${form.cod} mg/L Â· BOD ${form.bod} mg/L`)
+    auditSave("laboratory", siteId, industryId, role, `${form.samplePoint} — pH ${form.ph} · COD ${form.cod} mg/L · BOD ${form.bod} mg/L`)
     await refresh(); setShowForm(false); setForm(blank); setSaving(false)
   }
   return (
@@ -489,7 +588,7 @@ function LabForm({ siteId, industryId, role }: { siteId: string; industryId: str
       ]} onDelete={async (id) => {
         const e = entries.find(x => x.id === id)
         await deleteHubEntry("laboratory", id)
-        auditDelete("laboratory", siteId, industryId, role, e ? `${e.samplePoint} Â· ${e.date}` : id)
+        auditDelete("laboratory", siteId, industryId, role, e ? `${e.samplePoint} · ${e.date}` : id)
         refresh()
       }} />
     </Section>
@@ -516,7 +615,7 @@ function StackForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string;
   const save = async () => {
     setSaving(true)
     await saveHubEntry("stack", siteId, industryId, { ...form, id: newId() })
-    auditSave("stack", siteId, industryId, role, `${form.stackId} â€” TSP ${form.tsp} Â· SOâ‚‚ ${form.so2} Â· NOx ${form.nox} mg/NmÂ³`)
+    auditSave("stack", siteId, industryId, role, `${form.stackId} — TSP ${form.tsp} · SO₂ ${form.so2} · NOx ${form.nox} mg/Nm³`)
     await refresh(); onCalcUpdate(); setShowForm(false); setForm(blank); setSaving(false)
   }
   return (
@@ -529,12 +628,12 @@ function StackForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string;
         <div className="mb-4 grid gap-3 rounded-lg border border-red-100 bg-red-50/40 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Tanggal" required><Input type="date" value={form.date} onChange={f("date")} /></Field>
           <Field label="ID Cerobong" required><Input value={form.stackId} onChange={f("stackId")} placeholder="Stack-01" /></Field>
-          <Field label="TSP (Partikulat)" unit="mg/NmÂ³"><Input type="number" value={form.tsp || ""} onChange={f("tsp")} min="0" step="0.1" /></Field>
-          <Field label="SOâ‚‚" unit="mg/NmÂ³"><Input type="number" value={form.so2 || ""} onChange={f("so2")} min="0" step="0.1" /></Field>
-          <Field label="NOx" unit="mg/NmÂ³"><Input type="number" value={form.nox || ""} onChange={f("nox")} min="0" step="0.1" /></Field>
-          <Field label="CO" unit="mg/NmÂ³"><Input type="number" value={form.co || ""} onChange={f("co")} min="0" step="0.1" /></Field>
+          <Field label="TSP (Partikulat)" unit="mg/Nm³"><Input type="number" value={form.tsp || ""} onChange={f("tsp")} min="0" step="0.1" /></Field>
+          <Field label="SO₂" unit="mg/Nm³"><Input type="number" value={form.so2 || ""} onChange={f("so2")} min="0" step="0.1" /></Field>
+          <Field label="NOx" unit="mg/Nm³"><Input type="number" value={form.nox || ""} onChange={f("nox")} min="0" step="0.1" /></Field>
+          <Field label="CO" unit="mg/Nm³"><Input type="number" value={form.co || ""} onChange={f("co")} min="0" step="0.1" /></Field>
           <Field label="Opasitas" unit="%"><Input type="number" value={form.opacity || ""} onChange={f("opacity")} min="0" max="100" step="1" /></Field>
-          <Field label="Laju Alir Cerobong" unit="NmÂ³/jam"><Input type="number" value={form.flowRate || ""} onChange={f("flowRate")} min="0" step="1" /></Field>
+          <Field label="Laju Alir Cerobong" unit="Nm³/jam"><Input type="number" value={form.flowRate || ""} onChange={f("flowRate")} min="0" step="1" /></Field>
           <div className="col-span-full flex gap-2">
             <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Simpan</Button>
             <Button size="sm" variant="secondary" onClick={() => setShowForm(false)}><X className="mr-1.5 h-3.5 w-3.5" /> Batal</Button>
@@ -543,14 +642,14 @@ function StackForm({ siteId, industryId, role, onCalcUpdate }: { siteId: string;
       )}
       <EntryTable loading={loading} entries={entries} columns={[
         { key: "date", label: "Tanggal" }, { key: "stackId", label: "Cerobong" },
-        { key: "tsp", label: "TSP", render: (r) => `${(r as StackEntry).tsp} mg/NmÂ³` },
-        { key: "so2", label: "SOâ‚‚", render: (r) => `${(r as StackEntry).so2} mg/NmÂ³` },
-        { key: "nox", label: "NOx", render: (r) => `${(r as StackEntry).nox} mg/NmÂ³` },
+        { key: "tsp", label: "TSP", render: (r) => `${(r as StackEntry).tsp} mg/Nm³` },
+        { key: "so2", label: "SO₂", render: (r) => `${(r as StackEntry).so2} mg/Nm³` },
+        { key: "nox", label: "NOx", render: (r) => `${(r as StackEntry).nox} mg/Nm³` },
         { key: "opacity", label: "Opasitas", render: (r) => `${(r as StackEntry).opacity}%` },
       ]} onDelete={async (id) => {
         const e = entries.find(x => x.id === id)
         await deleteHubEntry("stack", id)
-        auditDelete("stack", siteId, industryId, role, e ? `${e.stackId} Â· ${e.date}` : id)
+        auditDelete("stack", siteId, industryId, role, e ? `${e.stackId} · ${e.date}` : id)
         refresh(); onCalcUpdate()
       }} />
     </Section>
@@ -578,7 +677,7 @@ function B3Form({ siteId, industryId, role }: { siteId: string; industryId: stri
     if (!form.wasteType) return
     setSaving(true)
     await saveHubEntry("b3", siteId, industryId, { ...form, id: newId() })
-    auditSave("b3", siteId, industryId, role, `${form.wasteType} (${form.wasteCode}) â€” ${form.qty} kg Â· Simpan ${form.storageDuration} hari`)
+    auditSave("b3", siteId, industryId, role, `${form.wasteType} (${form.wasteCode}) — ${form.qty} kg · Simpan ${form.storageDuration} hari`)
     await refresh(); setShowForm(false); setForm(blank); setSaving(false)
   }
   return (
@@ -613,7 +712,7 @@ function B3Form({ siteId, industryId, role }: { siteId: string; industryId: stri
       ]} onDelete={async (id) => {
         const e = entries.find(x => x.id === id)
         await deleteHubEntry("b3", id)
-        auditDelete("b3", siteId, industryId, role, e ? `${e.wasteType} â€” ${e.qty} kg` : id)
+        auditDelete("b3", siteId, industryId, role, e ? `${e.wasteType} — ${e.qty} kg` : id)
         refresh()
       }} />
     </Section>
@@ -640,7 +739,7 @@ function TransportForm({ siteId, industryId, role, onCalcUpdate }: { siteId: str
   const save = async () => {
     setSaving(true)
     await saveHubEntry("transport", siteId, industryId, { ...form, id: newId() })
-    auditSave("transport", siteId, industryId, role, `${form.vehicleType} Â· ${form.distance} km Â· ${form.cargoWeight} ton`)
+    auditSave("transport", siteId, industryId, role, `${form.vehicleType} · ${form.distance} km · ${form.cargoWeight} ton`)
     await refresh(); onCalcUpdate(); setShowForm(false); setForm(blank); setSaving(false)
   }
   return (
@@ -678,7 +777,7 @@ function TransportForm({ siteId, industryId, role, onCalcUpdate }: { siteId: str
       ]} onDelete={async (id) => {
         const e = entries.find(x => x.id === id)
         await deleteHubEntry("transport", id)
-        auditDelete("transport", siteId, industryId, role, e ? `${e.vehicleType} Â· ${e.distance} km Â· ${e.date}` : id)
+        auditDelete("transport", siteId, industryId, role, e ? `${e.vehicleType} · ${e.distance} km · ${e.date}` : id)
         refresh(); onCalcUpdate()
       }} />
     </Section>
@@ -706,7 +805,7 @@ function MaterialForm({ siteId, industryId, role }: { siteId: string; industryId
     if (!form.material) return
     setSaving(true)
     await saveHubEntry("materials", siteId, industryId, { ...form, id: newId() })
-    auditSave("materials", siteId, industryId, role, `${form.material} â€” ${form.qty} ${form.unit} dari ${form.supplier || "â€”"}`)
+    auditSave("materials", siteId, industryId, role, `${form.material} — ${form.qty} ${form.unit} dari ${form.supplier || "—"}`)
     await refresh(); setShowForm(false); setForm(blank); setSaving(false)
   }
   return (
@@ -719,7 +818,7 @@ function MaterialForm({ siteId, industryId, role }: { siteId: string; industryId
           <Field label="Pemasok / Supplier"><Input value={form.supplier} onChange={f("supplier")} placeholder="PT Supplier" /></Field>
           <Field label="Kuantitas" required><Input type="number" value={form.qty || ""} onChange={f("qty")} min="0" step="0.1" /></Field>
           <Field label="Satuan">
-            <Select value={form.unit} onChange={f("unit")} options={[{ value: "Ton", label: "Ton" }, { value: "kg", label: "kg" }, { value: "L", label: "Liter" }, { value: "mÂ³", label: "mÂ³" }, { value: "Unit", label: "Unit" }]} />
+            <Select value={form.unit} onChange={f("unit")} options={[{ value: "Ton", label: "Ton" }, { value: "kg", label: "kg" }, { value: "L", label: "Liter" }, { value: "m³", label: "m³" }, { value: "Unit", label: "Unit" }]} />
           </Field>
           <Field label="Negara Asal"><Input value={form.countryOfOrigin} onChange={f("countryOfOrigin")} placeholder="Indonesia" /></Field>
           <div className="col-span-full flex gap-2">
@@ -735,7 +834,7 @@ function MaterialForm({ siteId, industryId, role }: { siteId: string; industryId
       ]} onDelete={async (id) => {
         const e = entries.find(x => x.id === id)
         await deleteHubEntry("materials", id)
-        auditDelete("materials", siteId, industryId, role, e ? `${e.material} â€” ${e.qty} ${e.unit}` : id)
+        auditDelete("materials", siteId, industryId, role, e ? `${e.material} — ${e.qty} ${e.unit}` : id)
         refresh()
       }} />
     </Section>
@@ -763,7 +862,7 @@ function SupplierForm({ siteId, industryId, role }: { siteId: string; industryId
     if (!form.supplierName) return
     setSaving(true)
     await saveHubEntry("supplier", siteId, industryId, { ...form, id: newId() })
-    auditSave("supplier", siteId, industryId, role, `${form.supplierName} Â· ${form.country} Â· ${form.sustainability}`)
+    auditSave("supplier", siteId, industryId, role, `${form.supplierName} · ${form.country} · ${form.sustainability}`)
     await refresh(); setShowForm(false); setForm(blank); setSaving(false)
   }
   return (
@@ -795,7 +894,7 @@ function SupplierForm({ siteId, industryId, role }: { siteId: string; industryId
       ]} onDelete={async (id) => {
         const e = entries.find(x => x.id === id)
         await deleteHubEntry("supplier", id)
-        auditDelete("supplier", siteId, industryId, role, e ? `${e.supplierName} Â· ${e.country}` : id)
+        auditDelete("supplier", siteId, industryId, role, e ? `${e.supplierName} · ${e.country}` : id)
         refresh()
       }} />
     </Section>
@@ -878,7 +977,7 @@ function DocumentsForm({ siteId, industryId, role }: { siteId: string; industryI
                   <FileText className="h-4 w-4 shrink-0 text-neutral-400" />
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold text-neutral-800">{doc.fileName}</p>
-                    <p className="text-[11px] text-neutral-400">{docTypeOptions.find((o) => o.value === doc.docType)?.label} Â· {doc.date}</p>
+                    <p className="text-[11px] text-neutral-400">{docTypeOptions.find((o) => o.value === doc.docType)?.label} · {doc.date}</p>
                   </div>
                 </div>
                 <button onClick={async () => {
@@ -908,14 +1007,35 @@ export default function DataHubPage() {
   const industry = INDUSTRIES.find((i) => i.id === industryId)
   const [kpis, setKpis] = useState<CalculatedKPIs | null>(null)
   const [showKpi, setShowKpi] = useState(false)
-  const { boundary } = useBoundary()
+  const { boundary, isCalculated, unlockCalculation } = useBoundary()
+  const [toastMsg, setToastMsg] = useState("")
+  const [isCalculating, setIsCalculating] = useState(false)
 
   const refreshKpis = useCallback(async () => {
     if (siteId && industryId) {
       const res = await calcEngineAsync(siteId, industryId, boundary)
       setKpis(res)
+      return res
     }
+    return null
   }, [siteId, industryId, boundary])
+
+  const handleCalculate = async () => {
+    setIsCalculating(true)
+    const oldHash = JSON.stringify(kpis)
+    const newKpis = await refreshKpis()
+    const newHash = JSON.stringify(newKpis)
+    
+    if (isCalculated && oldHash === newHash) {
+      setToastMsg("Tidak ada perubahan data terbaru. KPI Anda masih mutakhir.")
+    } else {
+      setToastMsg("Kalkulasi berhasil diperbarui dengan data terbaru!")
+      if (!isCalculated) unlockCalculation()
+    }
+    setShowKpi(true)
+    setIsCalculating(false)
+    setTimeout(() => setToastMsg(""), 4000)
+  }
 
   useEffect(() => { refreshKpis() }, [refreshKpis])
 
@@ -931,11 +1051,11 @@ export default function DataHubPage() {
           </div>
         </div>
       )}
-      {/* â”€â”€ Page Header â”€â”€ */}
+      {/* ── Page Header ── */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-            <Database className="mr-1.5 h-3.5 w-3.5" /> Single Source of Truth â€” Database Terpusat
+            <Database className="mr-1.5 h-3.5 w-3.5" /> Single Source of Truth — Database Terpusat
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Data Hub (Pusat Ingest Data Operasional)</h1>
           <p className="mt-1 max-w-2xl text-sm text-neutral-500">
@@ -950,14 +1070,20 @@ export default function DataHubPage() {
             <Link href="/dashboard/company-profile">
               <Button variant="secondary" size="sm"><Building2 className="mr-2 h-4 w-4" /> Profil Perusahaan</Button>
             </Link>
-            <Button size="sm" onClick={() => { refreshKpis(); setShowKpi(true) }} className="bg-emerald-600 text-white hover:bg-emerald-700">
-              <Calculator className="mr-2 h-4 w-4" /> Lihat KPI Terhitung
+            <Button 
+              size="sm" 
+              onClick={handleCalculate}
+              disabled={isCalculating}
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              {isCalculating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calculator className="mr-2 h-4 w-4" />}
+              {isCalculated ? "Kalkulasi Ulang" : "Hitung & Buka Semua Modul"}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* â”€â”€ Industry not selected â”€â”€ */}
+      {/* ── Industry not selected ── */}
       {!industry && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
           <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-amber-500" />
@@ -969,7 +1095,7 @@ export default function DataHubPage() {
         </div>
       )}
 
-      {/* â”€â”€ KPI banner â”€â”€ */}
+      {/* ── KPI banner ── */}
       {industry && (
         <div className="rounded-xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 px-5 py-3.5">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -980,7 +1106,7 @@ export default function DataHubPage() {
               <div>
                 <p className="text-sm font-bold text-emerald-900">{industry.name}</p>
                 <p className="text-xs text-emerald-700">
-                  {getActiveScopes(boundary)} Â· GWP Â· AP Â· EP Â· Total Energi â†’ dihitung otomatis dari data di bawah ini
+                  {getActiveScopes(boundary)} · GWP · AP · EP · Total Energi → dihitung otomatis dari data di bawah ini
                   <span className="ml-1 inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 border border-emerald-200">
                     {getBoundaryLabel(boundary)}
                   </span>
@@ -991,7 +1117,7 @@ export default function DataHubPage() {
               <div className="flex items-center gap-4 text-center">
                 <div>
                   <p className="text-lg font-black text-emerald-800">{fmt(kpis.total_ghg_tCO2e, 1)}</p>
-                  <p className="text-[10px] text-emerald-600">tCOâ‚‚e Total</p>
+                  <p className="text-[10px] text-emerald-600">tCO₂e Total</p>
                 </div>
                 <div>
                   <p className="text-lg font-black text-blue-700">{fmt(kpis.energy_total_MWh, 0)}</p>
@@ -1003,7 +1129,7 @@ export default function DataHubPage() {
         </div>
       )}
 
-      {/* â”€â”€ Category Forms â”€â”€ */}
+      {/* ── Category Forms ── */}
       {industry && (
         <div className="space-y-4">
           {/* Boundary filter info banner */}
@@ -1035,10 +1161,46 @@ export default function DataHubPage() {
         </div>
       )}
 
-      {/* â”€â”€ KPI Panel â”€â”€ */}
+      {/* ── Call to Action Banner ── */}
+      {industry && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="rounded-full bg-blue-100 p-2">
+              <Calculator className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-blue-900">{isCalculated ? "Kalkulasi Ulang Emisi" : "Langkah Terakhir: Kalkulasi Data"}</h3>
+              <p className="mt-1 text-sm text-blue-700">
+                {isCalculated 
+                  ? "Ada perubahan data operasional di atas? Klik tombol Kalkulasi Ulang untuk memperbarui nilai KPI dan Emisi Anda."
+                  : "Data operasional di atas sudah diisi? Klik tombol Hitung untuk mengkalkulasi emisi dan membuka semua Modul Analitik (Modul 3-14)."}
+              </p>
+            </div>
+          </div>
+          <Button 
+            onClick={handleCalculate}
+            disabled={isCalculating}
+            className="bg-blue-600 text-white hover:bg-blue-700 shrink-0"
+          >
+            {isCalculating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isCalculated ? "Kalkulasi Ulang" : "Hitung Sekarang"} <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* ── KPI Panel ── */}
       {showKpi && kpis && <KpiPanel kpis={kpis} onClose={() => setShowKpi(false)} />}
+
+      {/* ── Custom Toast ── */}
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className="flex items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-sm text-white shadow-xl">
+            <Info className="h-4 w-4 text-blue-400" />
+            {toastMsg}
+          </div>
+        </div>
+      )}
     </div>
     </ModuleGate>
   )
 }
-

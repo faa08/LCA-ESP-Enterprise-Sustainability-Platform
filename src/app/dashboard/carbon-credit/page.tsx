@@ -15,7 +15,7 @@ import Link from "next/link"
 
 const dicts: Record<Locale, Record<string, string>> = { id: idDict, en: enDict }
 
-const CARBON_PRICE_IDR = 70_000 // Rp/tCOâ‚‚e (IDXCarbon referensi)
+const CARBON_PRICE_IDR = 70_000 // Rp/tCO₂e (IDXCarbon referensi)
 
 export default function CarbonCreditPage() {
   const [locale, setLocale] = useState<Locale>("id")
@@ -42,7 +42,7 @@ export default function CarbonCreditPage() {
       ? (scope1 ?? 0) + (scope2 ?? 0) + (scope3 ?? 0)
       : null
 
-  // Baseline SBTi: 50% reduksi di 2030 â†’ potensi kredit = selisih baseline vs target
+  // Baseline SBTi: 50% reduksi di 2030 → potensi kredit = selisih baseline vs target
   const reductionTarget2030 = totalEmissions !== null ? totalEmissions * 0.5 : null
   const potentialCreditTons = reductionTarget2030 !== null ? Math.round(reductionTarget2030) : null
   const potentialRevenueIdr =
@@ -58,7 +58,7 @@ export default function CarbonCreditPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="neutral" className="text-[10px]">Modul 7b</Badge>
-            <Badge variant="neutral" className="text-[10px] font-bold">SRN-PPI Â· IDXCarbon Â· Verra VCS</Badge>
+            <Badge variant="neutral" className="text-[10px] font-bold">SRN-PPI · IDXCarbon · Verra VCS</Badge>
           </div>
           <h1 className="text-xl font-bold text-neutral-900">Registri & Monetisasi Karbon Kredit</h1>
           <p className="mt-1 text-sm text-neutral-500">
@@ -69,7 +69,7 @@ export default function CarbonCreditPage() {
           href="/dashboard/carbon-accounting"
           className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3.5 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors"
         >
-          Lihat Carbon Accounting (Scope 1â€“3)
+          Lihat Carbon Accounting (Scope 1–3)
           <ArrowUpRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -90,24 +90,24 @@ export default function CarbonCreditPage() {
         </div>
       )}
 
-      {/* KPI Cards â€” dari data real */}
+      {/* KPI Cards — dari data real */}
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           title="Total Emisi Baseline"
-          value={hasData ? `${fmt(totalEmissions!)} tCOâ‚‚e` : "â€”"}
+          value={hasData ? `${fmt(totalEmissions!)} tCO₂e` : "—"}
           description="Scope 1 + 2 + 3 (tahun berjalan)"
           icon={Leaf}
         />
         <StatCard
           title="Potensi Reduksi (SBTi 50%)"
-          value={potentialCreditTons !== null ? `${fmt(potentialCreditTons)} tCOâ‚‚e` : "â€”"}
+          value={potentialCreditTons !== null ? `${fmt(potentialCreditTons)} tCO₂e` : "—"}
           description="Target Net-Zero 2030"
           icon={CheckCircle2}
         />
         <StatCard
           title="Estimasi Nilai Kredit"
-          value={potentialRevenueIdr !== null ? `Rp ${fmt(potentialRevenueIdr)}` : "â€”"}
-          description={`@ Rp ${fmt(CARBON_PRICE_IDR)} / tCOâ‚‚e (IDXCarbon)`}
+          value={potentialRevenueIdr !== null ? `Rp ${fmt(potentialRevenueIdr)}` : "—"}
+          description={`@ Rp ${fmt(CARBON_PRICE_IDR)} / tCO₂e (IDXCarbon)`}
           icon={Coins}
         />
       </div>
@@ -123,7 +123,7 @@ export default function CarbonCreditPage() {
             <span className="text-sm font-normal text-emerald-600 ml-2">/ tahun (estimasi)</span>
           </p>
           <p className="text-xs text-emerald-700 mt-1">
-            Berdasarkan {fmt(potentialCreditTons)} tCOâ‚‚e potensi reduksi Ã— Rp {fmt(CARBON_PRICE_IDR)}/tCOâ‚‚e
+            Berdasarkan {fmt(potentialCreditTons)} tCO₂e potensi reduksi × Rp {fmt(CARBON_PRICE_IDR)}/tCO₂e
             (harga referensi IDXCarbon 2026). Daftarkan proyek ke{" "}
             <a href="https://srn.menlhk.go.id" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
               SRN-PPI KLHK

@@ -68,10 +68,34 @@ export default function EnvironmentalMonitoring() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard title="Sampel Lab Air Limbah" value={noData ? "—" : `${labs.length} Pengujian`} description={latestLab ? `pH: ${latestLab.ph} · COD: ${latestLab.cod} mg/L` : "Belum ada data IPAL"} icon={Droplets} />
-            <StatCard title="Sampling Emisi Cerobong" value={noData ? "—" : `${stacks.length} Pengujian`} description={latestStack ? `NOx: ${latestStack.nox} mg/Nm³` : "Belum ada data Cerobong"} icon={Wind} />
-            <StatCard title="Status Mutu Cerobong" value={noData ? "—" : stackCompliant ? "MEMENUHI" : "MELEBIHI"} description="Baku Mutu Permen LHK" icon={ShieldCheck} />
-            <StatCard title="Status Mutu IPAL" value={noData ? "—" : labCompliant ? "MEMENUHI" : "MELEBIHI"} description="Baku Mutu Air Limbah" icon={AlertTriangle} />
+            <StatCard title="Sampel Lab Air Limbah" value={noData ? "—" : `${labs.length} Pengujian`} description={latestLab ? `pH: ${latestLab.ph} · COD: ${latestLab.cod} mg/L` : "Belum ada data IPAL"} icon={Droplets}
+              detail={{
+                formula: "Jumlah total entri pengujian air limbah yang diinput ke Data Hub. Parameter utama: pH, COD, BOD, TSS, NH₃.",
+                source: "Dihitung dari jumlah entri Lab (air limbah) di Data Hub. Nilai parameter terakhir ditampilkan.",
+                suggestion: "Lakukan pengujian laboratorium rutin (minimal bulanan). Pastikan IPAL beroperasi optimal untuk menjaga pH 6-9 dan COD sesuai baku mutu.",
+              }}
+            />
+            <StatCard title="Sampling Emisi Cerobong" value={noData ? "—" : `${stacks.length} Pengujian`} description={latestStack ? `NOx: ${latestStack.nox} mg/Nm³` : "Belum ada data Cerobong"} icon={Wind}
+              detail={{
+                formula: "Jumlah total entri pengujian emisi cerobong yang diinput. Parameter: SO₂, NOx, TSP, laju alir gas buang.",
+                source: "Dihitung dari jumlah entri Emisi Cerobong di Data Hub.",
+                suggestion: "Lakukan CEMS (Continuous Emission Monitoring) atau sampling berkala. Pastikan scrubber/EP berfungsi baik.",
+              }}
+            />
+            <StatCard title="Status Mutu Cerobong" value={noData ? "—" : stackCompliant ? "MEMENUHI" : "MELEBIHI"} description="Baku Mutu Permen LHK" icon={ShieldCheck}
+              detail={{
+                formula: "Membandingkan nilai SO₂, NOx, TSP terakhir dengan baku mutu PermenLHK sesuai jenis industri.",
+                source: "Data terakhir dari entri Emisi Cerobong dibandingkan dengan ambang batas regulasi.",
+                suggestion: "Jika MELEBIHI, segera periksa sistem pengendalian emisi (scrubber, baghouse, EP). Laporkan ke KLHK dalam 1×24 jam.",
+              }}
+            />
+            <StatCard title="Status Mutu IPAL" value={noData ? "—" : labCompliant ? "MEMENUHI" : "MELEBIHI"} description="Baku Mutu Air Limbah" icon={AlertTriangle}
+              detail={{
+                formula: "Membandingkan nilai pH, COD, BOD, TSS, NH₃ terakhir dengan baku mutu PermenLHK air limbah.",
+                source: "Data terakhir dari entri Lab dibandingkan dengan ambang batas regulasi.",
+                suggestion: "Jika MELEBIHI, periksa kinerja IPAL. Evaluasi dosing kimia, aerasi, dan retention time. Laporkan ke dinas lingkungan.",
+              }}
+            />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
